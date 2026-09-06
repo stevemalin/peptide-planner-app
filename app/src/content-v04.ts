@@ -5,8 +5,8 @@ export type V04LibraryEntry={
  deeper:DeepSection[];referenceMode:'existing'|'custom-only'; sources?:{id:string;title:string;type:string;url:string}[];
 };
 
-// 0.4 additions are intentionally educational/contextual. They do not invent a human
-// administration schedule where the current evidence set does not support one.
+// 0.4 additions are intentionally educational/contextual. Study-specific human
+// administration is kept distinct from community/common-practice conventions.
 export const addedLibraryV04:V04LibraryEntry[]=[
  {id:'5-amino-1mq',name:'5-Amino-1MQ',aliases:['5 amino 1mq','5amino1mq','1mq'],kind:'Small-molecule research compound',accent:'#5A67D8',referenceMode:'custom-only',
   summary:'5-Amino-1MQ is a small-molecule NNMT inhibitor used in metabolic research. It is not itself a peptide.',
@@ -15,11 +15,20 @@ export const addedLibraryV04:V04LibraryEntry[]=[
   mechanism:'Research focuses on inhibition of nicotinamide N-methyltransferase (NNMT), an enzyme involved in nicotinamide and methyl-donor metabolism.',
   deeper:[{title:'Research overview',body:'Published work has examined NNMT inhibition in cells and animal metabolic models. It is important to keep that evidence separate from human clinical dosing claims.'},{title:'What is known in humans?',body:'This library does not encode an established human administration schedule. Custom tracking remains available without labeling it as a published human protocol.'},{title:'Why it is still here',body:'Users may track non-peptide research compounds alongside peptides. Classification is shown clearly rather than forcing everything into one category.'}]},
  {id:'ss-31',name:'SS-31 / Elamipretide',aliases:['ss31','ss-31','elamipretide','mmtp-131'],kind:'Mitochondria-targeting peptide',accent:'#18A0AE',referenceMode:'custom-only',
-  summary:'SS-31, also called elamipretide, is a mitochondria-targeting peptide. Forzinity received US FDA accelerated approval in September 2025 for a specific Barth syndrome indication.',
-  plainEnglish:'It is designed to interact with mitochondrial membranes, so researchers have explored whether it can influence cellular energy function in mitochondrial disease and related settings.',
-  sources:[{id:'FDA-FORZINITY-2025',title:'FDA Drug Trials Snapshot: Forzinity (September 19, 2025)',type:'US FDA accelerated approval; product-specific',url:'https://www.fda.gov/drugs/drug-trials-snapshots/drug-trials-snapshots-forzinity'}],evidence:'US FDA accelerated approval for a specific product and indication; no general research-vial schedule is supplied.',studiedFor:'Primary mitochondrial myopathy and other mitochondrial/cardiac research settings.',
+  summary:'SS-31, also called elamipretide, is a mitochondria-targeting peptide studied in several human clinical programs.',
+  plainEnglish:'It is designed to interact with mitochondrial membranes, so researchers have explored whether it can influence cellular energy function in mitochondrial disease and other settings.',
+  sources:[
+   {id:'MMPOWER2-2020',title:'A randomized crossover trial of elamipretide in adults with primary mitochondrial myopathy',type:'Published randomized human clinical trial',url:'https://pubmed.ncbi.nlm.nih.gov/32096613/'},
+   {id:'MMPOWER3-2023',title:'Efficacy and Safety of Elamipretide in Individuals With Primary Mitochondrial Myopathy: MMPOWER-3',type:'Published phase 3 randomized human clinical trial',url:'https://pubmed.ncbi.nlm.nih.gov/37268435/'},
+   {id:'PROGRESSHF-2020',title:'Effects of Elamipretide on Left Ventricular Function in HFrEF: PROGRESS-HF',type:'Published phase 2 randomized human clinical trial',url:'https://pubmed.ncbi.nlm.nih.gov/32068002/'}
+  ],evidence:'Published randomized human clinical research; study-specific schedules are not universal recommendations.',studiedFor:'Primary mitochondrial myopathy, Barth syndrome, cardiac and ophthalmic mitochondrial research settings.',
   mechanism:'Elamipretide is designed to associate with cardiolipin-rich mitochondrial inner membranes and influence mitochondrial structure and bioenergetics.',
-  deeper:[{title:'Human research',body:'Randomized human studies have evaluated subcutaneous elamipretide in mitochondrial disease. Study-specific route, duration and population matter, so This library does not convert one trial into a universal plan.'},{title:'Research limitations',body:'Clinical programs have produced mixed outcomes across indications. School presents the study context rather than a single simplified efficacy claim.'},{title:'Planning context',body:'A user can build a custom schedule while the source library remains explicit about which fields come from a study and which are user choices.'}]},
+  deeper:[
+   {title:'Human research',body:'MMPOWER-2 randomized adults with primary mitochondrial myopathy to 40 mg/day subcutaneous elamipretide for 4 weeks in a crossover design. MMPOWER-3 studied 40 mg/day subcutaneously for 24 weeks. These are published study regimens tied to specific populations, not a universal starting plan.'},
+   {title:'Dose-ranging context',body:'PROGRESS-HF randomized participants with heart failure with reduced ejection fraction to placebo, 4 mg, or 40 mg subcutaneous elamipretide once daily for 28 days. Neither elamipretide group significantly improved the primary ventricular-volume outcome versus placebo.'},
+   {title:'Research limitations',body:'Clinical programs have produced mixed outcomes across indications. MMPOWER-3 did not demonstrate significant benefit on its primary endpoints in the overall genetically diverse primary mitochondrial myopathy population.'},
+   {title:'Planning context',body:'School can show and model a published study regimen only with its population, route, duration and source attached. Community-style microgram ranges, fasting timing, reconstitution volumes and cycling conventions require independent sourcing before they are presented as reference data.'}
+  ]},
  {id:'nad-plus',name:'NAD+',aliases:['nad','nad+','nicotinamide adenine dinucleotide'],kind:'Endogenous cofactor / metabolite',accent:'#7C5CFF',referenceMode:'custom-only',
   summary:'NAD+ is a naturally occurring cellular cofactor central to redox reactions and energy metabolism. It is not a peptide.',
   plainEnglish:'Cells use NAD+ as part of energy and repair chemistry. Research and commercial contexts can involve very different routes and formulations, so “NAD+” should never be treated as one universal protocol.',
