@@ -3,7 +3,7 @@
   "version": "0.4.0",
   "private": true,
   "scripts": {
-    "test": "node --test engine033.test.cjs setup033.test.cjs calculation032.test.cjs native-time031.test.cjs reminders03.test.cjs notification-capability03.test.cjs multiplan04.test.cjs ui04.test.cjs",
+    "test": "node --test engine033.test.cjs setup033.test.cjs calculation032.test.cjs native-time031.test.cjs reminders03.test.cjs notification-capability03.test.cjs multiplan04.test.cjs multiplan-migration04.test.cjs ui04.test.cjs",
     "test:ui": "node ui033.test.cjs"
   },
   "devDependencies": {
