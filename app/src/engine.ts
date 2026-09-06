@@ -1,10 +1,12 @@
+import {stageDays,planDays,durationError} from './duration';
+import type {StageDuration} from './duration';
 import {practiceTransfer} from './research-practice';
 import{setupOriginFor}from'./reference-setup';
 import type{SetupOrigin}from'./reference-setup';
 import type { Compound, PlanTemplate } from './content';
 import { calculate } from './planning';
 export type Schedule = { kind: 'daily' | 'weekly' | 'intervalDays' | 'intervalHours'; days: number[]; times: string[]; interval: number | null; timesPerWeek?: number | null };
-export type Stage = { id: string; amountMg: string; amountUnit: 'mg'|'mcg'; weeks: string; override: Schedule | null };
+export type Stage = { id: string; amountMg: string; amountUnit: 'mg'|'mcg'; weeks: string; duration?:StageDuration; durationWeeks?:number|string; override: Schedule | null };
 export type Origin = { title: string; sourceClass: string; sourceTitle: string; sourceIds: string[]; originalStages: unknown[]; originalReference: Record<string, any>; packVersion: string; disclaimer?: string };
 export type Draft = { id: string; compoundId: string; compoundName: string; origin: Origin | null; customized: boolean; stages: Stage[]; defaultSchedule: Schedule | null; breakWeeks: string; startDate: string; vialMg: string; waterMl: string; initialVials: string; setupOrigin?:SetupOrigin|null; syringeCapacityUnits?:30|50|100|null; blendComposition?:{component:string;amountMg:number}[]; uxDefaults?: string[]; reviewed: boolean; reminderEnabled: boolean; reminderOffsetMinutes: number };
 export type Event = { id: string; stageId: string; stageIndex: number; scheduledAt: string; localDate: string; amountMg: number; amountUnit: 'mg'|'mcg'; calculation: NonNullable<ReturnType<typeof calculate>>; status: 'pending' | 'completed' | 'skipped'; completedAt?: string; skippedAt?: string; snoozedUntil?: string };
@@ -104,11 +106,11 @@ export function validateDraft(d: Draft): string[] {
  if(!d.reviewed)errors.push('Review your plan before starting.');
  if(!parseDate(d.startDate))errors.push('Choose a valid start date.');
  if(!d.stages.length||d.stages.length>24)errors.push('Use between one and 24 stages.');
- d.stages.forEach((s,i)=>{if(!s.amountMg.trim()||!Number.isFinite(Number(s.amountMg))||Number(s.amountMg)<=0)errors.push('Stage '+(i+1)+': enter a positive amount.');if(!/^\d+$/.test(s.weeks)||Number(s.weeks)<1||Number(s.weeks)>104)errors.push('Stage '+(i+1)+': choose 1–104 weeks.'); const err=scheduleError(s.override||d.defaultSchedule);if(err)errors.push('Stage '+(i+1)+': '+err);});
+ d.stages.forEach((s,i)=>{if(!s.amountMg.trim()||!Number.isFinite(Number(s.amountMg))||Number(s.amountMg)<=0)errors.push('Stage '+(i+1)+': enter a positive amount.');const durationIssue=durationError(s);if(durationIssue)errors.push('Stage '+(i+1)+': '+durationIssue); const err=scheduleError(s.override||d.defaultSchedule);if(err)errors.push('Stage '+(i+1)+': '+err);});
  if(d.breakWeeks==='' || !/^\d+$/.test(d.breakWeeks)||Number(d.breakWeeks)>104)errors.push('Choose a planned break, or confirm no break.');
  if(!calculate(d.vialMg,d.waterMl,'1'))errors.push('Enter valid vial strength and diluent volume.');
  if(d.initialVials!==''&&(!Number.isFinite(Number(d.initialVials))||Number(d.initialVials)<0))errors.push('Enter a valid supply quantity.');
- if(d.stages.reduce((n,s)=>n+Number(s.weeks||0),0)>260)errors.push('This prototype supports plans up to 260 weeks.');
+ if(planDays(d.stages)>1820)errors.push('This prototype supports plans up to 260 weeks.');
  return [...new Set(errors)];
 }
 function atTime(day: string,time: string) { const d=parseDate(day)!;const [h,m]=time.split(':').map(Number);d.setHours(h,m,0,0);if(d.getHours()!==h||d.getMinutes()!==m)throw Error(time+' does not exist on '+day+' because clocks change. Choose another time.');return d; }
@@ -116,7 +118,7 @@ export function generateEvents(d: Draft): Event[] {
  const errors=validateDraft(d);if(errors.length)throw Error(errors.join('\n'));
  const events:Event[]=[];let offset=0;
  for(let i=0;i<d.stages.length;i++){
-  const stage=d.stages[i],schedule=stage.override||d.defaultSchedule!,length=Number(stage.weeks)*7;
+  const stage=d.stages[i],schedule=stage.override||d.defaultSchedule!,length=stageDays(stage);
   const start=addDays(d.startDate,offset),end=addDays(start,length),anchor=stage.override?start:d.startDate;
   const dates:Date[]=[];
   if(schedule.kind==='intervalHours'){
@@ -147,9 +149,9 @@ export function logEvent(plan:SavedPlan,id:string,action:'completed'|'skipped'|'
  return {...plan,events:plan.events.map(e=>e.id!==id?e:action==='later'?{...e,snoozedUntil:new Date(now.getTime()+minutes*60000).toISOString()}:action==='completed'?{...e,status:'completed',completedAt:now.toISOString(),snoozedUntil:undefined}:{...e,status:'skipped',skippedAt:now.toISOString(),snoozedUntil:undefined})};
 }
 export function actualProgress(plan: SavedPlan,now=new Date()) {
- const today=localDate(now),elapsed=daysBetween(plan.startDate,today),totalDays=plan.stages.reduce((n,s)=>n+Number(s.weeks)*7,0),breakDays=Number(plan.breakWeeks)*7;
- let before=0,stageIndex=-1;for(let i=0;i<plan.stages.length;i++){const end=before+Number(plan.stages[i].weeks)*7;if(elapsed>=before&&elapsed<end){stageIndex=i;break;}before=end;}
- return {started:elapsed>=0,week:elapsed<0?0:Math.min(Math.floor(elapsed/7)+1,totalDays/7),totalWeeks:totalDays/7,stageIndex,stageWeek:stageIndex<0?0:Math.floor((elapsed-before)/7)+1,daysRemaining:Math.max(0,totalDays-Math.max(0,elapsed)),nextTransition:stageIndex>=0?addDays(plan.startDate,before+Number(plan.stages[stageIndex].weeks)*7):null,breakStart:addDays(plan.startDate,totalDays),breakEnd:addDays(plan.startDate,totalDays+breakDays),inBreak:elapsed>=totalDays&&elapsed<totalDays+breakDays,ended:elapsed>=totalDays+breakDays,completed:plan.events.filter(e=>e.status==='completed').length,due:plan.events.filter(e=>new Date(e.scheduledAt)<=now).length,total:plan.events.length};
+ const today=localDate(now),elapsed=daysBetween(plan.startDate,today),totalDays=planDays(plan.stages),breakDays=Number(plan.breakWeeks)*7;
+ let before=0,stageIndex=-1;for(let i=0;i<plan.stages.length;i++){const end=before+stageDays(plan.stages[i]);if(elapsed>=before&&elapsed<end){stageIndex=i;break;}before=end;}
+ return {totalDays,day:Math.max(0,Math.min(elapsed+1,totalDays)),stageDay:stageIndex<0?0:elapsed-before+1,started:elapsed>=0,week:elapsed<0?0:Math.min(Math.floor(elapsed/7)+1,Math.ceil(totalDays/7)),totalWeeks:Math.ceil(totalDays/7),stageIndex,stageWeek:stageIndex<0?0:Math.floor((elapsed-before)/7)+1,daysRemaining:Math.max(0,totalDays-Math.max(0,elapsed)),nextTransition:stageIndex>=0?addDays(plan.startDate,before+stageDays(plan.stages[stageIndex])):null,breakStart:addDays(plan.startDate,totalDays),breakEnd:addDays(plan.startDate,totalDays+breakDays),inBreak:elapsed>=totalDays&&elapsed<totalDays+breakDays,ended:elapsed>=totalDays+breakDays,completed:plan.events.filter(e=>e.status==='completed').length,due:plan.events.filter(e=>new Date(e.scheduledAt)<=now).length,total:plan.events.length};
 }
 export function inventoryCoverage(plan:SavedPlan,now=new Date()) {
  const used=plan.events.filter(e=>e.status==='completed').reduce((n,e)=>n+e.amountMg,0);
@@ -166,7 +168,7 @@ export function decodeStore(raw:string):Store {
  for(const p of [value.active,...value.archives].filter(Boolean)){if(!Array.isArray(p.events)||!parseDate(p.startDate))throw Error('Saved event data could not be read. It has been preserved.');}
  // Older saves already store explicit mg values. Add presentation units without changing quantities.
  for(const p of [value.draft,value.active,...value.archives].filter(Boolean)){
-  for(const stage of p.stages){stage.amountUnit??='mg';if(!['mg','mcg'].includes(stage.amountUnit))throw Error('Saved amount unit is unsupported. Your data is preserved.');}
+  for(const stage of p.stages){if(stage.duration&&(!['days','weeks'].includes(stage.duration.unit)||typeof stage.duration.value!=='string'))throw Error('Saved duration is unsupported. Your data is preserved.');stage.amountUnit??='mg';if(!['mg','mcg'].includes(stage.amountUnit))throw Error('Saved amount unit is unsupported. Your data is preserved.');}
   for(const event of p.events||[]){event.amountUnit??=p.stages[event.stageIndex]?.amountUnit||'mg';if(!['mg','mcg'].includes(event.amountUnit))throw Error('Saved event unit is unsupported. Your data is preserved.');}
  }
  return value;

@@ -1,3 +1,4 @@
+import NavIcon,{navColors,type NavGlyph} from './src/NavIcon';
 import ResearchPracticeCard from './src/ResearchPracticeCard';
 import Svg,{Circle,Path} from 'react-native-svg';
 import {researchPracticeFor,RESEARCH_PRACTICE_LABEL,RESEARCH_PRACTICE_NOTICE} from './src/research-practice';
@@ -74,22 +75,22 @@ function Molecule({ color = COLORS.blue }: { color?: string }) {
 }
 
 function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Screen) => void }) {
-  const items: { key: Screen; label: string; icon: string }[] = [
-    { key: "school", label: "Pep School", icon: "🎓" },
-    { key: "guide", label: "Guide", icon: "📖" },
-    { key: "tracker", label: "TODAY", icon: "▥" },
-    { key: "plans", label: "My Plans", icon: "▣" },
-    { key: "more", label: "More", icon: "☰" },
+  const items: { key: NavGlyph; label: string }[] = [
+    { key: "school", label: "Pep School" },
+    { key: "guide", label: "Guide" },
+    { key: "tracker", label: "TODAY" },
+    { key: "plans", label: "My Peptides" },
+    { key: "more", label: "More" },
   ];
   return (
-    <View style={styles.nav}>
+    <View testID="bottom-navigation" style={styles.nav}>
       {items.map((item) => {
         const tab = active === "schoolDetail" || active === "schoolMore" || active === "schoolSources" ? "school" : active === "detail" ? "guide" : ["plan", "planDetail", "planInventory", "calc", "review", "schedule"].includes(active) ? "plans" : ["history","planTracker"].includes(active) ? "tracker" : ["inventory", "reminders","profile","settings"].includes(active) ? "more" : active;
         const isActive = tab === item.key;
         return (
-          <Pressable accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: isActive }} key={item.key} onPress={() => setScreen(item.key)} style={[styles.navItem,item.key==='tracker'&&styles.todayDestination,isActive&&item.key==='tracker'&&styles.todayDestinationActive]}>
-            <Text style={[styles.navIcon, isActive && styles.navActive,item.key==='tracker'&&styles.todayInk]}>{item.icon}</Text>
-            <Text style={[styles.navLabel, isActive && styles.navActive,item.key==='tracker'&&styles.todayInk]}>{item.label}</Text>
+          <Pressable accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: isActive }} key={item.key} onPress={() => setScreen(item.key)} style={styles.navItem}>
+            <View testID={item.key==='tracker'?'today-center-button':undefined} style={item.key==='tracker'?[styles.todayCircle,isActive&&styles.todayCircleSelected]:[styles.iconWell,isActive&&{backgroundColor:navColors[item.key]+'15'}]}><NavIcon name={item.key} color={item.key==='tracker'?'#ffffff':navColors[item.key]} size={item.key==='tracker'?31:25}/></View>
+            <Text style={[styles.navLabel,{color:navColors[item.key],fontWeight:isActive||item.key==='tracker'?'800':'600'}]}>{item.key==='tracker'?'Today':item.label}</Text>
           </Pressable>
         );
       })}
@@ -370,7 +371,7 @@ export default function App() {
         {screen === "schoolMore" && renderSchoolDetail(true)}
         {screen === "schoolSources" && renderSources()}
         {screen === "more" && renderMore()}
-        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Text style={styles.detailTitle}>{screen==='profile'?'Profile':'Settings'}</Text><Text style={styles.helper}>{screen==='profile'?'Your local planner. Accounts and cloud sync are not connected in this prototype.':'Plan-specific syringe size, reminders and supply can be changed from My Plans → Edit. Preferences remain on this device.'}</Text><AppButton label="Open My Plans" onPress={()=>setScreen('plans')}/><AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
+        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Text style={styles.detailTitle}>{screen==='profile'?'Profile':'Settings'}</Text><Text style={styles.helper}>{screen==='profile'?'Your local planner. Accounts and cloud sync are not connected in this prototype.':'Plan-specific syringe size, reminders and supply can be changed from My Peptides → Edit. Preferences remain on this device.'}</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/><AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
         {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onEdit={editPlan} onDraft={()=>setScreen('plan')} onGuide={()=>setScreen('guide')}/>}
@@ -525,11 +526,14 @@ const styles = StyleSheet.create({
   todayMeta: { color: COLORS.muted, fontSize: 13 },
   nextCard: { marginTop: 14, borderWidth: 1, borderColor: COLORS.border, borderRadius: 20, padding: 16 },
   nextText: { color: COLORS.muted, fontSize: 13, lineHeight: 20 },
-  nav: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.border, backgroundColor: COLORS.white, paddingTop: 7, paddingBottom: 6 },
+  nav: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.border, backgroundColor: COLORS.white, paddingTop: 12, paddingBottom: 8, paddingHorizontal: 4, minHeight: 88 },
   todayDestination: { backgroundColor: COLORS.paleBlue, borderRadius: 15, borderWidth: 1, borderColor: COLORS.blue, marginHorizontal: 3 },
   todayDestinationActive: { backgroundColor: "#d8f2ff", borderWidth: 2 },
   todayInk: { color: "#087ba5", fontWeight: "800" },
-  navItem: { minHeight: 48, flex: 1, alignItems: "center", justifyContent: "center" },
+  iconWell: {width:44,height:40,borderRadius:13,alignItems:"center",justifyContent:"center"},
+  todayCircle: {width:56,height:56,borderRadius:28,marginTop:-6,backgroundColor:"#06aacc",alignItems:"center",justifyContent:"center",boxShadow:"0px 3px 8px rgba(6,170,204,0.25)"},
+  todayCircleSelected: {backgroundColor:"#009ebb",borderWidth:3,borderColor:"#a2eef6"},
+  navItem: { minHeight: 64, flex: 1, alignItems: "center", justifyContent: "center" },
   navIcon: { color: "#7B8AA6", fontSize: 20, fontWeight: "700" },
   navLabel: { color: "#7B8AA6", fontSize: 9, marginTop: 2 },
   navActive: { color: COLORS.blue },

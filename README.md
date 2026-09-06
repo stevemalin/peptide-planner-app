@@ -72,3 +72,11 @@ npm run test:ui
 ## Repository boundaries
 
 Never commit credentials, tokens, `.env` files, signing keys, production exports, customer data, device databases, node_modules, Expo state, build output, APKs or backups. The `.gitignore` also excludes generated native directories; if native development-build source is intentionally introduced later, review that policy explicitly. No deployment or production automation is included.
+
+## Days/Weeks and daily navigation refinement
+
+Customer navigation is Pep School, Guide, Today, My Peptides, More. Today is the raised central vector control; Tomorrow previews the next calendar day's events without future completion actions. Existing internal plan and storage identifiers are unchanged.
+
+Stages may store explicit `duration: { value, unit: 'days' | 'weeks' }`. Legacy `weeks` or `durationWeeks` values are interpreted as Weeks on read, without rewriting saved events or active-edit fingerprints. Calendar-day offsets drive stage ranges, transitions, progress and event generation. Days are never encoded as fractional weeks. Existing historical events remain unchanged during active edits.
+
+Run `node --test duration04.test.cjs` and `node duration-ui04.cjs` for focused duration, migration, Tomorrow and navigation checks. Browser fixtures use isolated profiles; Steve's Chrome and Edge storage must remain separate and untouched.

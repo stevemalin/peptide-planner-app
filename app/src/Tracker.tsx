@@ -1,3 +1,4 @@
+import {stageDays,durationLabel} from './duration';
 import React,{useRef,useState}from'react';
 import{Text,View,Pressable,StyleSheet}from'react-native';
 import type{SavedPlan,Event,Store}from'./engine';
@@ -18,11 +19,11 @@ export default function Tracker({plan,archives,now,update,initialTab='Today'}:{p
  const history=[...archives,plan].flatMap(owner=>owner.events.filter(e=>e.status!=='pending'||new Date(e.scheduledAt)<now).map(e=>({e,owner}))).sort((a,b)=>b.e.scheduledAt.localeCompare(a.e.scheduledAt));
  const [historyLimit,setHistoryLimit]=useState(30);
  return <>
-  <View style={u.row}>{['Today','Calendar','History'].map(name=><Pressable key={name} accessibilityRole="tab" accessibilityLabel={name} accessibilityState={{selected:tab===name}} onPress={()=>setTab(name)} style={[u.pill,tab===name&&u.selected]}><Text style={u.heading}>{name}</Text></Pressable>)}</View>
+  <View style={u.row}>{['Today','Tomorrow','Calendar','History'].map(name=><Pressable key={name} accessibilityRole="tab" accessibilityLabel={name} accessibilityState={{selected:tab===name}} onPress={()=>setTab(name)} style={[u.pill,tab===name&&u.selected]}><Text style={u.heading}>{name}</Text></Pressable>)}</View>
   {!!error&&<Text style={u.error}>{error}</Text>}{!!message&&<Text accessibilityLiveRegion="polite" style={u.small}>{message}</Text>}
   {tab==='Today'&&<>
-   <Card><Text style={u.title}>{plan.compoundName}</Text><Text style={u.heading}>{!p.started?'Starts '+prettyDate(plan.startDate):p.inBreak?'Planned break':p.ended?'End of modelled plan':`Week ${p.week} of ${p.totalWeeks}`}</Text>
-    {p.stageIndex>=0&&<Text style={u.body}>Stage {p.stageIndex+1} · Week {p.stageWeek} of {plan.stages[p.stageIndex].weeks}</Text>}
+   <Card><Text style={u.title}>{plan.compoundName}</Text><Text style={u.heading}>{!p.started?'Starts '+prettyDate(plan.startDate):p.inBreak?'Planned break':p.ended?'End of modelled plan':`Day ${p.day} of ${p.totalDays}`}</Text>
+    {p.stageIndex>=0&&<Text style={u.body}>Stage {p.stageIndex+1} · Day {p.stageDay} · {durationLabel(plan.stages[p.stageIndex])}</Text>}
     <Text style={u.body}>{p.daysRemaining} days remaining in the stages</Text><Text style={u.body}>{p.completed} of {p.due} scheduled events completed</Text><Text style={u.small}>{p.total} events in the full plan. Calendar progress is independent of completions.</Text>
     {p.nextTransition&&<Text style={u.body}>Next: {p.stageIndex<plan.stages.length-1?'Stage '+(p.stageIndex+2):Number(plan.breakWeeks)>0?'Planned break':'End of plan stages'} · {prettyDate(p.nextTransition)}</Text>}
     <Text style={u.small}>Planned break: {Number(plan.breakWeeks)>0?prettyDate(p.breakStart)+' to '+prettyDate(addDays(p.breakEnd,-1)):'None selected'}</Text>
@@ -32,16 +33,17 @@ export default function Tracker({plan,archives,now,update,initialTab='Today'}:{p
    <Card><Text style={u.heading}>Next scheduled event</Text><Text style={u.body}>{future?prettyDate(future.localDate)+' · '+prettyTime(future.scheduledAt):'No future events in this model.'}</Text>{due.length>0&&<Text style={u.small}>{due.length} past event(s) awaiting a log. Review them in Calendar or History.</Text>}</Card>
    {candidate?<>{eventCard(candidate,plan,true)}<Syringe capacityOverride={plan.syringeCapacityUnits??null} onCapacityChange={size=>update(s=>s.active?.id===plan.id?{...s,active:{...s.active,syringeCapacityUnits:size,setupOrigin:s.active.setupOrigin?{...s.active.setupOrigin,customized:s.active.setupOrigin.customized||size!==s.active.setupOrigin.original.defaultSyringeCapacityUnits}:undefined}}:s).catch(e=>setError(String(e)))} result={candidate.calculation} amount={quantityFromMg(candidate.amountMg,candidate.amountUnit)} glow={plan.compoundId==='glow-70'}/></>:<Text style={u.body}>All generated events have been logged.</Text>}
   </>}
+  {tab==='Tomorrow'&&<><Text style={u.heading}>Tomorrow · {prettyDate(addDays(localDate(now),1))}</Text>{plan.events.filter(e=>e.localDate===addDays(localDate(now),1)).map(e=>eventCard(e,plan,false))}{!plan.events.some(e=>e.localDate===addDays(localDate(now),1))&&<Text style={u.body}>Nothing scheduled tomorrow.</Text>}</>}
   {tab==='Calendar'&&<>
    <View style={[u.row,{justifyContent:'space-between',marginTop:18}]}><Pressable accessibilityRole="button" accessibilityLabel="Previous month" onPress={()=>moveMonth(-1)}><Text style={u.link}>‹</Text></Pressable><Text style={u.heading}>{monthDate.toLocaleDateString(undefined,{month:'long',year:'numeric'})}</Text><Pressable accessibilityRole="button" accessibilityLabel="Next month" onPress={()=>moveMonth(1)}><Text style={u.link}>›</Text></Pressable></View>
    <View style={s.grid}>{['M','T','W','T','F','S','S'].map((day,i)=><Text key={i} style={s.weekday}>{day}</Text>)}{Array.from({length:leading},(_,i)=><View key={'blank'+i} style={s.cell}/>)}{Array.from({length:daysInMonth},(_,i)=>{
     const day=month.slice(0,8)+String(i+1).padStart(2,'0'),events=plan.events.filter(e=>e.localDate===day),statuses=[...new Set(events.map(e=>eventStatus(e,now)))];
-    let offset=0;const stageStart=plan.stages.some(stage=>{const hit=addDays(plan.startDate,offset)===day;offset+=Number(stage.weeks)*7;return hit;});const isBreak=day===p.breakStart&&Number(plan.breakWeeks)>0,isBreakEnd=day===p.breakEnd&&Number(plan.breakWeeks)>0;
+    let offset=0;const stageStart=plan.stages.some(stage=>{const hit=addDays(plan.startDate,offset)===day;offset+=stageDays(stage);return hit;});const isBreak=day===p.breakStart&&Number(plan.breakWeeks)>0,isBreakEnd=day===p.breakEnd&&Number(plan.breakWeeks)>0;
     return <Pressable key={day} accessibilityRole="button" accessibilityLabel={'Calendar '+day} onPress={()=>setSelected(day)} style={[s.cell,day===selected&&s.daySelected]}><Text style={s.dayText}>{i+1}</Text><View style={{flexDirection:'row',gap:2}}>{statuses.map(status=><View key={status} style={[s.dot,{backgroundColor:colors[status]}]}/>)}</View>{(stageStart||isBreak||isBreakEnd)&&<Text style={s.marker}>{isBreak?'B':isBreakEnd?'E':'S'}</Text>}</Pressable>;
    })}</View>
    <View style={u.row}>{Object.entries(colors).map(([status,color])=><Text key={status} style={[u.small,{color}]}>● {status}</Text>)}</View><Text style={u.small}>S = stage begins · B = break begins · E = break ends</Text>
    <Text style={[u.heading,{marginTop:18}]}>{prettyDate(selected)}</Text>
-   {(()=>{let offset=0;return plan.stages.map((stage,i)=>{const date=addDays(plan.startDate,offset);offset+=Number(stage.weeks)*7;return date===selected?<Text key={stage.id} style={u.body}>Stage {i+1} begins</Text>:null;});})()}
+   {(()=>{let offset=0;return plan.stages.map((stage,i)=>{const date=addDays(plan.startDate,offset);offset+=stageDays(stage);return date===selected?<Text key={stage.id} style={u.body}>Stage {i+1} begins</Text>:null;});})()}
    {Number(plan.breakWeeks)>0&&selected===p.breakStart&&<Text style={u.body}>Planned break begins</Text>}{Number(plan.breakWeeks)>0&&selected===p.breakEnd&&<Text style={u.body}>Planned break ends</Text>}
    {plan.events.filter(e=>e.localDate===selected).map(e=>eventCard(e,plan,true))}
    {!plan.events.some(e=>e.localDate===selected)&&<Text style={u.body}>No events on this day.</Text>}
