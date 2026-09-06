@@ -21,8 +21,14 @@ jobs:
       - name: Install app dependencies
         working-directory: app
         run: npm ci
-      - name: Unit and engine tests
-        run: npm test
+      - name: 0.3.3 regression tests
+        run: node --test engine033.test.cjs setup033.test.cjs calculation032.test.cjs native-time031.test.cjs reminders03.test.cjs notification-capability03.test.cjs
+      - name: 0.4 multi-plan engine tests
+        run: node --test multiplan04.test.cjs
+      - name: 0.4 migration tests
+        run: node --test multiplan-migration04.test.cjs
+      - name: 0.4 review-surface tests
+        run: node --test ui04.test.cjs
       - name: TypeScript
         working-directory: app
         run: npx tsc --noEmit
