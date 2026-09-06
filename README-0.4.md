@@ -90,3 +90,11 @@ Validation: 87 local automated tests, TypeScript, Expo dependency compatibility 
 Reproduce restart coverage with a fresh `PEPTIDE_TEST_PROFILE` directory and `node upgrade-persistence-ui04.cjs before`, restart Expo, then `node upgrade-persistence-ui04.cjs after` with the same directory. The before phase refuses an existing profile rather than clearing it. Regular unit coverage includes v4 round-trip, draft/active-edit preservation, legacy single-plan migration, transitional multi-plan migration and malformed-data protection.
 
 No additional peptide content, CI infrastructure, production changes or merge to main.
+
+## First AURAPEP family content expansion — 2026-09-06 Pacific
+
+Pep School expands from 10 to 15 profiles with BPC-157, TB-500 / thymosin beta-4, ipamorelin, tesamorelin and cagrilintide. Each profile includes beginner-first context, evidence classification, deeper route/formulation limitations and direct PubMed primary-source links. BPC-157's two-person intravenous pilot is not presented as support for routine subcutaneous use; topical thymosin beta-4 research is not equated with injectable TB-500; ipamorelin intravenous PK/PD is not converted to a subcutaneous plan; tesamorelin remains formulation- and population-specific; and cagrilintide trial schedules remain investigational rather than recommendations.
+
+All five entries are custom-only. They add no amount, schedule, vial strength, diluent, syringe calculation or transferable reference. Related-compound navigation covers the new families, and the School count is now data-driven.
+
+Validation: 102 automated tests passed; TypeScript passed; Expo dependencies are compatible; Expo Doctor passed 21/21. Browser inspection passed at 320, 412 and 1366 pixels with no overflow or console/runtime errors; the 320-pixel School screenshot was visually reviewed. This is browser acceptance only, not physical Android acceptance. No AURAPEP production connection, main change or merge was made.

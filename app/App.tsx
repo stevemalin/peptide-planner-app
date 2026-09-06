@@ -163,8 +163,8 @@ export default function App() {
       <View style={styles.searchWrap}><Text style={styles.searchIcon}>⌕</Text>
         <TextInput accessibilityLabel="Search Pep School" value={schoolQuery} onChangeText={setSchoolQuery} placeholder="Name, alias or abbreviation" style={styles.searchInput} />
       </View>
-      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>The 101 library</Text><Text style={styles.sectionLink}>10 compounds</Text></View>
-      <Text style={styles.helper}>Ten introductions · evidence and sources included.</Text>
+      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>The 101 library</Text><Text style={styles.sectionLink}>{compounds.length} compounds</Text></View>
+      <Text style={styles.helper}>Beginner introductions · evidence classes and primary sources included.</Text>
       {searchCompounds(schoolQuery).map(c => (
         <Pressable accessibilityRole="button" accessibilityLabel={c.name + " 101"} key={c.id} onPress={() => openSchool(c)} style={styles.schoolRow}>
           <Molecule color={c.accent} /><View style={{ flex: 1 }}><Text style={styles.planOptionTitle}>{c.name}</Text><Text style={styles.detailMeta}>101 · Fundamentals & context</Text><Text style={styles.smallBadge}>{c.supplied?.evidenceBadge}</Text></View><Text style={styles.linkArrow}>›</Text>

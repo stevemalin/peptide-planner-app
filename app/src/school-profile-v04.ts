@@ -4,7 +4,8 @@ import type {SchoolSection,RelatedSchoolItem} from './SchoolAccordion';
 const relatedMap:Record<string,string[]>={
  retatrutide:['tirzepatide','semaglutide'],tirzepatide:['retatrutide','semaglutide'],semaglutide:['tirzepatide','retatrutide'],
  'ghk-cu':['kpv','glow-70'],kpv:['ghk-cu','glow-70'],'glow-70':['ghk-cu','kpv'],
- 'ss-31':['mots-c','nad-plus'],'mots-c':['ss-31','nad-plus'],'nad-plus':['mots-c','ss-31'],'5-amino-1mq':['nad-plus','mots-c']
+ 'ss-31':['mots-c','nad-plus'],'mots-c':['ss-31','nad-plus'],'nad-plus':['mots-c','ss-31'],'5-amino-1mq':['nad-plus','mots-c'],
+ 'bpc-157':['tb-500','kpv'],'tb-500':['bpc-157','ghk-cu'],'ipamorelin':['tesamorelin'],'tesamorelin':['ipamorelin'],'cagrilintide':['semaglutide','tirzepatide']
 };
 
 export function schoolSections(compound:Compound):SchoolSection[]{
