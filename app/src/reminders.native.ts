@@ -31,16 +31,17 @@ export async function enableReminders(){
  }catch{return false;}
 }
 let serial=Promise.resolve();
-export function reconcileReminders(plan:SavedPlan|null):Promise<ReminderReport>{
+export function reconcileReminders(input:SavedPlan|SavedPlan[]|null):Promise<ReminderReport>{
  const task=serial.catch(()=>{}).then(async()=>{
   const Notifications=getLocalNotifications();if(!Notifications)return unavailable();
+  const plans=Array.isArray(input)?input:input?[input]:[];const plan=plans.find(p=>p.reminderEnabled);
   const now=Date.now();const permission=await Notifications.getPermissionsAsync();
-  const upcoming=plan?.reminderEnabled&&permission.granted?plan.events.filter(e=>e.status==='pending').map(e=>({event:e,at:e.snoozedUntil?new Date(e.snoozedUntil).getTime():new Date(e.scheduledAt).getTime()-plan.reminderOffsetMinutes*60000})).filter(e=>e.at>now).sort((a,b)=>a.at-b.at).slice(0,60):[];
-  const desired=new Map(upcoming.map(item=>['pep03:'+item.event.id+':'+item.at,item]));
+  const upcoming=plan?.reminderEnabled&&permission.granted?plans.filter(p=>p.reminderEnabled).flatMap(p=>p.events.filter(e=>e.status==='pending').map(e=>({planId:p.id,event:e,at:e.snoozedUntil?new Date(e.snoozedUntil).getTime():new Date(e.scheduledAt).getTime()-p.reminderOffsetMinutes*60000}))).filter(e=>e.at>now).sort((a,b)=>a.at-b.at).slice(0,60):[];
+  const desired=new Map(upcoming.map(item=>['pep04:'+item.planId+':'+item.event.id+':'+item.at,item]));
   const existing=await Notifications.getAllScheduledNotificationsAsync();
   for(const item of existing)if(item.content.data?.owner===owner&&!item.content.data?.test&&!desired.has(item.identifier))await Notifications.cancelScheduledNotificationAsync(item.identifier);
   const existingIds=new Set(existing.map(item=>item.identifier));
-  for(const [id,item]of desired)if(!existingIds.has(id))await Notifications.scheduleNotificationAsync({identifier:id,content:{title:'Plan reminder',body:'A saved plan event is ready to review.',sound:'default',data:{owner,eventId:item.event.id,planId:plan!.id}},trigger:{type:Notifications.SchedulableTriggerInputTypes.DATE,date:new Date(item.at),channelId}});
+  for(const [id,item]of desired)if(!existingIds.has(id))await Notifications.scheduleNotificationAsync({identifier:id,content:{title:'Plan reminder',body:'A saved plan event is ready to review.',sound:'default',data:{owner,eventId:item.event.id,planId:item.planId}},trigger:{type:Notifications.SchedulableTriggerInputTypes.DATE,date:new Date(item.at),channelId}});
   const through=upcoming.length?new Date(upcoming[upcoming.length-1].at).toISOString():undefined;
   return {message:!plan?.reminderEnabled?'Reminders are off.':!permission.granted?'Notifications are not permitted. Enable them to receive reminders.':upcoming.length+' local reminders prepared. Android controls delivery timing.',count:upcoming.length,through,enabled:!!permission.granted};
  }).catch(()=>({...unavailable(),message:'Local reminders could not be prepared. Your saved plan is unchanged. Check notification permissions or retry in a development build.'}));serial=task.then(()=>{});return task;
@@ -50,4 +51,3 @@ export function listenForReminder(callback:()=>void){
  const Notifications=getLocalNotifications();if(!Notifications)return()=>{};
  try{const sub=Notifications.addNotificationResponseReceivedListener(response=>{if(response.notification.request.content.data?.owner===owner)callback();});return()=>{try{sub.remove();}catch{}};}catch{return()=>{};}
 }
-

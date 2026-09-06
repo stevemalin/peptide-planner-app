@@ -8,7 +8,7 @@ export type Origin = { title: string; sourceClass: string; sourceTitle: string; 
 export type Draft = { id: string; compoundId: string; compoundName: string; origin: Origin | null; customized: boolean; stages: Stage[]; defaultSchedule: Schedule | null; breakWeeks: string; startDate: string; vialMg: string; waterMl: string; initialVials: string; setupOrigin?:SetupOrigin|null; syringeCapacityUnits?:30|50|100|null; blendComposition?:{component:string;amountMg:number}[]; uxDefaults?: string[]; reviewed: boolean; reminderEnabled: boolean; reminderOffsetMinutes: number };
 export type Event = { id: string; stageId: string; stageIndex: number; scheduledAt: string; localDate: string; amountMg: number; amountUnit: 'mg'|'mcg'; calculation: NonNullable<ReturnType<typeof calculate>>; status: 'pending' | 'completed' | 'skipped'; completedAt?: string; skippedAt?: string; snoozedUntil?: string };
 export type SavedPlan = Draft & { activatedAt: string; events: Event[]; inventoryTotalMg: number | null; timezone: string };
-export type Store = { version: 3; draft: Draft | null; active: SavedPlan | null; archives: SavedPlan[] };
+export type Store = { version: 3; activePlans?: SavedPlan[]; draft: Draft | null; active: SavedPlan | null; archives: SavedPlan[] };
 export const blankStore = (): Store => ({ version: 3, draft: null, active: null, archives: [] });
 export const blankSchedule = (): Schedule => ({ kind: 'weekly', days: [6], times: ['09:00'], interval: null, timesPerWeek: 1 });
 export const uid = () => Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 9);

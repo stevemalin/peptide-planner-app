@@ -13,9 +13,15 @@ import {
   Alert,
   BackHandler,
   AppState,
+  Linking,
 } from "react-native";
 
-import { compounds, searchCompounds, contentPackVersion } from "./src/content";
+import {library as compounds,searchLibrary as searchCompounds} from "./src/library-v04";
+import QuickStart from "./src/QuickStart";
+import MyPlans from "./src/MyPlans";
+import AggregateTracker from "./src/AggregateTracker";
+import {getActivePlans} from "./src/multiplan-v04";
+import {scopedPlanUpdate} from "./src/plan-actions-v04";
 import type { Compound, PlanStage, PlanTemplate } from "./src/content";
 import Workspace from "./src/Workspace";
 import { usePlannerStore } from "./src/store";
@@ -23,7 +29,7 @@ import { importReference, newDraft } from "./src/engine";
 import { Evidence } from "./src/ui";
 import { reconcileReminders, listenForReminder } from "./src/reminders";
 import type { PlanMode } from "./src/planning";
-type Screen = "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "more";
+type Screen = "plans" | "planInventory" | "planDetail" | "planTracker" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "more";
 
 const COLORS = {
   ink: "#0E1C4A",
@@ -64,14 +70,14 @@ function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Scree
   const items: { key: Screen; label: string; icon: string }[] = [
     { key: "school", label: "Pep School", icon: "▤" },
     { key: "guide", label: "Guide", icon: "⌂" },
-    { key: "plan", label: "My Plan", icon: "▣" },
+    { key: "plans", label: "My Plans", icon: "▣" },
     { key: "tracker", label: "Tracker", icon: "▥" },
     { key: "more", label: "More", icon: "☰" },
   ];
   return (
     <View style={styles.nav}>
       {items.map((item) => {
-        const tab = active === "schoolDetail" || active === "schoolMore" || active === "schoolSources" ? "school" : active === "detail" ? "guide" : ["calc", "review", "schedule"].includes(active) ? "plan" : active === "history" ? "tracker" : ["inventory", "reminders"].includes(active) ? "more" : active;
+        const tab = active === "schoolDetail" || active === "schoolMore" || active === "schoolSources" ? "school" : active === "detail" ? "guide" : ["plan", "planDetail", "planInventory", "calc", "review", "schedule"].includes(active) ? "plans" : ["history","planTracker"].includes(active) ? "tracker" : ["inventory", "reminders"].includes(active) ? "more" : active;
         const isActive = tab === item.key;
         return (
           <Pressable accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: isActive }} key={item.key} onPress={() => setScreen(item.key)} style={styles.navItem}>
@@ -85,12 +91,19 @@ function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Scree
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("guide");
+  const [screen, setScreen] = useState<Screen>("school");
   const [selected, setSelected] = useState<Compound>(compounds[0]);
   const [query,setQuery] = useState("");
   const [schoolQuery,setSchoolQuery] = useState("");
   const [showMechanism,setShowMechanism] = useState(false);
   const saved = usePlannerStore();
+  const [selectedPlanId,setSelectedPlanId]=useState<string|null>(null);
+  const plans=getActivePlans(saved.store);
+  const focused=plans.find(p=>p.id===selectedPlanId)??plans[0]??null;
+  const scopedStore={...saved.store,active:focused,draft:screen==='planDetail'?null:saved.store.draft};
+  const scopedUpdate=(change:Parameters<typeof saved.update>[0])=>saved.update(old=>{const next=scopedPlanUpdate(old,focused?.id??null,change);if(getActivePlans(next).length>getActivePlans(old).length)setSelectedPlanId(getActivePlans(next).at(-1)!.id);return next;});
+  const openPlan=(id:string)=>{setSelectedPlanId(id);setScreen('planDetail');};
+  const workspaceNavigate=(target:any)=>{if(target==='tracker'){setScreen('planTracker');}else if(target==='inventory')setScreen('planInventory');else setScreen(target);};
   const [reminderError,setReminderError] = useState("");
   const filtered=searchCompounds(query);
   const openCompound=(compound:Compound)=>{setSelected(compound);setScreen("detail");};
@@ -101,15 +114,15 @@ export default function App() {
   };
   useEffect(()=>{
     const subscription=BackHandler.addEventListener("hardwareBackPress",()=>{
-      const parent:Partial<Record<Screen,Screen>>={schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"review",review:"guide",schedule:"review",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
+      const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"review",review:"guide",schedule:"review",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
       if(!parent[screen])return false;setScreen(parent[screen]!);return true;
     });return()=>subscription.remove();
   },[screen]);
   useEffect(()=>{
     if(!saved.ready||saved.loadFailed)return;
-    let mounted=true;const sync=()=>reconcileReminders(saved.store.active).then(()=>{if(mounted)setReminderError("");}).catch(e=>{if(mounted)setReminderError("Reminders need attention. Open More → Reminders. "+String(e));});
+    let mounted=true;const sync=()=>reconcileReminders(plans).then(()=>{if(mounted)setReminderError("");}).catch(e=>{if(mounted)setReminderError("Reminders need attention. Open More → Reminders. "+String(e));});
     sync();const sub=AppState.addEventListener("change",state=>{if(state==="active")sync();});return()=>{mounted=false;sub.remove();};
-  },[saved.ready,saved.store.active,saved.loadFailed]);
+  },[saved.ready,saved.store.activePlans,saved.loadFailed]);
   useEffect(()=>listenForReminder(()=>setScreen("tracker")),[]);
 
   const renderSchool = () => (
@@ -120,11 +133,12 @@ export default function App() {
         <Text style={styles.heroTitle}>A clearer place{"\n"}to begin.</Text>
         <Text style={styles.heroSub}>Learn here. Plan in Guide.</Text>
       </View>
+      <QuickStart/>
       <View style={styles.searchWrap}><Text style={styles.searchIcon}>⌕</Text>
         <TextInput accessibilityLabel="Search Pep School" value={schoolQuery} onChangeText={setSchoolQuery} placeholder="Name, alias or abbreviation" style={styles.searchInput} />
       </View>
-      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>The 101 library</Text><Text style={styles.sectionLink}>6 compounds</Text></View>
-      <Text style={styles.helper}>Six introductions · evidence and sources included.</Text>
+      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>The 101 library</Text><Text style={styles.sectionLink}>10 compounds</Text></View>
+      <Text style={styles.helper}>Ten introductions · evidence and sources included.</Text>
       {searchCompounds(schoolQuery).map(c => (
         <Pressable accessibilityRole="button" accessibilityLabel={c.name + " 101"} key={c.id} onPress={() => openSchool(c)} style={styles.schoolRow}>
           <Molecule color={c.accent} /><View style={{ flex: 1 }}><Text style={styles.planOptionTitle}>{c.name}</Text><Text style={styles.detailMeta}>101 · Fundamentals & context</Text><Text style={styles.smallBadge}>{c.supplied?.evidenceBadge}</Text></View><Text style={styles.linkArrow}>›</Text>
@@ -172,7 +186,7 @@ export default function App() {
         {record.composition && <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Exact blend composition</Text>{record.composition.map(component => <Text key={component.component} style={styles.nextText}>{component.component} · {component.amountMg} mg</Text>)}<Text style={styles.lessonTitle}>Total: {record.composition.reduce((sum, item) => sum + item.amountMg, 0)} mg</Text></View>}
       </>}
       <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Reference Plans</Text></View>
-      {plans.length ? plans.map(plan => renderReference(plan, deep)) : <View style={styles.lessonCard}><Text style={styles.nextText}>No established human reference schedule identified in the research reviewed.</Text><Text style={styles.helper}>You can create a Custom Plan in Guide.</Text></View>}
+      {plans.length ? plans.map(plan => renderReference(plan, deep)) : <View style={styles.lessonCard}><Text style={styles.nextText}>No established human reference schedule identified in the research reviewed.</Text><Text style={styles.helper}>You can create a Custom Plan in Guide. No schedule or setup values will be filled in without a reference.</Text></View>}
       {record.commonResearchPractice && <View style={styles.lessonCard}>
         <Evidence kind={record.commonResearchPractice.sourceClass}/>
         <Text style={styles.lessonTitle}>{record.commonResearchPractice.title}</Text>
@@ -194,7 +208,8 @@ export default function App() {
     <Pressable accessibilityRole="button" accessibilityLabel="Back to Learn More" onPress={() => setScreen("schoolMore")}><Text style={styles.back}>‹ Learn More</Text></Pressable>
     <Text style={styles.kicker}>SOURCES</Text><Text style={styles.detailTitle}>{selected.name}</Text><Text style={styles.detailMeta}>Sources & references</Text>
     {(selected.supplied!.commonResearchPractice?.sourceUrls||[]).map((url:string,i:number)=><View key={url} style={styles.lessonCard}><Text style={styles.sourceClass}>COMMON RESEARCH PRACTICE</Text><Text selectable style={styles.nextText}>{url}</Text></View>)}
-    {selected.supplied!.sources.map(source => <View key={source.id} testID={"source-" + source.id} style={styles.lessonCard}><Text selectable style={styles.sourceClass}>{source.id}</Text><Text style={styles.lessonTitle}>{source.title}</Text><Text style={styles.helper}>{source.type}</Text></View>)}
+    {selected.supplied!.sources.length===0&&<Text style={styles.helper}>This library entry provides research context only. Study citations and a transferable reference plan have not been supplied.</Text>}
+    {selected.supplied!.sources.map(source => <View key={source.id} testID={"source-" + source.id} style={styles.lessonCard}><Text selectable style={styles.sourceClass}>{source.id}</Text><Text style={styles.lessonTitle}>{source.title}</Text><Text style={styles.helper}>{source.type}</Text>{source.url&&<Pressable accessibilityRole="link" accessibilityLabel={"Read "+source.title} onPress={()=>Linking.openURL(source.url!)}><Text style={styles.back}>Read source ↗</Text></Pressable>}</View>)}
   </ScrollView>;
   const renderMore = () => <ScrollView contentContainerStyle={styles.scrollContent}>
     <Text style={[styles.kicker, { marginTop: 20 }]}>MORE</Text><Text style={styles.detailTitle}>Your space</Text><Text style={styles.detailMeta}>Useful extras, kept out of the way.</Text>
@@ -202,7 +217,7 @@ export default function App() {
       const target:Screen|null=label==="Inventory"?"inventory":label==="History"?"history":label==="Reminders"?"reminders":label==="Sources / disclaimers"?"schoolSources":null;
       return <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={!target} key={label} style={styles.moreRow} onPress={()=>target&&setScreen(target)}><Text style={styles.planOptionTitle}>{label}</Text><Text style={styles.smallBadge}>{target?'Open ›':'Coming later'}</Text></Pressable>;
     })}
-    <View style={styles.notice}><Text style={styles.noticeText}>Prototype 0.3.3 · saved on this device. Reference library updated. No shop or cloud services are connected.</Text></View>
+    <View style={styles.notice}><Text style={styles.noticeText}>Prototype 0.4 · saved on this device. Reference library updated. No shop or cloud services are connected.</Text></View>
   </ScrollView>;
 
   const renderGuide = () => (
@@ -242,7 +257,7 @@ export default function App() {
       </View>
 
       <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Featured Peptides</Text>
+        <Text style={styles.sectionTitle}>Explore compounds</Text>
         <Text style={styles.sectionLink}>View All ›</Text>
       </View>
 
@@ -320,7 +335,7 @@ export default function App() {
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
       <View style={styles.topLine}>
         <Text style={styles.tempBrand}>PEPTIDE GUIDE</Text>
-        <Text style={styles.tempStatus}>Prototype 0.3.3</Text>
+        <Text style={styles.tempStatus}>Prototype 0.4</Text>
       </View>
       <View style={{paddingHorizontal:20,paddingVertical:3}}><Text testID="save-status" style={styles.smallBadge}>{saved.saving?'Saving on device…':saved.error?saved.error:'Saved on this device'}</Text>{!!saved.error&&!saved.loadFailed&&<AppButton label="Retry save" onPress={()=>saved.retry().catch(()=>{})} secondary/>}{!!reminderError&&<Text style={styles.smallBadge}>{reminderError}</Text>}</View>
       <View key={screen} style={styles.main}>
@@ -331,7 +346,10 @@ export default function App() {
         {screen === "more" && renderMore()}
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
-        {(["plan","review","schedule","calc","tracker","inventory","reminders","history"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={screen as any} navigate={setScreen} store={saved.store} update={saved.update} onGuide={()=>setScreen("guide")}/>}
+        {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
+        {(screen==='tracker'||screen==='history')&&!saved.loadFailed&&<AggregateTracker plans={plans} archives={saved.store.archives} update={saved.update} initialTab={screen==='history'?'History':'Today'} onOpen={openPlan}/>}
+        {screen==='inventory'&&!saved.loadFailed&&<MyPlans inventory store={saved.store} update={saved.update} onOpen={id=>{setSelectedPlanId(id);setScreen('planInventory');}} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
+        {(["plan","planDetail","planInventory","review","schedule","calc","planTracker","reminders"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={(screen==='planDetail'?'plan':screen==='planInventory'?'inventory':screen==='planTracker'?'tracker':screen) as any} navigate={workspaceNavigate} store={scopedStore} update={scopedUpdate} onGuide={()=>setScreen("guide")}/>}
       </View>
       <BottomNav active={screen} setScreen={setScreen} />
     </SafeAreaView></SafeAreaProvider>
@@ -360,7 +378,7 @@ const styles = StyleSheet.create({
   lessonTitle: { color: COLORS.ink, fontWeight: "800", fontSize: 16, marginBottom: 7 },
   moreRow: { padding: 17, borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, marginTop: 12 },
   previewRow: { marginTop: 14, gap: 8 },
-  safe: { flex: 1, backgroundColor: COLORS.white },
+  safe: { flex: 1, width: "100%", maxWidth: 900, alignSelf: "center", backgroundColor: COLORS.white },
   main: { flex: 1 },
   topLine: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.border },
   tempBrand: { color: COLORS.ink, fontWeight: "800", letterSpacing: 1.2, fontSize: 12 },
@@ -486,7 +504,3 @@ const styles = StyleSheet.create({
   navLabel: { color: "#7B8AA6", fontSize: 9, marginTop: 2 },
   navActive: { color: COLORS.blue },
 });
-
-
-
-

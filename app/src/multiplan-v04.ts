@@ -6,7 +6,7 @@ export type OwnedEvent={plan:SavedPlan;event:Event};
 
 export function getActivePlans(store:any):SavedPlan[]{
  const explicit=Array.isArray(store?.activePlans)?store.activePlans.filter(Boolean):[];
- if(explicit.length)return explicit;
+ if(Array.isArray(store?.activePlans))return explicit;
  return store?.active?[store.active]:[];
 }
 

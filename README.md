@@ -1,6 +1,6 @@
 # Peptide Planner app
 
-Private development source for the separately branded Peptide Planner Android app. Current source baseline: **Prototype 0.3.3** (Prototype 0.3.x). This repository contains only the mobile prototype and its tests. It is independent of AURAPEP WordPress/WooCommerce and has no production or customer-data integration.
+Private development source for the separately branded Peptide Planner Android app. Current development branch: **Prototype 0.4**, integrated into the established app. See [the 0.4 review handoff](README-0.4.md) for current browser behavior and persistence. Protected `main` baseline: **Prototype 0.3.3**. This repository contains only the mobile prototype and its tests. It is independent of AURAPEP WordPress/WooCommerce and has no production or customer-data integration.
 
 ## Architecture
 
