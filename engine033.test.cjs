@@ -28,7 +28,7 @@ test('common practice copies all fields, amounts and units, without substituting
 });
 test('adapter copies supported supplied extension fields without changing originals',()=>{
  const c=compounds[0],t=structuredClone(c.school.referenceSchedules[0]);Object.assign(t.suppliedPlan,{vialStrengthMg:12,reconstitutionVolumeMl:3,plannedBreakWeeks:2,startDate:'2026-09-07',schedule:{kind:'daily',days:[],times:['08:00'],interval:null}});
- const d=E.importReference(c,t);assert.equal(d.vialMg,'10');assert.equal(d.waterMl,'2');assert.equal(d.breakWeeks,'2');assert.equal(d.defaultSchedule.kind,'daily');d.stages[0].amountMg='99';assert.equal(t.suppliedPlan.stages[0].amountMg,2);
+ const d=E.importReference(c,t);assert.equal(d.vialMg,'12');assert.equal(d.waterMl,'3');assert.equal(d.breakWeeks,'2');assert.equal(d.defaultSchedule.kind,'daily');d.stages[0].amountMg='99';assert.equal(t.suppliedPlan.stages[0].amountMg,2);
 });
 test('weekly events cross stage boundary once and exclude planned break',()=>{
  const events=E.generateEvents(make());assert.deepEqual(events.map(e=>e.localDate),['2026-09-07','2026-09-14','2026-09-21','2026-09-28']);assert.deepEqual(events.map(e=>e.amountMg),[2,2,3,3]);assert.equal(new Set(events.map(e=>e.id)).size,4);

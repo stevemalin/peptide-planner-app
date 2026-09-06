@@ -1,3 +1,6 @@
+import ResearchPracticeCard from './src/ResearchPracticeCard';
+import Svg,{Circle,Path} from 'react-native-svg';
+import {researchPracticeFor,RESEARCH_PRACTICE_LABEL,RESEARCH_PRACTICE_NOTICE} from './src/research-practice';
 import SetupPreview from './src/SetupPreview';
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -33,7 +36,7 @@ import { importReference, newDraft } from "./src/engine";
 import { Evidence } from "./src/ui";
 import { reconcileReminders, listenForReminder } from "./src/reminders";
 import type { PlanMode } from "./src/planning";
-type Screen = "plans" | "planInventory" | "planDetail" | "planTracker" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "more";
+type Screen = "profile" | "settings" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "more";
 
 const COLORS = {
   ink: "#0E1C4A",
@@ -81,7 +84,7 @@ function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Scree
   return (
     <View style={styles.nav}>
       {items.map((item) => {
-        const tab = active === "schoolDetail" || active === "schoolMore" || active === "schoolSources" ? "school" : active === "detail" ? "guide" : ["plan", "planDetail", "planInventory", "calc", "review", "schedule"].includes(active) ? "plans" : ["history","planTracker"].includes(active) ? "tracker" : ["inventory", "reminders"].includes(active) ? "more" : active;
+        const tab = active === "schoolDetail" || active === "schoolMore" || active === "schoolSources" ? "school" : active === "detail" ? "guide" : ["plan", "planDetail", "planInventory", "calc", "review", "schedule"].includes(active) ? "plans" : ["history","planTracker"].includes(active) ? "tracker" : ["inventory", "reminders","profile","settings"].includes(active) ? "more" : active;
         const isActive = tab === item.key;
         return (
           <Pressable accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: isActive }} key={item.key} onPress={() => setScreen(item.key)} style={styles.navItem}>
@@ -203,8 +206,8 @@ export default function App() {
         {record.composition && <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Exact blend composition</Text>{record.composition.map(component => <Text key={component.component} style={styles.nextText}>{component.component} · {component.amountMg} mg</Text>)}<Text style={styles.lessonTitle}>Total: {record.composition.reduce((sum, item) => sum + item.amountMg, 0)} mg</Text></View>}
       </>}
       <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Reference Plans</Text></View>
-      {plans.length ? plans.map(plan => renderReference(plan, deep)) : <View style={styles.lessonCard}><Text style={styles.nextText}>{selected.id==='ss-31'?'SS-31 content / research gap: no approved transferable reference plan is supplied.':'No transferable reference plan is supplied in this library.'}</Text><Text style={styles.helper}>You can create a Custom Plan in Guide. No schedule or setup values will be filled in without a reference.</Text></View>}
-      {record.commonResearchPractice && <View style={styles.lessonCard}>
+      {plans.length ? plans.map(plan => renderReference(plan, deep)) : <View style={styles.lessonCard}><Text style={styles.nextText}>{selected.id==='ss-31'?'SS-31 content / research gap: no approved transferable reference plan is supplied.':'No transferable reference plan is supplied in this library.'}</Text><Text style={styles.sourceClass}>{RESEARCH_PRACTICE_LABEL}</Text><Text style={styles.helper}>{researchPracticeFor(selected).transferable?'Reference available for review.':'Awaiting reviewed defaults. No new values have been supplied.'}</Text><Text style={styles.helper}>You can create a Custom Plan in Guide. No schedule or setup values will be filled in without a reference.</Text></View>}
+      {selected.researchPracticeReference&&<ResearchPracticeCard reference={selected.researchPracticeReference} onModel={()=>copySchoolPlan()}/>}{record.commonResearchPractice && <View style={styles.lessonCard}>
         <Evidence kind={record.commonResearchPractice.sourceClass}/>
         <Text style={styles.lessonTitle}>{record.commonResearchPractice.title}</Text>
         {(record.commonResearchPractice.stages||[]).map((stage:any,i:number)=><Text key={i} style={styles.nextText}>Stage {i+1} · {stage.amountMcg!=null?stage.amountMcg+' mcg':stage.amountMg+' mg'} · {stage.durationWeeks} weeks</Text>)}
@@ -233,7 +236,7 @@ export default function App() {
   const renderMore = () => <ScrollView contentContainerStyle={styles.scrollContent}>
     <Text style={[styles.kicker, { marginTop: 20 }]}>MORE</Text><Text style={styles.detailTitle}>Your space</Text><Text style={styles.detailMeta}>Useful extras, kept out of the way.</Text>
     {["Profile / Settings", "Inventory", "History", "Reminders", "Preferences", "Help / About", "Sources / disclaimers", "Shop"].map(label => {
-      const target:Screen|null=label==="Inventory"?"inventory":label==="History"?"history":label==="Reminders"?"reminders":label==="Sources / disclaimers"?"schoolSources":null;
+      const target:Screen|null=label==="Profile / Settings"?"settings":label==="Inventory"?"inventory":label==="History"?"history":label==="Reminders"?"reminders":label==="Sources / disclaimers"?"schoolSources":null;
       return <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={!target} key={label} style={styles.moreRow} onPress={()=>target&&setScreen(target)}><Text style={styles.planOptionTitle}>{label}</Text><Text style={styles.smallBadge}>{target?'Open ›':'Coming later'}</Text></Pressable>;
     })}
     <View style={styles.notice}><Text style={styles.noticeText}>Prototype 0.4 · saved on this device. Reference library updated. No shop or cloud services are connected.</Text></View>
@@ -354,7 +357,7 @@ export default function App() {
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
       <View style={styles.topLine}>
         <Text style={styles.tempBrand}>PEPTIDE GUIDE</Text>
-        <Text style={styles.tempStatus}>Prototype 0.4</Text>
+        <View style={{flexDirection:"row",alignItems:"center",gap:4}}><Text style={[styles.tempStatus,{fontSize:10}]}>Prototype 0.4</Text><Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={()=>setScreen("profile")} style={{width:36,minHeight:44,alignItems:"center",justifyContent:"center"}}><Svg width={20} height={22} viewBox="0 0 24 24"><Circle cx={12} cy={7} r={4} fill="none" stroke={COLORS.ink} strokeWidth={1.7}/><Path d="M 4 22 L 4 19 C 4 12 20 12 20 19 L 20 22 Z" fill="none" stroke={COLORS.ink} strokeWidth={1.7}/></Svg></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={()=>setScreen("settings")} style={{width:36,minHeight:44,alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:20,color:COLORS.ink}}>⚙</Text></Pressable></View>
       </View>
       <View style={{paddingHorizontal:20,paddingVertical:3}}><Text testID="save-status" style={styles.smallBadge}>{saved.saving?'Saving on device…':saved.error?saved.error:'Saved on this device'}</Text>{!!saved.error&&!saved.loadFailed&&<AppButton label="Retry save" onPress={()=>saved.retry().catch(()=>{})} secondary/>}{!!reminderError&&<Text style={styles.smallBadge}>{reminderError}</Text>}</View>
       {!!editError&&<Text style={styles.helper}>{editError}</Text>}
@@ -367,10 +370,11 @@ export default function App() {
         {screen === "schoolMore" && renderSchoolDetail(true)}
         {screen === "schoolSources" && renderSources()}
         {screen === "more" && renderMore()}
+        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Text style={styles.detailTitle}>{screen==='profile'?'Profile':'Settings'}</Text><Text style={styles.helper}>{screen==='profile'?'Your local planner. Accounts and cloud sync are not connected in this prototype.':'Plan-specific syringe size, reminders and supply can be changed from My Plans → Edit. Preferences remain on this device.'}</Text><AppButton label="Open My Plans" onPress={()=>setScreen('plans')}/><AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
         {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onEdit={editPlan} onDraft={()=>setScreen('plan')} onGuide={()=>setScreen('guide')}/>}
-        {(screen==='tracker'||screen==='history')&&!saved.loadFailed&&<AggregateTracker plans={plans} archives={saved.store.archives} update={saved.update} initialTab={screen==='history'?'History':'Today'} onOpen={openPlan}/>}
+        {(screen==='tracker'||screen==='history')&&!saved.loadFailed&&<AggregateTracker plans={plans} archives={saved.store.archives} update={saved.update} initialTab={screen==='history'?'History':'Today'} onOpen={openPlan} onEdit={editPlan}/>}
         {screen==='inventory'&&!saved.loadFailed&&<MyPlans inventory store={saved.store} update={saved.update} onOpen={id=>{setSelectedPlanId(id);setScreen('planInventory');}} onEdit={editPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
         {(["plan","planDetail","planInventory","review","schedule","calc","planTracker","reminders"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={(screen==='planDetail'?'plan':screen==='planInventory'?'inventory':screen==='planTracker'?'tracker':screen) as any} navigate={workspaceNavigate} store={scopedStore} update={scopedUpdate} editing={editing?{onSave:saveActiveEdits,supply:saved.store.activeEdit!.supplyVials,onSupplyChange:value=>saved.update(old=>old.activeEdit?{...old,activeEdit:{...old.activeEdit,supplyVials:value}}:old).catch(()=>{})}:undefined} onStarted={()=>setScreen("plans")} onDiscard={editing?discardActiveEdits:async()=>{const compound=compounds.find(c=>c.id===saved.store.draft?.compoundId);await saved.update(old=>({...old,draft:null}));if(compound)setSelected(compound);setScreen("detail");}} onGuide={()=>setScreen("guide")}/>}
       </View>

@@ -1,3 +1,4 @@
+import {practiceTransfer} from './research-practice';
 import{setupOriginFor}from'./reference-setup';
 import type{SetupOrigin}from'./reference-setup';
 import type { Compound, PlanTemplate } from './content';
@@ -47,10 +48,10 @@ export function newDraft(compound: Compound, mode='custom'): Draft {
  return {id:uid(),compoundId:compound.id,compoundName:compound.name,origin:null,customized:false,stages:Array.from({length:mode==='staged'?3:1},()=>({id:uid(),amountMg:'',amountUnit:'mg',weeks:'',override:null})),defaultSchedule:null,breakWeeks:'',startDate:'',vialMg:compound.id==='glow-70'?'70':'',waterMl:'',initialVials:'',reviewed:false,reminderEnabled:true,reminderOffsetMinutes:0};
 }
 export function importReference(compound: Compound, template?: PlanTemplate): Draft {
- const draft=newDraft(compound);const raw:Record<string,any>=JSON.parse(JSON.stringify(template?template.suppliedPlan:compound.supplied?.commonResearchPractice||{}));
+ const draft=newDraft(compound);const raw:Record<string,any>=JSON.parse(JSON.stringify(template?template.suppliedPlan:compound.researchPracticeReference?practiceTransfer(compound.researchPracticeReference):compound.supplied?.commonResearchPractice||{}));
  if(!template&&!raw.guideTransfer)throw Error('No transferable reference is available.');
  const title=template?.title||raw.title||compound.name+' reference';
- draft.origin={title,sourceClass:template?.sourceClass||raw.sourceClass,sourceTitle:template?.sourceTitle||title,sourceIds:template?[...template.sourceIds]:[...(raw.sourceIds||[])],originalStages:JSON.parse(JSON.stringify(raw.stages||[])),originalReference:raw,packVersion:'0.3.1',disclaimer:raw.disclaimer};
+ draft.origin={title,sourceClass:template?.sourceClass||raw.sourceClass,sourceTitle:template?.sourceTitle||raw.sourceTitle||title,sourceIds:template?[...template.sourceIds]:[...(raw.sourceIds||[])],originalStages:JSON.parse(JSON.stringify(raw.stages||[])),originalReference:raw,packVersion:'0.3.1',disclaimer:raw.disclaimer};
  draft.uxDefaults=[];
  const text=(v:unknown)=>v==null?'':String(v);
  const normalizeSchedule=(value:any):Schedule|null=>{
@@ -58,8 +59,8 @@ export function importReference(compound: Compound, template?: PlanTemplate): Dr
   if(value.kind)return JSON.parse(JSON.stringify(value));
   const names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const type=typeof value==='string'?value:value.type;
-  if(type==='daily')return {kind:'daily',days:[],times:[],interval:null};
-  if(type==='once weekly'||type==='weekly')return {kind:'weekly',days:[],times:[],interval:null,timesPerWeek:1};
+  if(type==='daily')return {kind:'daily',days:[],times:value.times||[],interval:null};
+  if(type==='once weekly'||type==='weekly')return {kind:'weekly',days:value.days||[],times:value.times||[],interval:null,timesPerWeek:1};
   if(type==='specific_days')return {kind:'weekly',days:(value.days||[]).map((d:string|number)=>typeof d==='number'?d:names.indexOf(d)),times:value.times||[],interval:null};
   if(type==='every_x_days'||type==='intervalDays')return {kind:'intervalDays',days:[],times:value.times||[],interval:value.interval??value.everyDays??null};
   return null;
@@ -71,13 +72,13 @@ export function importReference(compound: Compound, template?: PlanTemplate): Dr
   return schedule;
  };
  if(raw.stages?.length)draft.stages=raw.stages.map((stage:any)=>({id:uid(),amountMg:stage.amountMcg!=null?String(stage.amountMcg/1000):text(stage.amountMg),amountUnit:stage.amountMcg!=null?'mcg':'mg',weeks:text(stage.durationWeeks),override:withDefaults(normalizeSchedule(stage.schedule))}));
- else {draft.stages[0].amountMg=raw.amountMcg!=null?String(raw.amountMcg/1000):text(raw.amountMg);draft.stages[0].amountUnit=raw.amountMcg!=null?'mcg':'mg';draft.stages[0].weeks=text(raw.durationWeeks);}
+ else {draft.stages=draft.stages.slice(0,1);draft.stages[0].amountMg=raw.amountMcg!=null?String(raw.amountMcg/1000):text(raw.amountMg);draft.stages[0].amountUnit=raw.amountMcg!=null?'mcg':'mg';draft.stages[0].weeks=text(raw.durationWeeks);}
  draft.defaultSchedule=withDefaults(normalizeSchedule(raw.schedule||raw.frequency));
  draft.breakWeeks=text(raw.plannedBreakWeeks);
  if(raw.vialStrengthMg!=null)draft.vialMg=text(raw.vialStrengthMg);
  draft.waterMl=text(raw.diluentMl??raw.reconstitutionVolumeMl);
  draft.setupOrigin=setupOriginFor(compound.id,draft.stages[0]?.amountMg||'');
- if(draft.setupOrigin){const setup=draft.setupOrigin.original;draft.vialMg=String(setup.vialStrengthMg);draft.waterMl=String(setup.diluentMl);}
+ if(draft.setupOrigin){const setup=draft.setupOrigin.original;if(raw.vialStrengthMg==null)draft.vialMg=String(setup.vialStrengthMg);if(raw.diluentMl==null&&raw.reconstitutionVolumeMl==null)draft.waterMl=String(setup.diluentMl);if(draft.vialMg!==String(setup.vialStrengthMg)||draft.waterMl!==String(setup.diluentMl))draft.setupOrigin=null;}
  draft.syringeCapacityUnits=null;
  if(compound.supplied?.composition)draft.blendComposition=JSON.parse(JSON.stringify(compound.supplied.composition));
  draft.startDate=text(raw.startDate);
