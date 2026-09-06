@@ -28,7 +28,7 @@ jobs:
       - name: 0.4 migration tests
         run: node --test multiplan-migration04.test.cjs
       - name: 0.4 review-surface tests
-        run: node --test ui04.test.cjs
+        run: node --test ui04.test.cjs review04.test.cjs
       - name: TypeScript diagnostics
         id: tsc
         working-directory: app
