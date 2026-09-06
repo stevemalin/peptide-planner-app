@@ -1,0 +1,15 @@
+require('./register-tests.cjs');
+const test=require('node:test'),assert=require('node:assert/strict'),Module=require('node:module');
+const scheduled=new Map();let allowed=true,calls=0;
+const mock={setNotificationHandler(){},AndroidImportance:{HIGH:4},SchedulableTriggerInputTypes:{DATE:'date',TIME_INTERVAL:'timeInterval'},setNotificationChannelAsync:async()=>{},getPermissionsAsync:async()=>({granted:allowed}),requestPermissionsAsync:async()=>({granted:allowed}),getAllScheduledNotificationsAsync:async()=>[...scheduled.values()],cancelScheduledNotificationAsync:async id=>{scheduled.delete(id)},scheduleNotificationAsync:async item=>{calls++;const id=item.identifier||'test';scheduled.set(id,{...item,identifier:id});return id;},addNotificationResponseReceivedListener:()=>({remove(){}})};
+const original=Module._load;Module._load=function(request,parent,isMain){return request==='expo'?{isRunningInExpoGo:()=>false}:request==='expo-notifications'?mock:original.call(this,request,parent,isMain)};
+const N=require('./app/src/reminders.native.ts');
+const owner='peptide-planner-v03';const make=()=>({id:'test-plan',reminderEnabled:true,reminderOffsetMinutes:0,events:Array.from({length:65},(_,i)=>({id:'event-'+i,status:'pending',scheduledAt:new Date(Date.now()+3600000*(i+1)).toISOString()}))});
+test('local reminder reconciliation is idempotent, bounded, private and scoped to this prototype',async()=>{
+ scheduled.set('unrelated',{identifier:'unrelated',content:{data:{owner:'another-app'}}});const p=make();const report=await N.reconcileReminders(p);assert.equal(report.count,60);assert.equal(calls,60);assert.ok(scheduled.has('unrelated'));await N.reconcileReminders(p);assert.equal(calls,60);for(const n of scheduled.values())if(n.content.data.owner===owner)assert.equal(n.content.body,'A saved plan event is ready to review.');
+ p.events[0].status='completed';await N.reconcileReminders(p);assert.ok(![...scheduled.values()].some(n=>n.content.data.eventId==='event-0'));assert.ok([...scheduled.values()].some(n=>n.content.data.eventId==='event-60'));
+ p.events[1].snoozedUntil=new Date(Date.now()+900000).toISOString();const originalTime=p.events[1].scheduledAt;await N.reconcileReminders(p);const alarm=[...scheduled.values()].find(n=>n.content.data.eventId==='event-1');assert.equal(new Date(alarm.trigger.date).toISOString(),p.events[1].snoozedUntil);assert.equal(p.events[1].scheduledAt,originalTime);
+ await N.testReminder();await N.reconcileReminders(p);assert.ok(scheduled.has('test'));
+ await N.reconcileReminders({...p,reminderEnabled:false});assert.ok(scheduled.has('unrelated'));assert.ok(scheduled.has('test'));assert.equal(scheduled.size,2);
+ allowed=false;assert.equal((await N.reconcileReminders(p)).enabled,false);assert.equal(await N.enableReminders(),false);
+});

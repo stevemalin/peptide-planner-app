@@ -1,0 +1,642 @@
+{
+  "packVersion": "0.3.1",
+  "date": "2026-09-05",
+  "status": "READY_FOR_LOCAL_INTEGRATION",
+  "editorialRules": [
+    "Pep School = Learn; Guide = Plan.",
+    "Lead with a short 101 and plain-English explanation; deeper science is optional.",
+    "Keep approved labeling, published human clinical research, preclinical/mechanistic evidence, blend/component evidence, and user-created plans visibly distinct.",
+    "A research label does not convert a user-created regimen into published research.",
+    "Only transfer a reference plan into Guide when the source actually supports the encoded stages.",
+    "If the user edits a sourced plan, mark it Customized from [source]."
+  ],
+  "compounds": [
+    {
+      "id": "retatrutide",
+      "canonicalName": "Retatrutide",
+      "aliases": [
+        "reta",
+        "LY3437943",
+        "triple agonist",
+        "GIP GLP-1 glucagon agonist",
+        "redatrutide",
+        "redotratide"
+      ],
+      "evidenceBadge": "Published human clinical research · Phase 3 program ongoing",
+      "school101": {
+        "whatIsIt": "Retatrutide is an investigational peptide being developed as a triple agonist of the GIP, GLP-1 and glucagon receptors. It is not an approved medicine.",
+        "plainEnglish": "Instead of working through one metabolic hormone pathway, retatrutide is designed to signal through three. Researchers are studying whether that combination can produce substantial effects on body weight and metabolic health.",
+        "studiedFor": "Human trials have focused heavily on obesity/overweight, including related cardiometabolic outcomes. Phase 3 research is ongoing.",
+        "howItWorks": "It activates GIP, GLP-1 and glucagon receptors, combining metabolic signals involved in appetite, glucose regulation and energy balance."
+      },
+      "referencePlans": [
+        {
+          "id": "reta-phase2-4mg-start2",
+          "title": "Phase 2 research arm — 4 mg target, 2 mg initial",
+          "sourceClass": "Published human clinical research",
+          "frequency": "once weekly",
+          "stages": [
+            {
+              "amountMg": 2,
+              "durationWeeks": 4
+            },
+            {
+              "amountMg": 4,
+              "durationWeeks": 44
+            }
+          ],
+          "notes": "The 48-week Phase 2 obesity trial included a 4 mg arm initiated at 2 mg. The publication states that groups assigned 4 mg or higher used gradual escalation every 4 weeks for up to 12 weeks. Do not infer unverified intermediate stages for the 8 mg and 12 mg arms.",
+          "sourceIds": [
+            "NEJMoa2301972",
+            "NCT04881760"
+          ]
+        }
+      ],
+      "keyConsiderations": [
+        "Investigational: there is no approved human dosing label.",
+        "The Phase 2 trial reported dose-related gastrointestinal adverse events; a lower 2 mg initial dose partly mitigated them compared with 4 mg.",
+        "Do not present a trial arm as a personalized recommendation."
+      ],
+      "learnMore": "The Phase 2 obesity trial randomized adults to once-weekly retatrutide target groups of 1, 4, 8 or 12 mg (with different initial-dose arms) or placebo for 48 weeks. Escalation for groups assigned 4 mg or higher occurred every four weeks for up to 12 weeks. Current Phase 3/3b work continues to investigate retatrutide, including escalation strategies.",
+      "sources": [
+        {
+          "title": "Triple–Hormone-Receptor Agonist Retatrutide for Obesity — A Phase 2 Trial",
+          "type": "journal",
+          "id": "NEJMoa2301972"
+        },
+        {
+          "title": "NCT04881760",
+          "type": "clinical-trial",
+          "id": "NCT04881760"
+        }
+      ]
+    },
+    {
+      "id": "tirzepatide",
+      "canonicalName": "Tirzepatide",
+      "aliases": [
+        "tirz",
+        "tirzep",
+        "Mounjaro",
+        "Zepbound",
+        "LY3298176",
+        "GIP GLP-1 dual agonist",
+        "terzepatide",
+        "tirzapatide",
+        "trizepatide",
+        "tryzepatide"
+      ],
+      "evidenceBadge": "Approved medicine · human clinical evidence",
+      "school101": {
+        "whatIsIt": "Tirzepatide is a prescription dual GIP/GLP-1 receptor agonist used in approved medicines including Zepbound and Mounjaro.",
+        "plainEnglish": "Tirzepatide strengthens two gut-hormone signals involved in appetite and glucose regulation. Unlike retatrutide, it has approved prescribing information.",
+        "studiedFor": "Approved uses depend on product and jurisdiction and include chronic weight management and type 2 diabetes; Zepbound also has a U.S. indication for moderate-to-severe obstructive sleep apnea in adults with obesity.",
+        "howItWorks": "It activates both GIP and GLP-1 receptors, influencing appetite, food intake and glucose-dependent insulin signaling."
+      },
+      "referencePlans": [
+        {
+          "id": "mounjaro-canada-monograph-2026",
+          "title": "Mounjaro Canada approved escalation",
+          "sourceClass": "Approved Canadian product monograph",
+          "frequency": "once weekly",
+          "stages": [
+            {
+              "amountMg": 2.5,
+              "durationWeeks": 4
+            },
+            {
+              "amountMg": 5,
+              "durationWeeks": 4
+            }
+          ],
+          "continuationRule": "If additional glycemic control is needed, the Canadian monograph allows increases in 2.5 mg increments after no less than 4 weeks on the current dose.",
+          "maximumMgWeekly": 15,
+          "sourceIds": [
+            "HC-MOUNJARO-PM-00084159-2026"
+          ]
+        }
+      ],
+      "keyConsiderations": [
+        "The Canadian monograph states that 2.5 mg once weekly is for treatment initiation and is not intended for glycemic control.",
+        "After 4 weeks, the Canadian monograph increases to 5 mg once weekly; further increases, if needed, are 2.5 mg after no less than 4 weeks on the current dose.",
+        "The Canadian monograph lists a maximum dose of 15 mg once weekly.",
+        "Keep approved product-monograph information distinct from a user-created plan."
+      ],
+      "learnMore": "The current U.S. Zepbound label starts at 2.5 mg once weekly for four weeks, then increases to 5 mg. Further increases may occur in 2.5 mg increments after at least four weeks at the current level. The label contains important contraindications, warnings and adverse-effect information that should remain accessible from Learn More.",
+      "sources": [
+        {
+          "title": "MOUNJARO and MOUNJARO KwikPen (tirzepatide injection) Canadian Product Monograph",
+          "type": "approved-canadian-monograph",
+          "id": "HC-MOUNJARO-PM-00084159-2026"
+        }
+      ]
+    },
+    {
+      "id": "semaglutide",
+      "canonicalName": "Semaglutide",
+      "aliases": [
+        "sema",
+        "Wegovy",
+        "Ozempic",
+        "Rybelsus",
+        "GLP-1",
+        "semiglutide",
+        "semi-glutide"
+      ],
+      "evidenceBadge": "Approved medicine · human clinical evidence",
+      "school101": {
+        "whatIsIt": "Semaglutide is a GLP-1 receptor agonist used in several approved prescription products. The exact product matters because indications, formulations and schedules differ.",
+        "plainEnglish": "Semaglutide strengthens the GLP-1 hormone signal, which affects appetite, food intake, glucose-dependent insulin signaling and stomach emptying.",
+        "studiedFor": "Approved uses vary by product and include chronic weight management, type 2 diabetes and cardiovascular-risk reduction in certain populations.",
+        "howItWorks": "It activates GLP-1 receptors, strengthening a natural metabolic signal involved in satiety and glucose regulation."
+      },
+      "referencePlans": [
+        {
+          "id": "wegovy-canada-monograph-2025",
+          "title": "Wegovy Canada approved escalation",
+          "sourceClass": "Approved Canadian product monograph",
+          "frequency": "once weekly",
+          "stages": [
+            {
+              "amountMg": 0.25,
+              "durationWeeks": 4
+            },
+            {
+              "amountMg": 0.5,
+              "durationWeeks": 4
+            },
+            {
+              "amountMg": 1.0,
+              "durationWeeks": 4
+            },
+            {
+              "amountMg": 1.7,
+              "durationWeeks": 4
+            }
+          ],
+          "maintenance": "Week 17 onward: 2.4 mg once weekly therapeutic/maintenance dose in the Canadian monograph.",
+          "tolerabilityRule": "If a dose is not tolerated during escalation, the Canadian monograph says to consider delaying escalation for 4 weeks.",
+          "sourceIds": [
+            "HC-WEGOVY-PM-00082777-2025"
+          ]
+        }
+      ],
+      "keyConsiderations": [
+        "Keep Wegovy, Ozempic and other semaglutide product contexts separate.",
+        "The Canadian Wegovy monograph uses four-week escalation steps to reduce gastrointestinal symptoms.",
+        "The Canadian monograph reaches 2.4 mg once weekly after the 16-week escalation.",
+        "Attach the Wegovy product monograph to this template so it is never shown as a universal semaglutide schedule."
+      ],
+      "learnMore": "Wegovy provides a clear visual staircase for teaching staged escalation. Other semaglutide products should receive their own product-specific School records/templates rather than inheriting Wegovy's schedule.",
+      "sources": [
+        {
+          "title": "WEGOVY (semaglutide injection) Canadian Product Monograph",
+          "type": "approved-canadian-monograph",
+          "id": "HC-WEGOVY-PM-00082777-2025"
+        }
+      ]
+    },
+    {
+      "id": "ghk-cu",
+      "canonicalName": "GHK-Cu",
+      "aliases": [
+        "GHKCu",
+        "GHK Cu",
+        "GHK",
+        "copper peptide",
+        "copper tripeptide",
+        "Copper Tripeptide-1",
+        "glycyl histidyl lysine copper"
+      ],
+      "evidenceBadge": "Human topical/cosmetic + preclinical evidence",
+      "school101": {
+        "whatIsIt": "GHK is a naturally occurring three-amino-acid peptide (glycine-histidine-lysine) that binds copper. The copper complex is called GHK-Cu.",
+        "plainEnglish": "GHK-Cu is a small copper-carrying peptide studied mainly around skin, extracellular-matrix remodeling and tissue repair. Evidence depends heavily on how it is used.",
+        "studiedFor": "Published literature includes topical/cosmetic skin research plus extensive cell and animal work on tissue remodeling and wound-related biology.",
+        "howItWorks": "Research suggests GHK-Cu can influence fibroblast activity, collagen/elastin-related processes, extracellular-matrix remodeling, angiogenesis and gene expression."
+      },
+      "referencePlans": [],
+      "keyConsiderations": [
+        "Do not convert topical study durations into an injectable dosing plan.",
+        "Recent reviews still describe a limited number of well-designed clinical trials and a lack of standardized clinical protocols.",
+        "Guide may offer Custom Plan, but School should not label an injectable schedule as research-supported without route-matched human evidence."
+      ],
+      "learnMore": "Reviews describe small human topical studies, including 8–12 week skin studies, alongside a much larger preclinical literature. A recent systematic review found only a small number of clinical studies compared with preclinical studies and called for standardized formulations, dosing regimens and delivery methods.",
+      "sources": [
+        {
+          "title": "Topically applied GHK as an anti-wrinkle peptide: Advantages, problems and prospective",
+          "type": "review",
+          "id": "PMID39963574"
+        },
+        {
+          "title": "GHK Peptide as a Natural Modulator of Multiple Cellular Pathways in Skin Regeneration",
+          "type": "review",
+          "id": "PMC4508379"
+        },
+        {
+          "title": "The Regenerative Potential of GHK-Cu in Aesthetic Medicine",
+          "type": "systematic-review",
+          "id": "PMID42619529"
+        }
+      ],
+      "commonResearchPractice": {
+        "sourceClass": "Common Research Practice",
+        "title": "Common GHK-Cu 50 mg reference",
+        "disclaimer": "Injectable research convention — not an approved or established human clinical dosing schedule.",
+        "vialStrengthMg": 50,
+        "diluentMl": 3,
+        "concentrationMgMl": 16.6667,
+        "frequency": {
+          "type": "specific_days",
+          "days": [
+            "Mon",
+            "Tue",
+            "Wed",
+            "Thu",
+            "Fri"
+          ],
+          "timesPerDay": 1
+        },
+        "uxDefaultTime": "09:00",
+        "uxDefaultTimeLabel": "9:00 AM",
+        "stages": [
+          {
+            "amountMg": 1.0,
+            "durationWeeks": 4
+          },
+          {
+            "amountMg": 1.5,
+            "durationWeeks": 4
+          },
+          {
+            "amountMg": 2.0,
+            "durationWeeks": 4
+          }
+        ],
+        "guideTransfer": true,
+        "sourceNotes": [
+          "Multiple current research-reference sources converge on a 50 mg vial + 3 mL BAC setup and 1–2 mg reference amounts.",
+          "ResearchProtocols.net and JA Performance publish staged 1.0→1.5→2.0 mg examples; frequency conventions vary, so this template uses the common 5-days/week pattern as one explicitly labeled reference."
+        ],
+        "sourceUrls": [
+          "https://researchprotocols.net/ghk-cu/",
+          "https://japerformance.ca/peptide-dosage-protocols/ghk-cu-50mg"
+        ]
+      }
+    },
+    {
+      "id": "kpv",
+      "canonicalName": "KPV",
+      "aliases": [
+        "Lys-Pro-Val",
+        "lysine proline valine",
+        "alpha-MSH fragment",
+        "α-MSH fragment",
+        "KPV peptide"
+      ],
+      "evidenceBadge": "Preclinical / mechanistic evidence",
+      "school101": {
+        "whatIsIt": "KPV is a tripeptide made of lysine-proline-valine and corresponds to the C-terminal three-amino-acid sequence of alpha-melanocyte-stimulating hormone.",
+        "plainEnglish": "KPV is mainly interesting because laboratory and animal studies suggest anti-inflammatory signaling effects. The human clinical evidence base is much thinner than for approved metabolic medicines.",
+        "studiedFor": "Published work includes inflammatory signaling in human cell lines and intestinal inflammation in mouse models.",
+        "howItWorks": "A key study found KPV can be transported by the PepT1 peptide transporter and can reduce NF-κB and MAP-kinase inflammatory signaling in cell models."
+      },
+      "referencePlans": [],
+      "keyConsiderations": [
+        "No robust human clinical reference schedule was identified for this content pack.",
+        "Do not convert cell-culture concentrations or mouse doses into human plan templates.",
+        "Guide can still support a clearly labeled user-created Custom Plan."
+      ],
+      "learnMore": "A 2008 Gastroenterology study examined KPV in human intestinal epithelial and immune cell lines and in two mouse colitis models. It found reduced inflammatory signaling/cytokine expression in those models. This supports biological interest, not an established human dosing schedule.",
+      "sources": [
+        {
+          "title": "PepT1-mediated tripeptide KPV uptake reduces intestinal inflammation",
+          "type": "preclinical-mechanistic",
+          "id": "PMID18061177"
+        }
+      ],
+      "commonResearchPractice": {
+        "sourceClass": "Common Research Practice",
+        "title": "Common once-daily KPV reference",
+        "disclaimer": "Reference information — not an established human clinical dosing schedule.",
+        "vialStrengthMg": 10,
+        "diluentMl": 2,
+        "concentrationMgMl": 5,
+        "frequency": {
+          "type": "daily",
+          "timesPerDay": 1
+        },
+        "uxDefaultTime": "09:00",
+        "uxDefaultTimeLabel": "9:00 AM",
+        "stages": [
+          {
+            "amountMcg": 200,
+            "durationWeeks": 1
+          },
+          {
+            "amountMcg": 300,
+            "durationWeeks": 1
+          },
+          {
+            "amountMcg": 400,
+            "durationWeeks": 1
+          },
+          {
+            "amountMcg": 500,
+            "durationWeeks": 5
+          }
+        ],
+        "guideTransfer": true,
+        "sourceNotes": [
+          "ResearchProtocols.net publishes a 200→300→400→500 mcg staged reference with a 10 mg vial + 2 mL BAC setup.",
+          "PeptaBase independently lists 200–400 mcg/day subcutaneous and a 250–500 mcg general reference range."
+        ],
+        "sourceUrls": [
+          "https://researchprotocols.net/kpv/",
+          "https://www.peptabase.com/peptides/kpv"
+        ]
+      }
+    },
+    {
+      "id": "glow70",
+      "canonicalName": "Glow 70 mg",
+      "aliases": [
+        "Glow",
+        "Glow 70",
+        "GLOW70",
+        "Glow blend",
+        "Glow peptide",
+        "GHK BPC TB blend",
+        "BPC TB GHK blend"
+      ],
+      "evidenceBadge": "Blend · component evidence only",
+      "composition": [
+        {
+          "component": "GHK-Cu",
+          "amountMg": 50
+        },
+        {
+          "component": "BPC-157",
+          "amountMg": 10
+        },
+        {
+          "component": "TB-500",
+          "amountMg": 10
+        }
+      ],
+      "school101": {
+        "whatIsIt": "Glow is a blend name, not one molecular compound. The formulation used for this app is a 70 mg co-formulated blend of GHK-Cu 50 mg, BPC-157 10 mg and TB-500 10 mg.",
+        "plainEnglish": "Three different peptides share one vial. Each component has its own research literature; evidence about one ingredient does not prove that the three-component blend has the same effect.",
+        "studiedFor": "The components appear in separate research areas involving skin/tissue remodeling, wound/repair models, cell migration and regenerative biology. The exact 70 mg blend does not have an established clinical protocol in the evidence reviewed.",
+        "howItWorks": "Glow does not have one single mechanism. GHK-Cu is a copper-binding tripeptide; BPC-157 has a largely preclinical tissue-repair literature; TB-500 is related to thymosin-beta-4 biology and requires source-specific treatment."
+      },
+      "referencePlans": [],
+      "keyConsiderations": [
+        "No validated blend-level clinical schedule was identified.",
+        "The 70 mg total is combined component mass, not a clinically validated dose.",
+        "Blend names and ratios can vary by seller; bind this School record to the exact 50/10/10 formulation.",
+        "Component evidence must remain component evidence rather than being promoted to blend-level evidence."
+      ],
+      "learnMore": "Current reviews of emerging peptide use find that BPC-157 and TB-500 claims are supported predominantly by preclinical evidence with sparse, heterogeneous human data. GHK-Cu has some human topical/cosmetic research, but that route-specific evidence does not establish an injectable Glow-blend protocol.",
+      "sources": [
+        {
+          "title": "Peptide Supplements and Their Therapeutic Applications in Sports Medicine",
+          "type": "scoping-review",
+          "id": "PMID42578445"
+        },
+        {
+          "title": "Injectable Peptide Therapy: A Primer for Orthopaedic and Sports Medicine Physicians",
+          "type": "review",
+          "id": "PMID41476424"
+        },
+        {
+          "title": "AURAPEP supplier formulation evidence: GLOW70 = GHK-Cu 50 mg + BPC-157 10 mg + TB-500 10 mg",
+          "type": "project-source",
+          "id": "AURAPEP-GLOW70"
+        }
+      ],
+      "commonResearchPractice": {
+        "sourceClass": "Common Research Practice",
+        "title": "Common Glow 70 mg blend reference",
+        "disclaimer": "Blend reference information — not a clinically validated protocol.",
+        "formulation": [
+          {
+            "component": "GHK-Cu",
+            "amountMg": 50
+          },
+          {
+            "component": "BPC-157",
+            "amountMg": 10
+          },
+          {
+            "component": "TB-500",
+            "amountMg": 10
+          }
+        ],
+        "vialStrengthMg": 70,
+        "diluentMl": 3,
+        "concentrationMgMl": 23.3333,
+        "frequency": {
+          "type": "daily",
+          "timesPerDay": 1
+        },
+        "uxDefaultTime": "09:00",
+        "uxDefaultTimeLabel": "9:00 AM",
+        "stages": [
+          {
+            "amountMg": 2.33,
+            "durationWeeks": 4
+          }
+        ],
+        "referenceDraw": {
+          "u100Units": 10,
+          "volumeMl": 0.1
+        },
+        "componentAmountsAtReferenceDraw": {
+          "GHK-Cu_mg": 1.6667,
+          "BPC-157_mg": 0.3333,
+          "TB-500_mg": 0.3333
+        },
+        "plannedBreakWeeks": 2,
+        "guideTransfer": true,
+        "sourceNotes": [
+          "JA Performance publishes a 70 mg 50/10/10 blend with 3 mL BAC and a 10-unit daily reference.",
+          "Other community references differ; the app must label this as one common convention, not a validated blend protocol."
+        ],
+        "sourceUrls": [
+          "https://japerformance.ca/peptide-dosage-protocols/glow-70mg",
+          "https://glowpeptides.org/faq"
+        ]
+      }
+    }
+  ],
+  "integrationRules": {
+    "schoolCardOrder": [
+      "identity",
+      "plainEnglish",
+      "studiedFor",
+      "evidenceBadge",
+      "referencePlans",
+      "keyConsiderations",
+      "learnMore",
+      "sources",
+      "openInGuide"
+    ],
+    "guideTransfer": {
+      "preserveFields": [
+        "sourceClass",
+        "sourceTitle",
+        "sourceIds",
+        "originalStages"
+      ],
+      "onEditLabel": "Customized from [source]",
+      "neverRelabelEditedPlanAsOriginal": true
+    },
+    "search": "Match canonicalName and aliases; always display canonicalName in results.",
+    "noReferencePlanBehavior": "Show 'No established human reference schedule identified in the research reviewed' and offer Custom Plan in Guide."
+  },
+  "pendingVerification": [
+    "Retatrutide: exact intermediate escalation stages for the 8 mg and 12 mg Phase 2 arms remain intentionally omitted until the trial protocol/supplement is directly verified.",
+    "Glow: expand component-level BPC-157 and TB-500 School content before substantially deepening the blend Learn More page."
+  ],
+  "verificationNote": "Verification pass completed for the first integration. Canadian Mounjaro and Wegovy monograph schedules were verified. Retatrutide exact intermediate stages for higher Phase 2 arms remain intentionally unencoded rather than inferred.",
+  "integrationTarget": "Prototype 0.3.1 UX/Data Repair",
+  "commonResearchPracticeRule": "Common Research Practice is a separate evidence class from approved labeling and published human clinical research. It may be shown as reference information only when explicitly classified and sourced. It must never be relabeled as an approved or clinically established schedule.",
+  "prototype03Requirements": {
+    "schoolToGuideTransfer": [
+      "Transfer all fields actually present in the selected reference: stages, amounts, duration, frequency, schedule pattern, vial strength, reconstitution volume, and other supported parameters.",
+      "Never invent missing values or substitute zero for missing values.",
+      "Show a Review My Plan screen before activation.",
+      "If the user changes a sourced plan, label it Customized from [source]."
+    ],
+    "stageSchedule": {
+      "inheritance": "Plan-level default schedule inherited by all stages unless a stage override is set.",
+      "quickTemplates": [
+        "Daily",
+        "Once weekly",
+        "Mon/Wed/Fri",
+        "Every other day",
+        "Specific days"
+      ],
+      "advanced": [
+        "Every X days",
+        "X times per week",
+        "Multiple times per day",
+        "Custom interval"
+      ],
+      "times": "Support one or more times per scheduled day.",
+      "avoidTerm": "Do not use ambiguous 'biweekly'; use explicit '2× per week' or 'Every 14 days'."
+    },
+    "tracker": {
+      "tabs": [
+        "Today",
+        "Calendar",
+        "History"
+      ],
+      "calendarStatuses": [
+        "Completed",
+        "Scheduled",
+        "Missed",
+        "Future"
+      ],
+      "actions": [
+        "Completed",
+        "Skip",
+        "Remind later"
+      ],
+      "progress": [
+        "Week X of Y",
+        "Current stage",
+        "Week within stage",
+        "Time remaining",
+        "Next transition",
+        "Planned break",
+        "Completed vs scheduled events"
+      ]
+    },
+    "syringe": {
+      "direction": "Replace the basic barrel graphic with a clearer high-fidelity syringe visualization.",
+      "primaryResult": "DRAW TO → XX UNITS",
+      "requirements": [
+        "Readable tick marks",
+        "Strong target marker",
+        "U-100 scale",
+        "mL and concentration shown secondarily",
+        "Responsive on Android"
+      ]
+    },
+    "inventory": {
+      "principle": "Inventory supports the plan rather than controlling setup.",
+      "outputs": [
+        "Supply remaining",
+        "Projected weeks of coverage",
+        "Whether supply covers the active plan"
+      ]
+    },
+    "persistence": [
+      "Persist active plan, generated events, event status, plan start date, stage progress, schedule overrides, calculation setup, and inventory state locally."
+    ]
+  },
+  "repairPurpose": "Repair the 0.3 regression identified from Android screenshots: restore pre-filled reference data, restore visual stage styling, fix schedule drawer truncation, replace manual 24-hour HH:MM entry with a normal time picker/default, and prevent incomplete plans from reaching a misleading review state.",
+  "uxRepair031": {
+    "referenceResolution": {
+      "rule": "Resolve a usable draft plan before Review My Plan.",
+      "allowedValueSources": [
+        "Approved/published source values",
+        "Explicitly classified Common Research Practice values",
+        "Pure UX defaults such as 9:00 AM"
+      ],
+      "neverDo": [
+        "Do not replace missing scientific/reference values with 0.",
+        "Do not label a UX default as research evidence.",
+        "Do not show 'Looks good' when required plan inputs remain unresolved."
+      ]
+    },
+    "scheduleDrawer": {
+      "restoreReadableLabels": true,
+      "quickLabels": [
+        "Daily",
+        "Once weekly",
+        "Mon / Wed / Fri",
+        "Every other day",
+        "Specific days"
+      ],
+      "advancedLabels": [
+        "Every X days",
+        "X times per week",
+        "Multiple times per day",
+        "Custom interval"
+      ],
+      "defaultTime": "9:00 AM",
+      "timeInput": "Use a normal platform time picker; do not require typing HH:MM or 24-hour time.",
+      "layout": "No clipped/truncated buttons. Allow wrapping or full-width rows as needed on narrow Android screens."
+    },
+    "stageCards": {
+      "direction": "Restore the original visually styled stage cards/timeline. Add the schedule summary and Change action without flattening the design into plain form boxes.",
+      "show": [
+        "Stage number",
+        "Amount",
+        "Duration",
+        "Schedule summary",
+        "Change schedule"
+      ],
+      "visual": [
+        "colored stage marker",
+        "timeline connection",
+        "rounded card",
+        "clear hierarchy"
+      ]
+    },
+    "reviewPlan": {
+      "userFacingLanguage": "Replace developer phrases like 'supplied content pack' and repetitive 'not specified by this reference' with clean user-facing language.",
+      "completeStateButton": "Looks good — Continue",
+      "incompleteStateButton": "Complete plan",
+      "incompleteSummary": "Show only the few remaining choices clearly, e.g. Choose start date, Confirm vial setup.",
+      "sourceDetails": "Keep provenance available under Source details without dominating the main screen."
+    },
+    "timeDefaults": {
+      "default": "9:00 AM",
+      "classification": "UX default only — editable and not part of the evidence source."
+    }
+  }
+}

@@ -1,0 +1,95 @@
+import React,{useEffect,useState}from'react';
+import{ScrollView,Text,View,Pressable,AppState}from'react-native';
+import type{Store,Draft,Schedule}from'./engine';
+import{editDraft,activate,validateDraft,scheduleSummary,localDate,addDays,prettyDate,uid,inventoryCoverage,actualProgress,scheduleError,reviewChoices,stageAmount,referenceDrawComponents,sameSchedule}from'./engine';
+import{calculate}from'./planning';
+import{Button,Field,Card,Evidence,u}from'./ui';
+import ScheduleSheet from'./ScheduleSheet';
+import Syringe from'./Syringe';
+import Tracker from'./Tracker';
+import StageCard from './StageCard';
+import{quantityFromMg}from'./quantities';
+import VialSetup from './VialSetup';
+import SetupSummary from './SetupSummary';
+import{enableReminders,reconcileReminders,testReminder}from'./reminders';
+import type{ReminderReport}from'./reminders';
+export type WorkspaceScreen='plan'|'review'|'schedule'|'calc'|'tracker'|'inventory'|'reminders'|'history';
+export default function Workspace({screen,navigate,store,update,onGuide}:{screen:WorkspaceScreen;navigate:(screen:WorkspaceScreen)=>void;store:Store;update:(change:(s:Store)=>Store)=>Promise<void>;onGuide:()=>void}){
+ const [error,setError]=useState(''),[busy,setBusy]=useState(false),[sheet,setSheet]=useState<{stage:number|null}|null>(null),[showSource,setShowSource]=useState(false),[now,setNow]=useState(new Date()),[report,setReport]=useState<ReminderReport|null>(null),[supply,setSupply]=useState(''),[testMessage,setTestMessage]=useState('');
+ const d=store.draft;
+ useEffect(()=>{const refresh=()=>setNow(new Date());const timer=setInterval(refresh,30000),sub=AppState.addEventListener('change',state=>{if(state==='active')refresh();});return()=>{clearInterval(timer);sub.remove();};},[]);
+ const save=(change:(s:Store)=>Store)=>update(change).catch(e=>{setError(String(e));throw e;});
+ const patch=(value:Partial<Draft>,structural=true,reviewed=d?.reviewed)=>{if(!d)return;save(s=>s.draft?.id!==d.id?s:{...s,draft:{...editDraft(s.draft,value,structural),reviewed:reviewed??false}}).catch(()=>{});};
+ const totalWeeks=d&&d.stages.every(s=>s.weeks&&Number(s.weeks)>0)?d.stages.reduce((n,s)=>n+Number(s.weeks),0):null;
+ const previousWeeks=(index:number)=>d&&d.stages.slice(0,index).every(s=>s.weeks&&Number(s.weeks)>0)?d.stages.slice(0,index).reduce((n,s)=>n+Number(s.weeks),0):null;
+ const source=(plan:Draft)=>plan.origin?<><Text style={u.label}>PLAN</Text><Evidence kind={plan.customized?'User-created plan':plan.origin.sourceClass}/>{plan.customized&&/common research/i.test(plan.origin.sourceClass)&&<Text style={u.small}>Common Research Practice · not an established human clinical dosing schedule.</Text>}{plan.customized&&<Text style={u.small}>Customized from: {plan.origin.title}</Text>}<SetupSummary plan={plan}/><Pressable accessibilityRole="button" accessibilityLabel="Source details" onPress={()=>setShowSource(!showSource)}><Text style={u.link}>Source details {showSource?'−':'+'}</Text></Pressable>{showSource&&<Card><Text style={u.heading}>{plan.origin.title}</Text><Text style={u.body}>{plan.origin.sourceTitle}</Text><Text style={u.body}>{plan.origin.sourceClass}</Text>{plan.origin.disclaimer&&<Text style={u.small}>{plan.origin.disclaimer}</Text>}{plan.origin.sourceIds.length>0&&<Text selectable style={u.small}>Source IDs: {plan.origin.sourceIds.join(' · ')}</Text>}{plan.origin.originalStages.map((item:any,i)=><Text key={i} style={u.body}>Original stage {i+1}: {item.amountMcg!=null?item.amountMcg+' mcg':item.amountMg+' mg'} · {item.durationWeeks} weeks</Text>)}{['notes','continuationRule','maintenance','tolerabilityRule'].map(key=>plan.origin!.originalReference[key]?<Text key={key} style={u.body}>{String(plan.origin!.originalReference[key])}</Text>:null)}{(plan.origin.originalReference.sourceNotes||[]).map((note:string,i:number)=><Text key={i} style={u.small}>{note}</Text>)}{(plan.origin.originalReference.sourceUrls||[]).map((url:string)=><Text key={url} selectable style={u.small}>{url}</Text>)}{!!plan.uxDefaults?.length&&<Text style={u.small}>{plan.uxDefaults!.join(' and ')} defaults are editable conveniences, not research evidence.</Text>}</Card>}</>:<Evidence kind="User-created plan"/>;
+ const scheduleSave=(schedule:Schedule,all:boolean)=>{
+  if(!d||!sheet)return;
+  const old=sheet.stage===null?d.defaultSchedule:d.stages[sheet.stage].override||d.defaultSchedule;
+  const frequencyChanged=!!d.origin&&!!old&&(old.kind!==schedule.kind || old.kind==='weekly'&&schedule.days.length!==Math.max(1,old.days.length)||old.kind.startsWith('interval')&&old.interval!==schedule.interval||old.times.length!==schedule.times.length||old.kind==='weekly'&&old.times.length===0&&schedule.times.length>1||d.origin?.originalReference.frequency?.type==='specific_days'&&JSON.stringify(old.days)!==JSON.stringify(schedule.days));
+  if(all)patch({defaultSchedule:schedule,stages:d.stages.map(s=>({...s,override:null}))},frequencyChanged);
+  else {const inherited=sameSchedule(schedule,d.defaultSchedule);patch({stages:d.stages.map((s,i)=>i===sheet.stage?{...s,override:inherited?null:schedule}:s)},!inherited&&frequencyChanged);}
+  setSheet(null);
+ };
+ const start=async()=>{
+  if(!d||busy)return;setBusy(true);setError('');try{
+   const plan=activate(d);if(d.reminderEnabled)await enableReminders();
+   await save(s=>({...s,active:plan,archives:s.active?[...s.archives,s.active]:s.archives,draft:null}));navigate('tracker');
+  }catch(e){setError(String(e));}finally{setBusy(false);}
+ };
+ const cloneActive=()=>{const a=store.active;if(!a)return;const {events,activatedAt,inventoryTotalMg,timezone,...fields}=a;const left=inventoryCoverage(a).vials;save(s=>({...s,draft:{...fields,id:uid(),stages:fields.stages.map(stage=>({...stage,id:uid()})),startDate:'',initialVials:left===null?'':String(left),reviewed:false}})).then(()=>navigate('plan')).catch(()=>{});};
+ useEffect(()=>{if(screen==='reminders')reconcileReminders(store.active).then(setReport).catch(e=>setError('Reminders: '+String(e)));},[screen,store.active,now]);
+ const active=store.active;
+ const calculationReady=!!d&&d.stages.length>0&&d.stages.every(stage=>!!calculate(d.vialMg,d.waterMl,stage.amountMg));
+ const isTracking=['tracker','history','inventory','reminders'].includes(screen);
+ if(isTracking&&!active)return <ScrollView contentContainerStyle={u.scroll}><Text style={u.title}>{screen==='inventory'?'Inventory':'Tracker'}</Text><Card><Text style={u.body}>Start a saved plan to see real dates, events and coverage.</Text><Button label={d?'Continue My Plan':'Open Guide'} onPress={()=>d?navigate('review'):onGuide()}/></Card></ScrollView>;
+ if(!isTracking&&!d&&active)return <ScrollView contentContainerStyle={u.scroll}><Text style={u.title}>My Plan</Text><Text style={u.heading}>{active.compoundName}</Text>{source(active)}<Card><Text style={u.body}>Started {prettyDate(active.startDate)}</Text><Text style={u.body}>{active.stages.length} stages · {active.events.length} events</Text><Text style={u.body}>{scheduleSummary(active.defaultSchedule)}</Text></Card><Button label="Open Tracker" onPress={()=>navigate('tracker')}/><Button label="Customize a copy" secondary onPress={cloneActive}/><Text style={u.small}>A new draft preserves this plan and its history until you choose to start the replacement.</Text></ScrollView>;
+ if(!isTracking&&!d)return <ScrollView contentContainerStyle={u.scroll}><Text style={u.title}>My Plan</Text><Text style={u.body}>Choose a compound or reference in School or Guide to begin.</Text><Button label="Open Guide" onPress={onGuide}/></ScrollView>;
+ return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={u.scroll}>
+  {error!==''&&<Text accessibilityLiveRegion="polite" style={u.error}>{error}</Text>}
+  {screen==='review'&&d&&<>
+   <Text style={u.title}>Review My Plan</Text><Text style={u.heading}>{d.compoundName}</Text>{source(d)}
+   {d.stages.map((stage,i)=><StageCard key={stage.id} stage={stage} index={i} previousWeeks={previousWeeks(i)} schedule={d.defaultSchedule} last={i===d.stages.length-1}/>)}
+   <Card><Text style={u.body}>Start: {d.startDate?prettyDate(d.startDate):'Choose start date'}</Text><Text style={u.body}>{d.vialMg&&d.waterMl?d.vialMg+' mg vial · '+d.waterMl+' mL diluent':'Confirm vial setup'}</Text><Text style={u.body}>Planned break: {d.breakWeeks===''?'Choose…':d.breakWeeks==='0'?'None':d.breakWeeks+' weeks'}</Text>{reviewChoices(d).map(choice=><Pressable key={choice} accessibilityRole="button" accessibilityLabel={choice} onPress={()=>navigate(choice==='Confirm vial setup'?'calc':choice==='Complete stages and schedule'?'plan':'schedule')}><Text style={u.link}>{choice} ›</Text></Pressable>)}</Card>
+   <Button label={reviewChoices(d).length?'Complete plan':'Looks good — Continue'} onPress={()=>{patch({reviewed:true},false,true);navigate(d.stages.some(s=>!s.amountMg||Number(s.amountMg)<=0||!s.weeks||Number(s.weeks)<=0)?'plan':'schedule');}}/>
+   <Button label="Customize" secondary onPress={()=>navigate('plan')}/>
+  </>}
+  {screen==='plan'&&d&&<>
+   <Text style={u.title}>Build My Plan</Text><Text style={u.heading}>{d.compoundName}</Text>{source(d)}
+   <Card><Text style={u.heading}>{totalWeeks||'Choose'} {totalWeeks===1?'week':'weeks'} in stages</Text><Text style={u.body}>Plan default: {scheduleSummary(d.defaultSchedule)}</Text><Button label="Change plan default schedule" secondary onPress={()=>setSheet({stage:null})}/></Card>
+   {d.stages.map((stage,i)=><StageCard key={stage.id} stage={stage} index={i} previousWeeks={previousWeeks(i)} schedule={d.defaultSchedule} last={i===d.stages.length-1} edit={value=>patch({stages:d.stages.map(s=>s.id===stage.id?{...s,...value}:s)},Object.keys(value).some(key=>key!=='amountUnit'),false)} changeSchedule={()=>setSheet({stage:i})} useDefault={()=>patch({stages:d.stages.map(s=>s.id===stage.id?{...s,override:null}:s)},true,false)}/>)}
+   <Button label="+ Add stage" secondary disabled={d.stages.length>=24} onPress={()=>patch({stages:[...d.stages,{id:uid(),amountMg:'',amountUnit:'mg',weeks:'',override:null}]},true,false)}/>
+   <Button label="Review My Plan" onPress={()=>navigate('review')}/>
+  </>}
+  {screen==='schedule'&&d&&<>
+   <Text style={u.title}>Schedule your plan</Text><Text style={u.body}>Choose once. All stages inherit the plan default unless you change a stage separately.</Text>
+   <Card><Field label="Start date" value={d.startDate} placeholder="YYYY-MM-DD" onChange={v=>patch({startDate:v},false)}/><View style={u.row}><Pressable accessibilityRole="button" accessibilityLabel="Start today" onPress={()=>patch({startDate:localDate()},false)}><Text style={u.link}>Today</Text></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Start tomorrow" onPress={()=>patch({startDate:addDays(localDate(),1)},false)}><Text style={u.link}>Tomorrow</Text></Pressable></View><Text style={u.small}>Times use this device's local time zone when the plan starts.</Text></Card>
+   <Card><Text style={u.heading}>Plan default schedule</Text><Text style={u.body}>{scheduleSummary(d.defaultSchedule)}</Text><Button label="Choose schedule" secondary onPress={()=>setSheet({stage:null})}/>{d.stages.some(s=>s.override)&&<Text style={u.small}>Some stages have their own schedule.</Text>}</Card>
+   <Card><Field label="Planned break (weeks)" value={d.breakWeeks} numeric onChange={v=>patch({breakWeeks:v},true)}/><Button label="No planned break" secondary onPress={()=>patch({breakWeeks:'0'},false)}/><Text style={u.small}>Choose a break, or select no planned break.</Text></Card>
+   <Pressable accessibilityRole="checkbox" accessibilityLabel="Remind at scheduled time" accessibilityState={{checked:d.reminderEnabled}} onPress={()=>patch({reminderEnabled:!d.reminderEnabled},false)} style={u.evidence}><Text style={u.body}>{d.reminderEnabled?'✓':'○'} Remind at scheduled time</Text><Text style={u.small}>Reminder preferences are saved with your plan. OS delivery is paused in Expo Go.</Text></Pressable>
+   <Button label="Continue to Vial Setup" onPress={()=>{const errors=validateDraft({...d,reviewed:true}).filter(e=>!e.includes('vial strength')&&!e.includes('Glow uses'));if(errors.length)setError(errors.join('\n'));else{patch({reviewed:true},false,true);navigate('calc');}}}/>
+   <Button label="Back to stages" secondary onPress={()=>navigate('plan')}/>
+  </>}
+  {screen==='calc'&&d&&<>
+   <Text style={u.title}>Vial & Calculation</Text><Text style={u.heading}>{d.compoundName}</Text><Text style={u.body}>Stage amounts are already carried into every event.</Text>
+   <VialSetup draft={d} change={(value,structural)=>patch(value,structural)}/>
+   <Text style={u.heading}>Stage 1 · {d.stages[0]?stageAmount(d.stages[0]):'Choose amount'}</Text>
+   <Syringe capacityOverride={d.syringeCapacityUnits??null} onCapacityChange={size=>patch({syringeCapacityUnits:size},false)} result={calculate(d.vialMg,d.waterMl,d.stages[0]?.amountMg||'')} amount={quantityFromMg(d.stages[0]?.amountMg,d.stages[0]?.amountUnit)} glow={d.compoundId==='glow-70'}/>
+   {d.origin?.originalReference.referenceDraw&&<Card><Text style={u.heading}>Reference draw · {d.origin.originalReference.referenceDraw.u100Units} units</Text><Text style={u.body}>{d.origin.originalReference.referenceDraw.volumeMl} mL · {d.origin.sourceClass}</Text><Text style={u.small}>The reference amount is rounded. The syringe above uses your plan's exact amount and setup.</Text>{d.compoundId==='glow-70'&&referenceDrawComponents(d.origin.originalReference)?.map(c=><Text key={c.name} style={u.body}>{c.name} ≈ {c.amountMg.toFixed(2)} mg</Text>)}</Card>}
+   <Text style={u.small}>Stage 1 shown. Every event uses its own saved stage amount. Arithmetic does not validate a clinical dose or product preparation.</Text>
+   <Card><Text style={u.heading}>Supply · optional</Text><Field label="Vials available" value={d.initialVials} numeric placeholder="Choose… or leave for later" onChange={v=>patch({initialVials:v},false)}/></Card>
+   <Card><Text style={u.heading}>{calculationReady?'Ready to start?':'Complete vial setup'}</Text><Text style={u.body}>{totalWeeks} weeks · starts {d.startDate?prettyDate(d.startDate):'Choose…'}</Text><Text style={u.body}>{scheduleSummary(d.defaultSchedule)}</Text>{store.active&&<Text style={u.small}>Starting this plan archives the previous plan. Its logged history stays on this device.</Text>}</Card>
+   <Button label={!calculationReady?'Complete vial setup':busy?'Starting…':'Start Plan'} disabled={busy||!calculationReady} onPress={start}/><Button label="Back to schedule" secondary onPress={()=>navigate('schedule')}/>
+  </>}
+  {(screen==='tracker'||screen==='history')&&active&&<Tracker plan={active} archives={store.archives} now={now} update={save} initialTab={screen==='history'?'History':'Today'}/>}
+  {screen==='inventory'&&active&&(()=>{const cover=inventoryCoverage(active,now);return <><Text style={u.title}>Inventory coverage</Text><Text style={u.heading}>{active.compoundName}</Text><Card><Text style={u.title}>{cover.vials===null?'Add your supply':Number(cover.vials.toFixed(2))+' vial equivalents'}</Text><Text style={u.body}>{cover.supply===null?'Supply not specified':Number(cover.supply.toFixed(3))+' mg remaining'}</Text><Text style={u.body}>{cover.days===null?'Coverage: not yet calculated':'Approximately '+cover.days+' days covered in the scheduled plan'}</Text><Text style={u.body}>Plan remaining: {actualProgress(active,now).daysRemaining} days</Text>{cover.enough!==null&&<Text style={u.heading}>{cover.enough?'You have enough for this plan':'More supply is needed'}</Text>}<Text style={u.small}>Based on future scheduled amounts. Completed events reduce supply once; skipped or past unlogged events do not. Vial equivalents describe mass, not individual open vials or shelf life.</Text></Card><Card><Text style={u.heading}>Add supply</Text><Field label="Additional vials" value={supply} numeric onChange={setSupply}/><Button label="Add to supply" onPress={()=>{if(!supply.trim()||!Number.isFinite(Number(supply))||Number(supply)<=0){setError('Enter a positive vial quantity.');return;}save(s=>s.active?{...s,active:{...s.active,inventoryTotalMg:(s.active.inventoryTotalMg??0)+Number(supply)*Number(s.active.vialMg)}}:s).then(()=>{setSupply('');setError('');}).catch(()=>{});}}/></Card></>;})()}
+  {screen==='reminders'&&active&&<>
+   <Text style={u.title}>Reminders</Text><Card><Text style={u.body}>{report?.message||'Checking local reminders…'}</Text>{report?.through&&<Text style={u.small}>Prepared through {new Date(report.through).toLocaleString()}. The next 60 reminders are queued and refreshed when this app is opened or activity changes.</Text>}<Text style={u.small}>Local notifications only; no remote push service. Use a development build to test delivery. Android permissions and battery settings also affect timing.</Text></Card>
+   <Button label={active.reminderEnabled?'Turn reminders off':'Enable reminders'} onPress={async()=>{try{if(!active.reminderEnabled)await enableReminders();await save(s=>s.active?{...s,active:{...s.active,reminderEnabled:!s.active.reminderEnabled}}:s);}catch(e){setError(String(e));}}}/>
+   <View style={u.row}>{[0,15,30].map(minutes=><Pressable key={minutes} accessibilityRole="button" accessibilityLabel={minutes?'Remind '+minutes+' minutes before':'Remind at scheduled time'} onPress={()=>save(s=>s.active?{...s,active:{...s.active,reminderOffsetMinutes:minutes}}:s).catch(()=>{})} style={[u.pill,active.reminderOffsetMinutes===minutes&&u.selected]}><Text style={u.body}>{minutes?minutes+' min before':'At scheduled time'}</Text></Pressable>)}</View>
+   <Button label="Test notification in 10 seconds" secondary onPress={()=>testReminder().then(()=>setTestMessage('Test notification scheduled for 10 seconds from now.')).catch(e=>setError(String(e)))}/><Text style={u.small}>{testMessage}</Text>
+  </>}
+  {sheet&&d&&<ScheduleSheet stageIndex={sheet.stage} initial={sheet.stage===null?d.defaultSchedule:d.stages[sheet.stage].override||d.defaultSchedule} onClose={()=>setSheet(null)} onSave={scheduleSave}/>}
+ </ScrollView>;
+}
+

@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Peptide Planner Prototype",
+    "slug": "peptide-planner-prototype",
+    "version": "0.3.3",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.prototype.peptideplanner",
+      "permissions": [
+        "android.permission.SCHEDULE_EXACT_ALARM"
+      ]
+    },
+    "plugins": [
+      "expo-notifications",
+      "@react-native-community/datetimepicker"
+    ]
+  }
+}

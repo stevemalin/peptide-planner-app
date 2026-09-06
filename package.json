@@ -1,0 +1,15 @@
+{
+  "name": "peptide-planner-app-source",
+  "version": "0.3.3",
+  "private": true,
+  "scripts": {
+    "test": "node --test engine033.test.cjs setup033.test.cjs calculation032.test.cjs native-time031.test.cjs reminders03.test.cjs notification-capability03.test.cjs",
+    "test:ui": "node ui033.test.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

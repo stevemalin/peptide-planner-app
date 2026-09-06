@@ -1,0 +1,108 @@
+require('./register-tests.cjs');
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs'),crypto=require('crypto');
+const E=require('./app/src/engine.ts'),{compounds}=require('./app/src/content.ts');
+const pack=require('./app/src/school-content.v0.3.1.json');
+const make=()=>({...E.newDraft(compounds[0]),reviewed:true,startDate:'2026-09-07',stages:[{id:'s1',amountMg:'2',weeks:'2',override:null},{id:'s2',amountMg:'3',weeks:'2',override:null}],defaultSchedule:{kind:'weekly',days:[1],times:['09:00'],interval:null},breakWeeks:'1',vialMg:'20',waterMl:'2',initialVials:'2'});
+test('authoritative 0.3.1 pack preserved byte-for-byte with all six records',()=>{
+ assert.equal(crypto.createHash('sha256').update(fs.readFileSync(__dirname+'/app/src/school-content.v0.3.1.json')).digest('hex'),'9d1af179654256fa0e2db60d3fdfe9646f5174188dcf5e1fb515a9be5f16d0e6');
+ for(const raw of pack.compounds)assert.deepEqual(compounds.find(c=>c.supplied.id===raw.id).supplied,raw);
+});
+test('reference transfer retains every supplied value and never fills absent numbers',()=>{
+ for(const c of compounds.filter(c=>c.school.referenceSchedules.length)){
+  const t=c.school.referenceSchedules[0],d=E.importReference(c,t);
+  assert.deepEqual(d.origin.originalReference,t.suppliedPlan);assert.deepEqual(d.origin.originalStages,t.suppliedPlan.stages);
+  assert.deepEqual(d.stages.map(s=>[Number(s.amountMg),Number(s.weeks)]),t.suppliedPlan.stages.map(s=>[s.amountMg,s.durationWeeks]));
+  assert.equal(d.defaultSchedule.kind,'weekly');assert.deepEqual(d.defaultSchedule.days,[6]);assert.deepEqual(d.defaultSchedule.times,['09:00']);
+  for(const key of ['breakWeeks','startDate','initialVials'])assert.equal(d[key],'');
+ }
+});
+test('common practice copies all fields, amounts and units, without substituting missing values',()=>{
+ for(const id of ['ghk-cu','kpv','glow-70']){
+  const c=compounds.find(c=>c.id===id),r=c.supplied.commonResearchPractice,d=E.importReference(c);
+  assert.deepEqual(d.origin.originalReference,r);assert.deepEqual(d.origin.originalStages,r.stages);
+  assert.equal(d.vialMg,String(r.vialStrengthMg));assert.equal(d.waterMl,String(r.diluentMl));assert.deepEqual(d.defaultSchedule.times,['09:00']);
+  assert.deepEqual(d.stages.map(s=>[E.displayedAmount(s),s.amountUnit,s.weeks]),r.stages.map(s=>[String(s.amountMcg??s.amountMg),s.amountMcg!=null?'mcg':'mg',String(s.durationWeeks)]));
+  assert.equal(d.breakWeeks,r.plannedBreakWeeks==null?'':String(r.plannedBreakWeeks));assert.equal(d.customized,false);
+  assert.deepEqual(d.origin.originalReference.sourceUrls,r.sourceUrls);
+ }
+});
+test('adapter copies supported supplied extension fields without changing originals',()=>{
+ const c=compounds[0],t=structuredClone(c.school.referenceSchedules[0]);Object.assign(t.suppliedPlan,{vialStrengthMg:12,reconstitutionVolumeMl:3,plannedBreakWeeks:2,startDate:'2026-09-07',schedule:{kind:'daily',days:[],times:['08:00'],interval:null}});
+ const d=E.importReference(c,t);assert.equal(d.vialMg,'10');assert.equal(d.waterMl,'2');assert.equal(d.breakWeeks,'2');assert.equal(d.defaultSchedule.kind,'daily');d.stages[0].amountMg='99';assert.equal(t.suppliedPlan.stages[0].amountMg,2);
+});
+test('weekly events cross stage boundary once and exclude planned break',()=>{
+ const events=E.generateEvents(make());assert.deepEqual(events.map(e=>e.localDate),['2026-09-07','2026-09-14','2026-09-21','2026-09-28']);assert.deepEqual(events.map(e=>e.amountMg),[2,2,3,3]);assert.equal(new Set(events.map(e=>e.id)).size,4);
+});
+test('daily, specific weekdays and multiple times per day',()=>{
+ let d=make();d.defaultSchedule={kind:'daily',days:[],times:['08:00','20:00'],interval:null};assert.equal(E.generateEvents(d).length,56);
+ d.defaultSchedule={kind:'weekly',days:[1,3,5],times:['09:00'],interval:null,timesPerWeek:3};assert.equal(E.generateEvents(d).length,12);
+});
+test('every-other-day default interval continues across stages without resetting',()=>{
+ const d=make();d.stages[0].weeks='1';d.stages[1].weeks='1';d.defaultSchedule={kind:'intervalDays',days:[],times:['09:00'],interval:2};
+ assert.deepEqual(E.generateEvents(d).map(e=>e.localDate),['2026-09-07','2026-09-09','2026-09-11','2026-09-13','2026-09-15','2026-09-17','2026-09-19']);
+});
+test('stage override changes only its stage and uses its own interval anchor',()=>{
+ const d=make();d.stages[1].override={kind:'daily',days:[],times:['10:00','18:00'],interval:null};const events=E.generateEvents(d);assert.equal(events.filter(e=>e.stageIndex===0).length,2);assert.equal(events.filter(e=>e.stageIndex===1).length,28);
+});
+test('custom hourly intervals produce stable unique elapsed-time events',()=>{
+ const d=make();d.defaultSchedule={kind:'intervalHours',days:[],times:['08:00'],interval:12};const events=E.generateEvents(d);for(let i=1;i<events.length;i++)assert.equal(new Date(events[i].scheduledAt)-new Date(events[i-1].scheduledAt),12*3600000);
+});
+test('invalid dates, missing choices, repeated times and unsupported event volume fail closed',()=>{
+ assert.equal(E.parseDate('2026-02-30'),null);const d=make();d.breakWeeks='';assert.throws(()=>E.generateEvents(d));d.breakWeeks='0';d.defaultSchedule.times=['09:00','09:00'];assert.throws(()=>E.generateEvents(d));
+ d.defaultSchedule={kind:'weekly',days:[1],times:['09:00'],interval:null,timesPerWeek:2};assert.throws(()=>E.generateEvents(d));
+ d.defaultSchedule={kind:'intervalHours',days:[],times:['09:00'],interval:1};d.stages[0].weeks='104';assert.throws(()=>E.generateEvents(d),/10,000/);
+});
+test('clock-change day arithmetic uses calendar days, not 24-hour divisions',()=>{assert.equal(E.daysBetween('2026-03-07','2026-03-09'),2);assert.equal(E.addDays('2026-03-07',2),'2026-03-09');});
+test('wall-clock weekly schedules preserve local hour across daylight saving',()=>{
+ const d=make();d.startDate='2026-03-02';d.defaultSchedule={kind:'daily',days:[],times:['09:00'],interval:null};assert.ok(E.generateEvents(d).every(e=>new Date(e.scheduledAt).getHours()===9));
+});
+test('progress uses start date independently of skipped or missed events',()=>{
+ let p=E.activate(make(),new Date(2026,8,7));const now=new Date(2026,8,22,12);const a=E.actualProgress(p,now);assert.equal(a.week,3);assert.equal(a.stageIndex,1);assert.equal(a.stageWeek,1);assert.equal(a.due,3);
+ p=E.logEvent(p,p.events[0].id,'completed',now);p=E.logEvent(p,p.events[1].id,'skipped',now);const b=E.actualProgress(p,now);assert.equal(b.week,3);assert.equal(b.completed,1);assert.equal(b.due,3);
+});
+test('completion is idempotent and inventory subtracts only completed event mass',()=>{
+ let p=E.activate(make());const now=new Date(2026,8,8,12),id=p.events[0].id;
+ p=E.logEvent(p,id,'completed',now);assert.equal(p.events[0].completedAt,now.toISOString());assert.equal(E.inventoryCoverage(p,now).supply,38);
+ assert.deepEqual(E.logEvent(p,id,'completed',now),p);assert.equal(E.inventoryCoverage(p,now).used,2);
+});
+test('skip does not consume inventory; future completion is rejected',()=>{
+ let p=E.activate(make());const now=new Date(2026,8,8,12);p=E.logEvent(p,p.events[0].id,'skipped',now);assert.equal(E.inventoryCoverage(p,now).supply,40);assert.throws(()=>E.logEvent(p,p.events[1].id,'completed',now));
+});
+test('remind later moves only reminder time and retains underlying schedule/status',()=>{
+ const p=E.activate(make()),now=new Date(2026,8,8,12),next=E.logEvent(p,p.events[0].id,'later',now);
+ assert.equal(next.events[0].scheduledAt,p.events[0].scheduledAt);assert.equal(next.events[0].status,'pending');assert.equal(new Date(next.events[0].snoozedUntil)-now,15*60000);
+});
+test('calendar statuses and plan break boundary',()=>{
+ const p=E.activate(make()),now=new Date(2026,8,7,8);assert.equal(E.eventStatus(p.events[0],now),'Scheduled');assert.equal(E.eventStatus(p.events[1],now),'Future');assert.equal(E.eventStatus(p.events[0],new Date(2026,8,7,10)),'Missed');assert.equal(E.actualProgress(p,new Date(2026,9,5)).inBreak,true);assert.equal(E.actualProgress(p,new Date(2026,9,12)).ended,true);
+});
+test('Glow fixed ratio sums to input mass and remains 5:1:1',()=>{for(const mg of [0,.5,7,70]){const c=E.glowComponents(mg);assert.ok(Math.abs(c.reduce((n,v)=>n+v.amountMg,0)-mg)<1e-12);assert.equal(c[1].amountMg,c[2].amountMg);assert.ok(Math.abs(c[0].amountMg-c[1].amountMg*5)<1e-12);}});
+test('complete persistence round-trip includes provenance, overrides, snooze, timestamps and inventory',()=>{
+ const d=E.importReference(compounds[0],compounds[0].school.referenceSchedules[0]);let p=E.activate(make());p=E.logEvent(p,p.events[0].id,'completed',new Date(2026,8,8));p=E.logEvent(p,p.events[1].id,'later',new Date(2026,8,8));const store={version:3,draft:d,active:p,archives:[]};assert.deepEqual(E.decodeStore(JSON.stringify(store)),JSON.parse(JSON.stringify(store)));assert.throws(()=>E.decodeStore('{broken'));assert.throws(()=>E.decodeStore('{"version":99}'));
+});
+
+
+test('schedule summaries never describe missing days as zero frequency and count multiple daily times',()=>{
+ assert.match(E.scheduleSummary(E.blankSchedule()),/^Once weekly/);
+ assert.ok(!E.scheduleSummary(E.blankSchedule()).includes('0×'));
+ assert.match(E.scheduleSummary({kind:'weekly',days:[1,3],times:['08:00','20:00'],interval:null}),/^4× per week/);
+});
+
+test('KPV transfer, calculation, persistence and event quantities retain mcg display with mg arithmetic',()=>{
+ const d=E.importReference(compounds.find(c=>c.id==='kpv'));Object.assign(d,{startDate:'2026-09-07',breakWeeks:'0',reviewed:true});
+ assert.deepEqual(d.stages.map(E.stageAmount),['200 mcg','300 mcg','400 mcg','500 mcg']);
+ const plan=E.activate(d),events=plan.events;assert.equal(events.length,56);assert.equal(events[0].calculation.units,4);assert.equal(events.at(-1).calculation.units,10);assert.equal(events[0].amountUnit,'mcg');
+ assert.deepEqual(E.decodeStore(JSON.stringify({...E.blankStore(),active:plan})).active,plan);
+ const edited=E.editDraft(d,{stages:d.stages.map((s,i)=>i===0?{...s,amountMg:E.storedAmount('250',s.amountUnit)}:s)});assert.equal(edited.stages[0].amountMg,'0.25');assert.equal(edited.customized,true);assert.deepEqual(edited.origin.originalStages,d.origin.originalStages);
+});
+test('GHK weekdays and Glow rounded mass and reference draw stay distinct',()=>{
+ const g=E.importReference(compounds.find(c=>c.id==='ghk-cu'));assert.deepEqual(g.defaultSchedule.days,[1,2,3,4,5]);Object.assign(g,{startDate:'2026-09-07',breakWeeks:'0',reviewed:true});assert.equal(E.generateEvents(g).length,60);
+ const glow=E.importReference(compounds.find(c=>c.id==='glow-70'));Object.assign(glow,{startDate:'2026-09-07',reviewed:true});assert.equal(glow.breakWeeks,'2');const es=E.generateEvents(glow);assert.equal(es.length,28);assert.ok(Math.abs(es[0].calculation.units-9.9857142857)<1e-8);assert.equal(glow.origin.originalReference.referenceDraw.u100Units,10);
+ const parts=E.glowComponents(70/3*0.1);assert.ok(Math.abs(parts[0].amountMg-5/3)<1e-10);assert.ok(Math.abs(parts[1].amountMg-1/3)<1e-10);
+});
+test('review blocks unresolved inputs and calculation rejects blank or zero values',()=>{
+ const {calculate}=require('./app/src/planning.ts');const d=E.importReference(compounds[0],compounds[0].school.referenceSchedules[0]);assert.deepEqual(E.reviewChoices(d),['Choose start date','Choose planned break']);
+ for(const values of [['','2','1'],['10','','1'],['10','2',''],['10','2','0'],['0','2','1']])assert.equal(calculate(...values),null);
+ Object.assign(d,{startDate:'2026-09-07',breakWeeks:'0',vialMg:'10',waterMl:'2'});assert.deepEqual(E.reviewChoices(d),[]);assert.equal(E.timeLabel('09:00'),'9:00 AM');assert.equal(E.timeLabel('21:15'),'9:15 PM');
+});
+
+test('equivalent schedules do not create accidental stage overrides',()=>{assert.ok(E.sameSchedule({kind:'daily',days:[],times:['09:00'],interval:null},{kind:'daily',days:[1,2],times:['09:00'],interval:null,timesPerWeek:null}));assert.ok(!E.sameSchedule({kind:'daily',days:[],times:['09:00'],interval:null},{kind:'daily',days:[],times:['10:00'],interval:null}));});

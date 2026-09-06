@@ -1,0 +1,2 @@
+import React from'react';import{setupOriginFor}from'./reference-setup';import SetupSummary from'./SetupSummary';
+export default function SetupPreview({compoundId,amountMg}:{compoundId:string;amountMg:string}){const origin=setupOriginFor(compoundId,amountMg);return origin?<SetupSummary plan={{vialMg:String(origin.original.vialStrengthMg),waterMl:String(origin.original.diluentMl),setupOrigin:origin}}/>:null;}
