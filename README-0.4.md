@@ -47,3 +47,17 @@ Started from fetched branch commit `44b0e9a` and preserved its School/profile, s
 Validation: 79 automated tests passed; TypeScript passed; Expo dependencies compatible; Expo Doctor 21/21 passed. The original six complete browser flows passed. The 1/3/6/10-plan matrix passed at 320×915, 412×915 and 1366×915. All ten School profiles, related-card navigation, active edit/reload/resume/discard, future-event changes, independent supply changes and unchanged logged history passed browser checks at all three widths. No browser console/runtime errors. Screenshots reviewed under ignored `checks/refinement04` and `checks/integration04`. Run `npm run test:refinement-ui` for this pass's additional browser coverage.
 
 No physical Android or native notification-delivery acceptance is claimed. `main` remains the protected 0.3.3 baseline. No CI infrastructure was added or modified locally.
+
+## Manual plan and Today finishing pass — 2026-09-06 Pacific
+
+Continued from `0c99ec7e17c09de8a42db9cdb3e3b188d9d8d6a1` on `develop/0.4-multiplan` after fetching GitHub. Existing source content and the protected main baseline are unchanged.
+
+- Manual plans now follow Amount & Stages → Schedule → Vial & Calculation → Review → Start Plan, with step context, validation and Back actions. Final activation validates the reviewed configuration and returns to My Plans after persistence, with the newest plan first. The completed draft clears while other active plans and histories remain intact. Validation errors scroll into view.
+- Draft discard, active-edit discard and replacement of an existing draft require confirmation. Cancelling preserves the draft. Discard returns to the draft's compound in Guide. Active plans and logs are not discarded.
+- Collapsed aggregate event cards show amount/unit, time, stage, status, syringe units, mL and a miniature U-100 syringe using the same scale as the full display. Capacity overflow remains explicit. Expanded details retain the large syringe and add saved-event arithmetic and clearly labelled current vial setup.
+- A horizontal touch swipe reveals a Taken confirmation; scrolling does not log an event. The explicit Taken / Completed action remains keyboard accessible. Undo appears on the completed event and restores its exact prior pending state, including snooze. Undo refuses stale or archived events rather than overwriting later activity. Skip and reminder actions remain in expanded details.
+- SS-31 is explicitly marked as a content/research gap for an approved transferable reference plan. No dose, schedule, preparation or other research claims were added. The existing sourced context is retained; this gap does not block UI review.
+
+Validation: 81 automated tests; TypeScript; Expo dependency compatibility; Expo Doctor 21/21. Original six reference workflows and persistence passed with intentional navigation updates. The aggregate 1/3/6/10-plan matrix passed at 320, 412 and 1366 pixels. All ten School profiles and active edits passed at those widths. `npm run test:finish-ui` adds the full manual activation journey, Back, confirmed discard/replacement cancellation, multiple active plans, saved miniature calculations, real touch swipe, keyboard completion, Undo, calendar/history and reload persistence. Browser console/runtime checks are clean. Visual screenshots reviewed in ignored `checks/finish04`, `checks/integration04` and `checks/refinement04`.
+
+Browser acceptance only; no physical-device or native-notification acceptance claimed. No new CI, production changes or merge to main.

@@ -28,6 +28,7 @@ import {scopedPlanUpdate} from "./src/plan-actions-v04";
 import type { Compound, PlanStage, PlanTemplate } from "./src/content";
 import Workspace from "./src/Workspace";
 import { usePlannerStore } from "./src/store";
+import type { Draft } from "./src/engine";
 import { importReference, newDraft } from "./src/engine";
 import { Evidence } from "./src/ui";
 import { reconcileReminders, listenForReminder } from "./src/reminders";
@@ -103,6 +104,7 @@ export default function App() {
   const [selectedPlanId,setSelectedPlanId]=useState<string|null>(null);
   const [editingActive,setEditingActive]=useState(false);
   const [editError,setEditError]=useState('');
+ const [discardEdits,setDiscardEdits]=useState(false);
   const editing=editingActive&&!!saved.store.activeEdit&&['plan','review','schedule','calc'].includes(screen);
   const plans=getActivePlans(saved.store);
   const focused=plans.find(p=>p.id===selectedPlanId)??plans[0]??null;
@@ -122,13 +124,15 @@ export default function App() {
   const filtered=searchCompounds(query);
   const openCompound=(compound:Compound)=>{setSelected(compound);setScreen("detail");};
   const openSchool=(compound:Compound)=>{setSelected(compound);setScreen("schoolDetail");};
-  const startPlan=(mode:PlanMode="staged")=>{setEditingActive(false);saved.update(old=>({...old,draft:newDraft(selected,mode)})).then(()=>setScreen("plan")).catch(()=>{});};
+  const [replacement,setReplacement]=useState<{draft:Draft;target:Screen}|null>(null);
+  const chooseDraft=(draft:Draft,target:Screen)=>{if(saved.store.draft){setReplacement({draft,target});return;}saved.update(old=>({...old,draft})).then(()=>setScreen(target)).catch(()=>{});};
+  const startPlan=(mode:PlanMode="staged")=>{setEditingActive(false);chooseDraft(newDraft(selected,mode),"plan");};
   const copySchoolPlan=(template?:PlanTemplate)=>{
-    try {setEditingActive(false);const draft=importReference(selected,template);saved.update(old=>({...old,draft})).then(()=>setScreen("review")).catch(()=>{});} catch(e){Alert.alert("Reference",String(e));}
+    try {setEditingActive(false);const draft=importReference(selected,template);chooseDraft(draft,"review");} catch(e){Alert.alert("Reference",String(e));}
   };
   useEffect(()=>{
     const subscription=BackHandler.addEventListener("hardwareBackPress",()=>{
-      const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"review",review:"guide",schedule:"review",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
+      const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"detail",review:"calc",schedule:"plan",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
       if(!parent[screen])return false;setScreen(parent[screen]!);return true;
     });return()=>subscription.remove();
   },[screen]);
@@ -199,7 +203,7 @@ export default function App() {
         {record.composition && <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Exact blend composition</Text>{record.composition.map(component => <Text key={component.component} style={styles.nextText}>{component.component} · {component.amountMg} mg</Text>)}<Text style={styles.lessonTitle}>Total: {record.composition.reduce((sum, item) => sum + item.amountMg, 0)} mg</Text></View>}
       </>}
       <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Reference Plans</Text></View>
-      {plans.length ? plans.map(plan => renderReference(plan, deep)) : <View style={styles.lessonCard}><Text style={styles.nextText}>No transferable reference plan is supplied in this library.</Text><Text style={styles.helper}>You can create a Custom Plan in Guide. No schedule or setup values will be filled in without a reference.</Text></View>}
+      {plans.length ? plans.map(plan => renderReference(plan, deep)) : <View style={styles.lessonCard}><Text style={styles.nextText}>{selected.id==='ss-31'?'SS-31 content / research gap: no approved transferable reference plan is supplied.':'No transferable reference plan is supplied in this library.'}</Text><Text style={styles.helper}>You can create a Custom Plan in Guide. No schedule or setup values will be filled in without a reference.</Text></View>}
       {record.commonResearchPractice && <View style={styles.lessonCard}>
         <Evidence kind={record.commonResearchPractice.sourceClass}/>
         <Text style={styles.lessonTitle}>{record.commonResearchPractice.title}</Text>
@@ -354,7 +358,9 @@ export default function App() {
       </View>
       <View style={{paddingHorizontal:20,paddingVertical:3}}><Text testID="save-status" style={styles.smallBadge}>{saved.saving?'Saving on device…':saved.error?saved.error:'Saved on this device'}</Text>{!!saved.error&&!saved.loadFailed&&<AppButton label="Retry save" onPress={()=>saved.retry().catch(()=>{})} secondary/>}{!!reminderError&&<Text style={styles.smallBadge}>{reminderError}</Text>}</View>
       {!!editError&&<Text style={styles.helper}>{editError}</Text>}
-      {saved.store.activeEdit&&<View style={{paddingHorizontal:20,paddingVertical:4,backgroundColor:COLORS.paleBlue}}><Text style={styles.smallBadge}>{editing?'Editing active plan · changes apply when saved':'You have saved active-plan edits.'}</Text><View style={{flexDirection:'row',gap:18}}>{!editing&&<Pressable accessibilityRole="button" accessibilityLabel="Resume plan edits" onPress={()=>editPlan(saved.store.activeEdit!.planId)}><Text style={styles.back}>Resume edits</Text></Pressable>}<Pressable accessibilityRole="button" accessibilityLabel="Discard plan edits" onPress={discardActiveEdits}><Text style={styles.back}>Discard edits</Text></Pressable></View></View>}
+      {saved.store.activeEdit&&<View style={{paddingHorizontal:20,paddingVertical:4,backgroundColor:COLORS.paleBlue}}><Text style={styles.smallBadge}>{editing?'Editing active plan · changes apply when saved':'You have saved active-plan edits.'}</Text><View style={{flexDirection:'row',gap:18}}>{!editing&&<Pressable accessibilityRole="button" accessibilityLabel="Resume plan edits" onPress={()=>editPlan(saved.store.activeEdit!.planId)}><Text style={styles.back}>Resume edits</Text></Pressable>}<Pressable accessibilityRole="button" accessibilityLabel="Discard plan edits" onPress={()=>setDiscardEdits(true)}><Text style={styles.back}>Discard edits</Text></Pressable></View></View>}
+      {replacement&&<View style={{padding:16,backgroundColor:COLORS.paleBlue}}><Text style={styles.helper}>You have an unfinished {saved.store.draft?.compoundName} draft. Replace only that draft? Active plans and history will stay unchanged.</Text><AppButton label="Confirm replace draft" onPress={()=>{const next=replacement;saved.update(old=>({...old,draft:next.draft})).then(()=>{setReplacement(null);setScreen(next.target);}).catch(()=>{});}}/><AppButton label="Keep existing draft" secondary onPress={()=>setReplacement(null)}/></View>}
+      {discardEdits&&<View style={{padding:16,backgroundColor:COLORS.paleBlue}}><Text style={styles.helper}>Discard saved edits? Active plans and history will stay unchanged.</Text><AppButton label="Confirm discard edits" onPress={()=>discardActiveEdits().then(()=>setDiscardEdits(false))}/><AppButton label="Keep edits" secondary onPress={()=>setDiscardEdits(false)}/></View>}
       <View key={screen==='schoolDetail'?screen+selected.id:screen} style={styles.main}>
         {screen === "school" && renderSchool()}
         {screen === "schoolDetail" && renderSchoolDetail()}
@@ -363,10 +369,10 @@ export default function App() {
         {screen === "more" && renderMore()}
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
-        {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onEdit={editPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
+        {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onEdit={editPlan} onDraft={()=>setScreen('plan')} onGuide={()=>setScreen('guide')}/>}
         {(screen==='tracker'||screen==='history')&&!saved.loadFailed&&<AggregateTracker plans={plans} archives={saved.store.archives} update={saved.update} initialTab={screen==='history'?'History':'Today'} onOpen={openPlan}/>}
         {screen==='inventory'&&!saved.loadFailed&&<MyPlans inventory store={saved.store} update={saved.update} onOpen={id=>{setSelectedPlanId(id);setScreen('planInventory');}} onEdit={editPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
-        {(["plan","planDetail","planInventory","review","schedule","calc","planTracker","reminders"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={(screen==='planDetail'?'plan':screen==='planInventory'?'inventory':screen==='planTracker'?'tracker':screen) as any} navigate={workspaceNavigate} store={scopedStore} update={scopedUpdate} editing={editing?{onSave:saveActiveEdits,supply:saved.store.activeEdit!.supplyVials,onSupplyChange:value=>saved.update(old=>old.activeEdit?{...old,activeEdit:{...old.activeEdit,supplyVials:value}}:old).catch(()=>{})}:undefined} onGuide={()=>setScreen("guide")}/>}
+        {(["plan","planDetail","planInventory","review","schedule","calc","planTracker","reminders"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={(screen==='planDetail'?'plan':screen==='planInventory'?'inventory':screen==='planTracker'?'tracker':screen) as any} navigate={workspaceNavigate} store={scopedStore} update={scopedUpdate} editing={editing?{onSave:saveActiveEdits,supply:saved.store.activeEdit!.supplyVials,onSupplyChange:value=>saved.update(old=>old.activeEdit?{...old,activeEdit:{...old.activeEdit,supplyVials:value}}:old).catch(()=>{})}:undefined} onStarted={()=>setScreen("plans")} onDiscard={editing?discardActiveEdits:async()=>{const compound=compounds.find(c=>c.id===saved.store.draft?.compoundId);await saved.update(old=>({...old,draft:null}));if(compound)setSelected(compound);setScreen("detail");}} onGuide={()=>setScreen("guide")}/>}
       </View>
       <BottomNav active={screen} setScreen={setScreen} />
     </SafeAreaView></SafeAreaProvider>
