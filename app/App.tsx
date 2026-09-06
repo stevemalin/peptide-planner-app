@@ -77,8 +77,8 @@ function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Scree
   const items: { key: Screen; label: string; icon: string }[] = [
     { key: "school", label: "Pep School", icon: "🎓" },
     { key: "guide", label: "Guide", icon: "📖" },
+    { key: "tracker", label: "TODAY", icon: "▥" },
     { key: "plans", label: "My Plans", icon: "▣" },
-    { key: "tracker", label: "Tracker", icon: "▥" },
     { key: "more", label: "More", icon: "☰" },
   ];
   return (
@@ -87,9 +87,9 @@ function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Scree
         const tab = active === "schoolDetail" || active === "schoolMore" || active === "schoolSources" ? "school" : active === "detail" ? "guide" : ["plan", "planDetail", "planInventory", "calc", "review", "schedule"].includes(active) ? "plans" : ["history","planTracker"].includes(active) ? "tracker" : ["inventory", "reminders","profile","settings"].includes(active) ? "more" : active;
         const isActive = tab === item.key;
         return (
-          <Pressable accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: isActive }} key={item.key} onPress={() => setScreen(item.key)} style={styles.navItem}>
-            <Text style={[styles.navIcon, isActive && styles.navActive]}>{item.icon}</Text>
-            <Text style={[styles.navLabel, isActive && styles.navActive]}>{item.label}</Text>
+          <Pressable accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: isActive }} key={item.key} onPress={() => setScreen(item.key)} style={[styles.navItem,item.key==='tracker'&&styles.todayDestination,isActive&&item.key==='tracker'&&styles.todayDestinationActive]}>
+            <Text style={[styles.navIcon, isActive && styles.navActive,item.key==='tracker'&&styles.todayInk]}>{item.icon}</Text>
+            <Text style={[styles.navLabel, isActive && styles.navActive,item.key==='tracker'&&styles.todayInk]}>{item.label}</Text>
           </Pressable>
         );
       })}
@@ -526,6 +526,9 @@ const styles = StyleSheet.create({
   nextCard: { marginTop: 14, borderWidth: 1, borderColor: COLORS.border, borderRadius: 20, padding: 16 },
   nextText: { color: COLORS.muted, fontSize: 13, lineHeight: 20 },
   nav: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: COLORS.border, backgroundColor: COLORS.white, paddingTop: 7, paddingBottom: 6 },
+  todayDestination: { backgroundColor: COLORS.paleBlue, borderRadius: 15, borderWidth: 1, borderColor: COLORS.blue, marginHorizontal: 3 },
+  todayDestinationActive: { backgroundColor: "#d8f2ff", borderWidth: 2 },
+  todayInk: { color: "#087ba5", fontWeight: "800" },
   navItem: { minHeight: 48, flex: 1, alignItems: "center", justifyContent: "center" },
   navIcon: { color: "#7B8AA6", fontSize: 20, fontWeight: "700" },
   navLabel: { color: "#7B8AA6", fontSize: 9, marginTop: 2 },

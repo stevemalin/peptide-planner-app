@@ -5,7 +5,10 @@ export const LEGACY_STORAGE_KEY='peptide-planner:local:v03';
 // Validate each plan through the established reader before adopting the collection.
 export function decodePlannerStore(raw:string):Store{
  const value=JSON.parse(raw);
- if(value?.version===3)return {...decodeStore(raw),activePlans:value.active?[decodeStore(raw).active!]:[]};
+ if(value?.version===3){
+  if(value.activePlans!==undefined)return decodePlannerStore(JSON.stringify({...value,version:4}));
+  const legacy=decodeStore(raw);return {...legacy,activePlans:legacy.active?[legacy.active]:[]};
+ }
  if(value?.version!==4||!Array.isArray(value.activePlans))throw Error('Saved data has an unsupported format. It has been preserved.');
  const base=decodeStore(JSON.stringify({version:3,draft:value.draft,active:null,archives:value.archives}));
  const plans=value.activePlans.map((active:unknown)=>decodeStore(JSON.stringify({version:3,draft:null,active,archives:[]})).active);
