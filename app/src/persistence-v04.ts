@@ -10,6 +10,13 @@ export function decodePlannerStore(raw:string):Store{
  const base=decodeStore(JSON.stringify({version:3,draft:value.draft,active:null,archives:value.archives}));
  const plans=value.activePlans.map((active:unknown)=>decodeStore(JSON.stringify({version:3,draft:null,active,archives:[]})).active);
  if(plans.some((p:any)=>!p)||new Set(plans.map((p:any)=>p.id)).size!==plans.length)throw Error('Saved plan identifiers are invalid. Your data is preserved.');
- return {...base,activePlans:plans,active:plans[0]??null};
+ let activeEdit=value.activeEdit??null;
+ if(activeEdit){
+  if(typeof activeEdit.planId!=='string'||typeof activeEdit.baseSettings!=='string'||typeof activeEdit.supplyVials!=='string')throw Error('Saved edits could not be read. Your data is preserved.');
+  const checked=decodeStore(JSON.stringify({version:3,draft:activeEdit.draft,active:null,archives:[]})).draft;
+  if(!checked||checked.id!==activeEdit.planId)throw Error('Saved edits do not match a plan. Your data is preserved.');
+  activeEdit={...activeEdit,draft:checked};
+ }
+ return {...base,...(value.activeEdit!==undefined?{activeEdit}:{}),activePlans:plans,active:plans[0]??null};
 }
 export function encodePlannerStore(store:Store){return JSON.stringify(normalizeStoreV04(store));}

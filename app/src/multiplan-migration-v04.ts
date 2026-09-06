@@ -15,6 +15,7 @@ export function normalizeStoreV04(store:ReadablePlannerStore):StoreV04{
  const plans=getActivePlans(store);
  return {
   draft:store.draft,
+  ...(store.activeEdit!==undefined?{activeEdit:store.activeEdit}:{}),
   archives:[...store.archives],
   version:STORAGE_VERSION_V04,
   activePlans:[...plans],

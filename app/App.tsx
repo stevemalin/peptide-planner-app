@@ -18,6 +18,9 @@ import {
 
 import {library as compounds,searchLibrary as searchCompounds} from "./src/library-v04";
 import QuickStart from "./src/QuickStart";
+import {SchoolAccordion,RelatedSchoolCards,ResearchProductLink} from "./src/SchoolAccordion";
+import {schoolSections,relatedSchool} from "./src/school-profile-v04";
+import {beginActiveEdit,applyActiveEdit} from "./src/active-edit-v04";
 import MyPlans from "./src/MyPlans";
 import AggregateTracker from "./src/AggregateTracker";
 import {getActivePlans} from "./src/multiplan-v04";
@@ -68,8 +71,8 @@ function Molecule({ color = COLORS.blue }: { color?: string }) {
 
 function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Screen) => void }) {
   const items: { key: Screen; label: string; icon: string }[] = [
-    { key: "school", label: "Pep School", icon: "▤" },
-    { key: "guide", label: "Guide", icon: "⌂" },
+    { key: "school", label: "Pep School", icon: "🎓" },
+    { key: "guide", label: "Guide", icon: "📖" },
     { key: "plans", label: "My Plans", icon: "▣" },
     { key: "tracker", label: "Tracker", icon: "▥" },
     { key: "more", label: "More", icon: "☰" },
@@ -95,22 +98,33 @@ export default function App() {
   const [selected, setSelected] = useState<Compound>(compounds[0]);
   const [query,setQuery] = useState("");
   const [schoolQuery,setSchoolQuery] = useState("");
-  const [showMechanism,setShowMechanism] = useState(false);
+
   const saved = usePlannerStore();
   const [selectedPlanId,setSelectedPlanId]=useState<string|null>(null);
+  const [editingActive,setEditingActive]=useState(false);
+  const [editError,setEditError]=useState('');
+  const editing=editingActive&&!!saved.store.activeEdit&&['plan','review','schedule','calc'].includes(screen);
   const plans=getActivePlans(saved.store);
   const focused=plans.find(p=>p.id===selectedPlanId)??plans[0]??null;
-  const scopedStore={...saved.store,active:focused,draft:screen==='planDetail'?null:saved.store.draft};
-  const scopedUpdate=(change:Parameters<typeof saved.update>[0])=>saved.update(old=>{const next=scopedPlanUpdate(old,focused?.id??null,change);if(getActivePlans(next).length>getActivePlans(old).length)setSelectedPlanId(getActivePlans(next).at(-1)!.id);return next;});
-  const openPlan=(id:string)=>{setSelectedPlanId(id);setScreen('planDetail');};
+  const scopedStore={...saved.store,active:focused,draft:editing?saved.store.activeEdit!.draft:screen==='planDetail'?null:saved.store.draft};
+  const scopedUpdate=(change:Parameters<typeof saved.update>[0])=>saved.update(old=>{if(editing&&old.activeEdit){const changed=change({...old,active:focused,draft:old.activeEdit.draft});return {...old,activeEdit:{...old.activeEdit,draft:changed.draft!}};}const next=scopedPlanUpdate(old,focused?.id??null,change);if(getActivePlans(next).length>getActivePlans(old).length)setSelectedPlanId(getActivePlans(next).at(-1)!.id);return next;});
+  const openPlan=(id:string)=>{setEditingActive(false);setSelectedPlanId(id);setScreen('planDetail');};
+  const editPlan=(id:string)=>{
+   const plan=plans.find(p=>p.id===id);if(!plan)return;
+   if(saved.store.activeEdit&&saved.store.activeEdit.planId!==id){setEditError('Finish or discard the existing plan edits first.');return;}
+   saved.update(old=>({...old,activeEdit:old.activeEdit??beginActiveEdit(plan)})).then(()=>{setSelectedPlanId(id);setEditingActive(true);setScreen('plan');setEditError('');}).catch(()=>{});
+  };
+  const saveActiveEdits=async()=>{await saved.update(old=>old.activeEdit?applyActiveEdit(old,old.activeEdit):old);setEditingActive(false);setScreen('planDetail');};
+  const discardActiveEdits=()=>saved.update(old=>({...old,activeEdit:null})).then(()=>{setEditingActive(false);setScreen('plans');setEditError('');}).catch(()=>{});
+  useEffect(()=>{if(!['plan','review','schedule','calc'].includes(screen))setEditingActive(false);},[screen]);
   const workspaceNavigate=(target:any)=>{if(target==='tracker'){setScreen('planTracker');}else if(target==='inventory')setScreen('planInventory');else setScreen(target);};
   const [reminderError,setReminderError] = useState("");
   const filtered=searchCompounds(query);
   const openCompound=(compound:Compound)=>{setSelected(compound);setScreen("detail");};
-  const openSchool=(compound:Compound)=>{setSelected(compound);setShowMechanism(false);setScreen("schoolDetail");};
-  const startPlan=(mode:PlanMode="staged")=>{saved.update(old=>({...old,draft:newDraft(selected,mode)})).then(()=>setScreen("plan")).catch(()=>{});};
+  const openSchool=(compound:Compound)=>{setSelected(compound);setScreen("schoolDetail");};
+  const startPlan=(mode:PlanMode="staged")=>{setEditingActive(false);saved.update(old=>({...old,draft:newDraft(selected,mode)})).then(()=>setScreen("plan")).catch(()=>{});};
   const copySchoolPlan=(template?:PlanTemplate)=>{
-    try {const draft=importReference(selected,template);saved.update(old=>({...old,draft})).then(()=>setScreen("review")).catch(()=>{});} catch(e){Alert.alert("Reference",String(e));}
+    try {setEditingActive(false);const draft=importReference(selected,template);saved.update(old=>({...old,draft})).then(()=>setScreen("review")).catch(()=>{});} catch(e){Alert.alert("Reference",String(e));}
   };
   useEffect(()=>{
     const subscription=BackHandler.addEventListener("hardwareBackPress",()=>{
@@ -178,15 +192,14 @@ export default function App() {
       {!deep && <>
         {[["What is it?", record.school101.whatIsIt], ["In Plain English", record.school101.plainEnglish], ["Studied / known for", record.school101.studiedFor]].map(([heading, text]) => <View key={heading} style={styles.lessonCard}><Text style={styles.lessonTitle}>{heading}</Text><Text style={styles.nextText}>{text}</Text></View>)}
       </>}
-      {!deep && <Pressable accessibilityRole="button" accessibilityLabel="How it works" accessibilityState={{expanded:showMechanism}} onPress={()=>setShowMechanism(!showMechanism)}><Text style={styles.back}>How it works {showMechanism?'−':'+'}</Text>{showMechanism&&<Text style={styles.nextText}>{record.school101.howItWorks}</Text>}</Pressable>}
+
       <View testID="evidence-badge"><Evidence kind={record.evidenceBadge} text={record.evidenceBadge}/></View>
+      <SchoolAccordion key={selected.id} sections={schoolSections(selected)}/>
       {deep && <>
-        <View style={styles.lessonCard}><Text style={styles.lessonTitle}>How it works</Text><Text style={styles.nextText}>{record.school101.howItWorks}</Text></View>
-        <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Research context</Text><Text style={styles.nextText}>{record.learnMore}</Text></View>
         {record.composition && <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Exact blend composition</Text>{record.composition.map(component => <Text key={component.component} style={styles.nextText}>{component.component} · {component.amountMg} mg</Text>)}<Text style={styles.lessonTitle}>Total: {record.composition.reduce((sum, item) => sum + item.amountMg, 0)} mg</Text></View>}
       </>}
       <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Reference Plans</Text></View>
-      {plans.length ? plans.map(plan => renderReference(plan, deep)) : <View style={styles.lessonCard}><Text style={styles.nextText}>No established human reference schedule identified in the research reviewed.</Text><Text style={styles.helper}>You can create a Custom Plan in Guide. No schedule or setup values will be filled in without a reference.</Text></View>}
+      {plans.length ? plans.map(plan => renderReference(plan, deep)) : <View style={styles.lessonCard}><Text style={styles.nextText}>No transferable reference plan is supplied in this library.</Text><Text style={styles.helper}>You can create a Custom Plan in Guide. No schedule or setup values will be filled in without a reference.</Text></View>}
       {record.commonResearchPractice && <View style={styles.lessonCard}>
         <Evidence kind={record.commonResearchPractice.sourceClass}/>
         <Text style={styles.lessonTitle}>{record.commonResearchPractice.title}</Text>
@@ -201,6 +214,8 @@ export default function App() {
       <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Important Considerations</Text>{(deep ? record.keyConsiderations : record.keyConsiderations.slice(0, 1)).map(text => <Text key={text} style={styles.consideration}>{text}</Text>)}{!deep && record.keyConsiderations.length > 1 && <Text style={styles.helper}>More considerations in Learn More.</Text>}</View>
       {!deep && <AppButton label="Learn More" onPress={() => setScreen("schoolMore")} secondary />}
       <AppButton label="Sources" onPress={() => setScreen("schoolSources")} secondary />
+      <RelatedSchoolCards items={relatedSchool(selected,compounds)} onOpen={id=>{const next=compounds.find(c=>c.id===id);if(next)openSchool(next);}}/>
+      <ResearchProductLink label={"AURAPEP research product: "+selected.name}/>
       <Pressable accessibilityRole="button" accessibilityLabel="Open in Guide" onPress={() => openCompound(selected)} style={styles.crossLink}><Text style={styles.crossLinkText}>Open in Guide →</Text></Pressable>
     </ScrollView>;
   };
@@ -338,7 +353,9 @@ export default function App() {
         <Text style={styles.tempStatus}>Prototype 0.4</Text>
       </View>
       <View style={{paddingHorizontal:20,paddingVertical:3}}><Text testID="save-status" style={styles.smallBadge}>{saved.saving?'Saving on device…':saved.error?saved.error:'Saved on this device'}</Text>{!!saved.error&&!saved.loadFailed&&<AppButton label="Retry save" onPress={()=>saved.retry().catch(()=>{})} secondary/>}{!!reminderError&&<Text style={styles.smallBadge}>{reminderError}</Text>}</View>
-      <View key={screen} style={styles.main}>
+      {!!editError&&<Text style={styles.helper}>{editError}</Text>}
+      {saved.store.activeEdit&&<View style={{paddingHorizontal:20,paddingVertical:4,backgroundColor:COLORS.paleBlue}}><Text style={styles.smallBadge}>{editing?'Editing active plan · changes apply when saved':'You have saved active-plan edits.'}</Text><View style={{flexDirection:'row',gap:18}}>{!editing&&<Pressable accessibilityRole="button" accessibilityLabel="Resume plan edits" onPress={()=>editPlan(saved.store.activeEdit!.planId)}><Text style={styles.back}>Resume edits</Text></Pressable>}<Pressable accessibilityRole="button" accessibilityLabel="Discard plan edits" onPress={discardActiveEdits}><Text style={styles.back}>Discard edits</Text></Pressable></View></View>}
+      <View key={screen==='schoolDetail'?screen+selected.id:screen} style={styles.main}>
         {screen === "school" && renderSchool()}
         {screen === "schoolDetail" && renderSchoolDetail()}
         {screen === "schoolMore" && renderSchoolDetail(true)}
@@ -346,10 +363,10 @@ export default function App() {
         {screen === "more" && renderMore()}
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
-        {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
+        {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onEdit={editPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
         {(screen==='tracker'||screen==='history')&&!saved.loadFailed&&<AggregateTracker plans={plans} archives={saved.store.archives} update={saved.update} initialTab={screen==='history'?'History':'Today'} onOpen={openPlan}/>}
-        {screen==='inventory'&&!saved.loadFailed&&<MyPlans inventory store={saved.store} update={saved.update} onOpen={id=>{setSelectedPlanId(id);setScreen('planInventory');}} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
-        {(["plan","planDetail","planInventory","review","schedule","calc","planTracker","reminders"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={(screen==='planDetail'?'plan':screen==='planInventory'?'inventory':screen==='planTracker'?'tracker':screen) as any} navigate={workspaceNavigate} store={scopedStore} update={scopedUpdate} onGuide={()=>setScreen("guide")}/>}
+        {screen==='inventory'&&!saved.loadFailed&&<MyPlans inventory store={saved.store} update={saved.update} onOpen={id=>{setSelectedPlanId(id);setScreen('planInventory');}} onEdit={editPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
+        {(["plan","planDetail","planInventory","review","schedule","calc","planTracker","reminders"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={(screen==='planDetail'?'plan':screen==='planInventory'?'inventory':screen==='planTracker'?'tracker':screen) as any} navigate={workspaceNavigate} store={scopedStore} update={scopedUpdate} editing={editing?{onSave:saveActiveEdits,supply:saved.store.activeEdit!.supplyVials,onSupplyChange:value=>saved.update(old=>old.activeEdit?{...old,activeEdit:{...old.activeEdit,supplyVials:value}}:old).catch(()=>{})}:undefined} onGuide={()=>setScreen("guide")}/>}
       </View>
       <BottomNav active={screen} setScreen={setScreen} />
     </SafeAreaView></SafeAreaProvider>

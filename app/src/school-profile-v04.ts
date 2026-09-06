@@ -10,10 +10,10 @@ const relatedMap:Record<string,string[]>={
 export function schoolSections(compound:Compound):SchoolSection[]{
  const record=compound.supplied!;
  const sections:SchoolSection[]=[
-  {id:'overview',title:'Research overview',summary:'What researchers have studied and why',body:record.learnMore||compound.school.knownFor},
+  {id:'overview',title:'Research overview',summary:'What researchers have studied and why',body:compound.school.deeperContent.length>1?compound.school.knownFor:record.learnMore||compound.school.knownFor},
   {id:'mechanism',title:'How it works',summary:'A deeper look at the biology',body:record.school101.howItWorks},
  ];
- for(const block of compound.school.deeperContent||[])if(block.text&&!sections.some(s=>s.body===block.text))sections.push({id:'deep-'+sections.length,title:block.heading,body:block.text});
+ for(const block of compound.school.deeperContent||[]){if(!block.text||sections.some(s=>s.body===block.text))continue;const existing=sections.find(s=>s.title===block.heading);if(existing)existing.body=block.text;else sections.push({id:'deep-'+sections.length,title:block.heading,body:block.text});}
  if(record.keyConsiderations?.length)sections.push({id:'limits',title:'Safety & limitations',summary:'Important context before modeling a plan',body:record.keyConsiderations.join('\n\n')});
  return sections;
 }

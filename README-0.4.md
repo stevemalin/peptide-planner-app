@@ -31,3 +31,19 @@ Run `npm test`, `npm run test:ui` (with `PLAYWRIGHT_CHANNEL=msedge` on this mach
 SS-31's prior investigational-only description was stale. Its entry now identifies the specific US FDA accelerated approval for Forzinity and links the [FDA snapshot](https://www.fda.gov/drugs/drug-trials-snapshots/drug-trials-snapshots-forzinity). This is not a Canadian approval claim or a general research-vial administration plan. The other new entries retain contextual evidence labels and disclose missing study citations rather than inventing them.
 
 This is browser acceptance, not physical Android acceptance. Native notification delivery remains device-unverified; browser notification delivery is unsupported. No accounts, backend, production/customer integration, AURAPEP changes, main merge or new CI infrastructure were added.
+
+## Completed refinement — 2026-09-06 Pacific
+
+Started from fetched branch commit `44b0e9a` and preserved its School/profile, sourced SS-31 context, plan-card and Tracker work. No School dosing or reconstitution claims were added or changed in this pass.
+
+- Actual compound pages now mount SchoolAccordion and school-profile-v04 helpers. The simple 101 introduction comes first, followed by evidence, expandable research context, existing reference flows and Sources. Related Compounds opens the target School profile with collapsed sections and reset scroll. The future AURAPEP product card remains disabled; no store or production connection was made.
+- Bottom navigation now uses a graduation cap for Pep School and an open book for Guide.
+- Compact My Plans cards have distinct View and Edit actions. Edit opens the existing stages/schedule/calculator journey for that active plan, rather than copying it or replacing another plan.
+- Active edits persist separately as `activeEdit` in v4 storage. They can be resumed after navigation or restart, or explicitly discarded. An unfinished new-plan draft is preserved independently.
+- Saving edits preserves the active plan ID and all completed, skipped and already-due events exactly, including amounts, calculations and log timestamps. Only future pending events are rebuilt from the edited configuration. Earlier configurations and supply totals are retained as plan revisions. Other plans remain untouched.
+- Blank supply during editing preserves the inventory ledger. A provided whole-number count means individual vials remaining, at the edited vial strength; consumed mass remains accounted for. Concurrent plan-setting changes fail closed while retaining the edit draft. Schedule editing requires the original plan time zone.
+- Tracker counts all due/unlogged items, including today's overdue items. Scheduled dates remain visible in History. The header exposes the next event directly; Calendar retains compact count indicators for many plans.
+
+Validation: 79 automated tests passed; TypeScript passed; Expo dependencies compatible; Expo Doctor 21/21 passed. The original six complete browser flows passed. The 1/3/6/10-plan matrix passed at 320×915, 412×915 and 1366×915. All ten School profiles, related-card navigation, active edit/reload/resume/discard, future-event changes, independent supply changes and unchanged logged history passed browser checks at all three widths. No browser console/runtime errors. Screenshots reviewed under ignored `checks/refinement04` and `checks/integration04`. Run `npm run test:refinement-ui` for this pass's additional browser coverage.
+
+No physical Android or native notification-delivery acceptance is claimed. `main` remains the protected 0.3.3 baseline. No CI infrastructure was added or modified locally.
