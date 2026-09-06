@@ -1,7 +1,7 @@
 import React from 'react';
 import Svg,{Path,Rect,Line} from 'react-native-svg';
 export type NavGlyph='school'|'guide'|'tracker'|'plans'|'more';
-export const navColors:Record<NavGlyph,string>={school:'#7055c9',guide:'#247ac2',tracker:'#06aacc',plans:'#6656cc',more:'#40516c'};
+export const navColors:Record<NavGlyph,string>={school:'#783ce0',guide:'#087feb',tracker:'#06aacc',plans:'#bd39bc',more:'#ac653c'};
 export default function NavIcon({name,color,size=25}:{name:NavGlyph;color:string;size?:number}){
  return <Svg testID={'nav-icon-'+name} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
  {name==='school'&&<><Path d="M2 8 12 3 22 8 12 13Z"/><Path d="M6 10v6c4 3 8 3 12 0v-6M22 8v8"/><Line x1={22} y1={17} x2={22} y2={19}/></>}

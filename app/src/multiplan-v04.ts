@@ -30,7 +30,7 @@ export function removePlan<T extends object>(store:T,id:string):T{
 }
 
 export function aggregateEvents(plans:SavedPlan[]):OwnedEvent[]{
- return plans.flatMap(plan=>plan.events.map(event=>({plan,event}))).sort((a,b)=>a.event.scheduledAt.localeCompare(b.event.scheduledAt));
+ return plans.flatMap(plan=>plan.events.filter(event=>!plan.pausedAt||event.status!=='pending').map(event=>({plan,event}))).sort((a,b)=>a.event.scheduledAt.localeCompare(b.event.scheduledAt));
 }
 
 export function eventsForDay(plans:SavedPlan[],day:string):OwnedEvent[]{
@@ -47,7 +47,7 @@ export function calendarDensity(plans:SavedPlan[],day:string,now=new Date()){
 }
 
 export function planDashboard(plans:SavedPlan[],now=new Date()){
- return plans.map(plan=>{const p=actualProgress(plan,now),pending=plan.events.filter(e=>e.status==='pending'&&new Date(e.scheduledAt)>=now),next=pending[0];return{plan,progress:p,next};});
+ return plans.map(plan=>{const p=actualProgress(plan,now),pending=plan.events.filter(e=>!plan.pausedAt&&e.status==='pending'&&new Date(e.scheduledAt)>=now),next=pending[0];return{plan,progress:p,next};});
 }
 
 export function inventorySummary(plan:SavedPlan,now=new Date()){

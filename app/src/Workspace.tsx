@@ -47,7 +47,7 @@ export default function Workspace({screen,navigate,store,update,onGuide,onStarte
    await save(s=>addPlan({...s,draft:null},plan));onStarted();
   }catch(e){setError(String(e));}finally{setBusy(false);}
  };
- const cloneActive=()=>{const a=store.active;if(!a)return;const {events,activatedAt,inventoryTotalMg,timezone,revisions,...fields}=a;save(s=>({...s,draft:{...fields,id:uid(),stages:fields.stages.map(stage=>({...stage,id:uid()})),startDate:'',initialVials:'',reviewed:false}})).then(()=>navigate('plan')).catch(()=>{});};
+ const cloneActive=()=>{const a=store.active;if(!a)return;const {events,activatedAt,inventoryTotalMg,timezone,revisions,inventoryLedger,...fields}=a;save(s=>({...s,draft:{...fields,id:uid(),stages:fields.stages.map(stage=>({...stage,id:uid()})),startDate:'',initialVials:'',reviewed:false}})).then(()=>navigate('plan')).catch(()=>{});};
  useEffect(()=>{if(screen==='reminders')reconcileReminders(getActivePlans(store)).then(setReport).catch(e=>setError('Reminders: '+String(e)));},[screen,store.active,now]);
  const active=store.active;
  const calculationReady=!!d&&d.stages.length>0&&d.stages.every(stage=>!!calculate(d.vialMg,d.waterMl,stage.amountMg));

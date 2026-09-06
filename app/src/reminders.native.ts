@@ -34,9 +34,9 @@ let serial=Promise.resolve();
 export function reconcileReminders(input:SavedPlan|SavedPlan[]|null):Promise<ReminderReport>{
  const task=serial.catch(()=>{}).then(async()=>{
   const Notifications=getLocalNotifications();if(!Notifications)return unavailable();
-  const plans=Array.isArray(input)?input:input?[input]:[];const plan=plans.find(p=>p.reminderEnabled);
+  const plans=Array.isArray(input)?input:input?[input]:[];const plan=plans.find(p=>p.reminderEnabled&&!p.pausedAt);
   const now=Date.now();const permission=await Notifications.getPermissionsAsync();
-  const upcoming=plan?.reminderEnabled&&permission.granted?plans.filter(p=>p.reminderEnabled).flatMap(p=>p.events.filter(e=>e.status==='pending').map(e=>({planId:p.id,event:e,at:e.snoozedUntil?new Date(e.snoozedUntil).getTime():new Date(e.scheduledAt).getTime()-p.reminderOffsetMinutes*60000}))).filter(e=>e.at>now).sort((a,b)=>a.at-b.at).slice(0,60):[];
+  const upcoming=plan?.reminderEnabled&&permission.granted?plans.filter(p=>p.reminderEnabled&&!p.pausedAt).flatMap(p=>p.events.filter(e=>e.status==='pending').map(e=>({planId:p.id,event:e,at:e.snoozedUntil?new Date(e.snoozedUntil).getTime():new Date(e.scheduledAt).getTime()-p.reminderOffsetMinutes*60000}))).filter(e=>e.at>now).sort((a,b)=>a.at-b.at).slice(0,60):[];
   const desired=new Map(upcoming.map(item=>['pep04:'+item.planId+':'+item.event.id+':'+item.at,item]));
   const existing=await Notifications.getAllScheduledNotificationsAsync();
   for(const item of existing)if(item.content.data?.owner===owner&&!item.content.data?.test&&!desired.has(item.identifier))await Notifications.cancelScheduledNotificationAsync(item.identifier);

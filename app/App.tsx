@@ -1,3 +1,5 @@
+import ActivePeptideEditor from './src/ActivePeptideEditor';
+import {archivePlan} from './src/plan-actions-v04';
 import NavIcon,{navColors,type NavGlyph} from './src/NavIcon';
 import ResearchPracticeCard from './src/ResearchPracticeCard';
 import Svg,{Circle,Path} from 'react-native-svg';
@@ -37,7 +39,7 @@ import { importReference, newDraft } from "./src/engine";
 import { Evidence } from "./src/ui";
 import { reconcileReminders, listenForReminder } from "./src/reminders";
 import type { PlanMode } from "./src/planning";
-type Screen = "profile" | "settings" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "more";
+type Screen = "activeEditor" | "profile" | "settings" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "more";
 
 const COLORS = {
   ink: "#0E1C4A",
@@ -89,7 +91,7 @@ function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Scree
         const isActive = tab === item.key;
         return (
           <Pressable accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: isActive }} key={item.key} onPress={() => setScreen(item.key)} style={styles.navItem}>
-            <View testID={item.key==='tracker'?'today-center-button':undefined} style={item.key==='tracker'?[styles.todayCircle,isActive&&styles.todayCircleSelected]:[styles.iconWell,isActive&&{backgroundColor:navColors[item.key]+'15'}]}><NavIcon name={item.key} color={item.key==='tracker'?'#ffffff':navColors[item.key]} size={item.key==='tracker'?31:25}/></View>
+            <View testID={item.key==='tracker'?'today-center-button':undefined} style={item.key==='tracker'?[styles.todayCircle,isActive&&styles.todayCircleSelected]:[styles.iconWell,{backgroundColor:navColors[item.key]+(isActive?'25':'12')},isActive&&{borderWidth:1,borderColor:navColors[item.key]+'55'}]}><NavIcon name={item.key} color={item.key==='tracker'?'#ffffff':navColors[item.key]} size={item.key==='tracker'?31:25}/></View>
             <Text style={[styles.navLabel,{color:navColors[item.key],fontWeight:isActive||item.key==='tracker'?'800':'600'}]}>{item.key==='tracker'?'Today':item.label}</Text>
           </Pressable>
         );
@@ -107,23 +109,24 @@ export default function App() {
   const saved = usePlannerStore();
   const [selectedPlanId,setSelectedPlanId]=useState<string|null>(null);
   const [editingActive,setEditingActive]=useState(false);
+  const [editorSection,setEditorSection]=useState('');
   const [editError,setEditError]=useState('');
  const [discardEdits,setDiscardEdits]=useState(false);
-  const editing=editingActive&&!!saved.store.activeEdit&&['plan','review','schedule','calc'].includes(screen);
+  const editing=editingActive&&!!saved.store.activeEdit&&['activeEditor','plan','review','schedule','calc'].includes(screen);
   const plans=getActivePlans(saved.store);
   const focused=plans.find(p=>p.id===selectedPlanId)??plans[0]??null;
   const scopedStore={...saved.store,active:focused,draft:editing?saved.store.activeEdit!.draft:screen==='planDetail'?null:saved.store.draft};
   const scopedUpdate=(change:Parameters<typeof saved.update>[0])=>saved.update(old=>{if(editing&&old.activeEdit){const changed=change({...old,active:focused,draft:old.activeEdit.draft});return {...old,activeEdit:{...old.activeEdit,draft:changed.draft!}};}const next=scopedPlanUpdate(old,focused?.id??null,change);if(getActivePlans(next).length>getActivePlans(old).length)setSelectedPlanId(getActivePlans(next).at(-1)!.id);return next;});
   const openPlan=(id:string)=>{setEditingActive(false);setSelectedPlanId(id);setScreen('planDetail');};
-  const editPlan=(id:string)=>{
+  const editPlan=(id:string,section='')=>{
    const plan=plans.find(p=>p.id===id);if(!plan)return;
    if(saved.store.activeEdit&&saved.store.activeEdit.planId!==id){setEditError('Finish or discard the existing plan edits first.');return;}
-   saved.update(old=>({...old,activeEdit:old.activeEdit??beginActiveEdit(plan)})).then(()=>{setSelectedPlanId(id);setEditingActive(true);setScreen('plan');setEditError('');}).catch(()=>{});
+   saved.update(old=>({...old,activeEdit:old.activeEdit??{...beginActiveEdit(plan),returnTo:screen==='tracker'||screen==='history'||screen==='planTracker'?'tracker':screen==='planDetail'?'planDetail':'plans'}})).then(()=>{setSelectedPlanId(id);setEditingActive(true);setEditorSection(section);setScreen('activeEditor');setEditError('');}).catch(()=>{});
   };
-  const saveActiveEdits=async()=>{await saved.update(old=>old.activeEdit?applyActiveEdit(old,old.activeEdit):old);setEditingActive(false);setScreen('planDetail');};
-  const discardActiveEdits=()=>saved.update(old=>({...old,activeEdit:null})).then(()=>{setEditingActive(false);setScreen('plans');setEditError('');}).catch(()=>{});
-  useEffect(()=>{if(!['plan','review','schedule','calc'].includes(screen))setEditingActive(false);},[screen]);
-  const workspaceNavigate=(target:any)=>{if(target==='tracker'){setScreen('planTracker');}else if(target==='inventory')setScreen('planInventory');else setScreen(target);};
+  const saveActiveEdits=async()=>{const target=saved.store.activeEdit?.returnTo??'plans';await saved.update(old=>old.activeEdit?applyActiveEdit(old,old.activeEdit):old);setEditingActive(false);setScreen(target);};
+  const discardActiveEdits=async()=>{const target=saved.store.activeEdit?.returnTo??'plans';await saved.update(old=>({...old,activeEdit:null}));setEditingActive(false);setScreen(target);setEditError('');};
+  useEffect(()=>{if(!['activeEditor','plan','review','schedule','calc'].includes(screen))setEditingActive(false);},[screen]);
+  const workspaceNavigate=(target:any)=>{if(target==='tracker'){setScreen('planTracker');}else if(target==='inventory'&&focused)editPlan(focused.id,'Inventory');else setScreen(target);};
   const [reminderError,setReminderError] = useState("");
   const filtered=searchCompounds(query);
   const openCompound=(compound:Compound)=>{setSelected(compound);setScreen("detail");};
@@ -136,6 +139,7 @@ export default function App() {
   };
   useEffect(()=>{
     const subscription=BackHandler.addEventListener("hardwareBackPress",()=>{
+      if(screen==='activeEditor'){discardActiveEdits().catch(()=>{});return true;}
       const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"detail",review:"calc",schedule:"plan",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
       if(!parent[screen])return false;setScreen(parent[screen]!);return true;
     });return()=>subscription.remove();
@@ -374,12 +378,13 @@ export default function App() {
         {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Text style={styles.detailTitle}>{screen==='profile'?'Profile':'Settings'}</Text><Text style={styles.helper}>{screen==='profile'?'Your local planner. Accounts and cloud sync are not connected in this prototype.':'Plan-specific syringe size, reminders and supply can be changed from My Peptides → Edit. Preferences remain on this device.'}</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/><AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
+        {screen==='activeEditor'&&focused&&saved.store.activeEdit&&<ActivePeptideEditor key={focused.id+editorSection} initialSection={editorSection} plan={focused} edit={saved.store.activeEdit} change={edit=>saved.update(old=>({...old,activeEdit:edit}))} onSave={saveActiveEdits} onCancel={discardActiveEdits} onArchive={async()=>{const target=saved.store.activeEdit?.returnTo==='tracker'?'tracker':'plans';await saved.update(old=>({...archivePlan(old,focused.id),activeEdit:null}));setEditingActive(false);setScreen(target);}}/>}
         {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onEdit={editPlan} onDraft={()=>setScreen('plan')} onGuide={()=>setScreen('guide')}/>}
         {(screen==='tracker'||screen==='history')&&!saved.loadFailed&&<AggregateTracker plans={plans} archives={saved.store.archives} update={saved.update} initialTab={screen==='history'?'History':'Today'} onOpen={openPlan} onEdit={editPlan}/>}
-        {screen==='inventory'&&!saved.loadFailed&&<MyPlans inventory store={saved.store} update={saved.update} onOpen={id=>{setSelectedPlanId(id);setScreen('planInventory');}} onEdit={editPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
+        {screen==='inventory'&&!saved.loadFailed&&<MyPlans inventory store={saved.store} update={saved.update} onOpen={id=>editPlan(id,'Inventory')} onEdit={editPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
         {(["plan","planDetail","planInventory","review","schedule","calc","planTracker","reminders"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={(screen==='planDetail'?'plan':screen==='planInventory'?'inventory':screen==='planTracker'?'tracker':screen) as any} navigate={workspaceNavigate} store={scopedStore} update={scopedUpdate} editing={editing?{onSave:saveActiveEdits,supply:saved.store.activeEdit!.supplyVials,onSupplyChange:value=>saved.update(old=>old.activeEdit?{...old,activeEdit:{...old.activeEdit,supplyVials:value}}:old).catch(()=>{})}:undefined} onStarted={()=>setScreen("plans")} onDiscard={editing?discardActiveEdits:async()=>{const compound=compounds.find(c=>c.id===saved.store.draft?.compoundId);await saved.update(old=>({...old,draft:null}));if(compound)setSelected(compound);setScreen("detail");}} onGuide={()=>setScreen("guide")}/>}
       </View>
-      <BottomNav active={screen} setScreen={setScreen} />
+      <BottomNav active={screen==='activeEditor'?(saved.store.activeEdit?.returnTo??'plans'):screen} setScreen={setScreen} />
     </SafeAreaView></SafeAreaProvider>
   );
 }
