@@ -11,7 +11,7 @@ export default function Tracker({plan,archives,now,update,initialTab='Today'}:{p
  const [tab,setTab]=useState(initialTab),[selected,setSelected]=useState(localDate(now)),[month,setMonth]=useState(localDate(now).slice(0,7)+'-01'),[error,setError]=useState(''),[message,setMessage]=useState('');
  const actionLock=useRef(false),tabRef=useRef(tab);tabRef.current=tab;const [logging,setLogging]=useState(false);
  const tabOrder=['Today','Tomorrow','Calendar','History'];
- const swipe=useRef(PanResponder.create({onMoveShouldSetPanResponder:(_,gesture)=>Math.abs(gesture.dx)>18&&Math.abs(gesture.dx)>Math.abs(gesture.dy)*1.3,onPanResponderRelease:(_,gesture)=>{if(Math.abs(gesture.dx)<60)return;const index=tabOrder.indexOf(tabRef.current),next=Math.max(0,Math.min(tabOrder.length-1,index+(gesture.dx<0?1:-1)));if(next!==index)setTab(tabOrder[next]);}})).current;
+ const swipe=useRef(PanResponder.create({onMoveShouldSetPanResponder:(_,gesture)=>Math.abs(gesture.dx)>18&&Math.abs(gesture.dx)>Math.abs(gesture.dy)*1.3,onMoveShouldSetPanResponderCapture:(_,gesture)=>Math.abs(gesture.dx)>18&&Math.abs(gesture.dx)>Math.abs(gesture.dy)*1.3,onPanResponderTerminationRequest:()=>false,onPanResponderRelease:(_,gesture)=>{if(Math.abs(gesture.dx)<60)return;const index=tabOrder.indexOf(tabRef.current),next=Math.max(0,Math.min(tabOrder.length-1,index+(gesture.dx<0?1:-1)));if(next!==index)setTab(tabOrder[next]);}})).current;
  const p=actualProgress(plan,now),pending=plan.events.filter(e=>e.status==='pending'),due=pending.filter(e=>new Date(e.scheduledAt)<=now),future=pending.find(e=>new Date(e.scheduledAt)>now);
  const candidate=due.find(e=>e.localDate===localDate(now))||due[due.length-1]||future;
  const action=async(e:Event,value:'completed'|'skipped'|'later')=>{if(actionLock.current)return;actionLock.current=true;setLogging(true);try{await update(s=>s.active?.id!==plan.id?s:{...s,active:logEvent(s.active,e.id,value,new Date())});setMessage(value==='later'?'Reminder moved 15 minutes later. The scheduled event time is unchanged.':'Event saved.');setError('');}catch(err){setError(String(err));}finally{setTimeout(()=>{actionLock.current=false;setLogging(false);},700);}};
@@ -20,7 +20,7 @@ export default function Tracker({plan,archives,now,update,initialTab='Today'}:{p
  const moveMonth=(n:number)=>{const d=parseDate(month)!;d.setMonth(d.getMonth()+n);setMonth(localDate(d));};
  const history=[...archives,plan].flatMap(owner=>owner.events.filter(e=>e.status!=='pending'||new Date(e.scheduledAt)<now).map(e=>({e,owner}))).sort((a,b)=>b.e.scheduledAt.localeCompare(a.e.scheduledAt));
  const [historyLimit,setHistoryLimit]=useState(30);
- return <View {...swipe.panHandlers} accessibilityLabel="Today tracker. Swipe left or right to change views.">
+ return <View {...swipe.panHandlers} style={{touchAction:'pan-y'} as any} accessibilityLabel="Today tracker. Swipe left or right to change views.">
   <View style={u.row}>{tabOrder.map(name=><Pressable key={name} accessibilityRole="tab" accessibilityLabel={name} accessibilityState={{selected:tab===name}} onPress={()=>setTab(name)} style={[u.pill,tab===name&&u.selected]}><Text style={u.heading}>{name}</Text></Pressable>)}</View>
   {!!error&&<Text style={u.error}>{error}</Text>}{!!message&&<Text accessibilityLiveRegion="polite" style={u.small}>{message}</Text>}
   {tab==='Today'&&<>

@@ -2,6 +2,8 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 require('./register-tests.cjs');
 const {upcomingGroup}=require('./app/src/today-sections.ts');
 const tracker=fs.readFileSync('./app/src/AggregateTracker.tsx','utf8');
+const app=fs.readFileSync('./app/App.tsx','utf8');
+const planTracker=fs.readFileSync('./app/src/Tracker.tsx','utf8');
 test('tracker leads with operational today dashboard',()=>{assert.match(tracker,/Today at a glance/);assert.match(tracker,/need logging/);assert.match(tracker,/Up next/);});
 test('tracker preserves aggregate calendar and history',()=>{for(const term of ['Today','Calendar','History','Counts include every active plan|total across every active plan'])assert.match(tracker,new RegExp(term));});
 test('tracker keeps compound identity visually distinct',()=>{assert.match(tracker,/compoundColor/);assert.match(tracker,/compoundDot/);assert.match(tracker,/plan\.compoundName/);});
@@ -33,18 +35,27 @@ test('taking or skipping events triggers targeted reminder cancellation',()=>{
 
 
 test('first-run guidance keeps navigation stable and Today becomes Start Here before a plan',()=>{
- for(const term of ['WELCOME TO PEPPLAN','How familiar are you with peptides?','What would you like to do first?','Show me where to begin','START HERE','Learn the essentials','Research a peptide','Build your plan','Review calculations','Start tracking'])assert.match(tracker,new RegExp(term));
- assert.match(tracker,/screen==='tracker'&&!plans\.length/);
- assert.match(tracker,/screen==='tracker'&&!!plans\.length/);
- assert.match(tracker,/{ key: "school", label: "Learn" }/);
- assert.match(tracker,/{ key: "guide", label: "Build Plan" }/);
- assert.match(tracker,/screen!=="welcome"&&<BottomNav/);
- assert.match(tracker,/RECOMMENDED FIRST/);
- assert.match(tracker,/plans\.length\|\|saved\.store\.draft/);
+ for(const term of ['WELCOME TO EZPEP PLANNER','How familiar are you with peptides?','What would you like to do first?','Show me where to begin','START HERE','Learn the essentials','Research a peptide','Build your plan','Review calculations','Start tracking'])assert.match(app,new RegExp(term));
+ assert.match(app,/screen==='tracker'&&!plans\.length/);
+ assert.match(app,/screen==='tracker'&&!!plans\.length/);
+ assert.match(app,/{ key: "school", label: "Learn" }/);
+ assert.match(app,/{ key: "guide", label: "Build Plan" }/);
+ assert.match(app,/screen!=="welcome"&&<BottomNav/);
+ assert.match(app,/RECOMMENDED FIRST/);
+ assert.match(app,/plans\.length\|\|saved\.store\.draft/);
 });
 
-test('onboarding is local, optional and does not claim to recommend a peptide or dose',()=>{
- assert.match(tracker,/pepplan\.onboarding\.v1/);
- assert.match(tracker,/Skip for now/);
- assert.match(tracker,/does not select a peptide or prescribe a dose/);
+test('onboarding is local, optional, restartable and does not alter saved plans',()=>{
+ assert.match(app,/pepplan\.onboarding\.v1/);
+ assert.match(app,/Skip for now/);
+ assert.match(app,/Restart Quick Start Onboarding/);
+ assert.match(app,/saved plans, history and settings will not be changed/);
+ assert.match(app,/does not select a peptide or prescribe a dose/);
+});
+
+test('plan tracker claims horizontal swipes before the vertical scroll container on web and native',()=>{
+ assert.match(planTracker,/onMoveShouldSetPanResponderCapture/);
+ assert.match(planTracker,/onPanResponderTerminationRequest:\(\)=>false/);
+ assert.match(planTracker,/touchAction:'pan-y'/);
+ assert.match(planTracker,/Math\.abs\(gesture\.dx\)<60/);
 });
