@@ -238,14 +238,24 @@ export default function App() {
     {selected.supplied!.sources.length===0&&<Text style={styles.helper}>This library entry provides research context only. Study citations and a transferable reference plan have not been supplied.</Text>}
     {selected.supplied!.sources.map(source => <View key={source.id} testID={"source-" + source.id} style={styles.lessonCard}><Text selectable style={styles.sourceClass}>{source.id}</Text><Text style={styles.lessonTitle}>{source.title}</Text><Text style={styles.helper}>{source.type}</Text>{source.url&&<Pressable accessibilityRole="link" accessibilityLabel={"Read "+source.title} onPress={()=>Linking.openURL(source.url!)}><Text style={styles.back}>Read source ↗</Text></Pressable>}</View>)}
   </ScrollView>;
-  const renderMore = () => <ScrollView contentContainerStyle={styles.scrollContent}>
-    <Text style={[styles.kicker, { marginTop: 20 }]}>MORE</Text><Text style={styles.detailTitle}>Your space</Text><Text style={styles.detailMeta}>Useful extras, kept out of the way.</Text>
-    {["Profile / Settings", "Inventory", "History", "Reminders", "Preferences", "Help / About", "Sources / disclaimers", "Shop"].map(label => {
-      const target:Screen|null=label==="Profile / Settings"?"settings":label==="Inventory"?"inventory":label==="History"?"history":label==="Reminders"?"reminders":label==="Sources / disclaimers"?"schoolSources":null;
-      return <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={!target} key={label} style={styles.moreRow} onPress={()=>target&&setScreen(target)}><Text style={styles.planOptionTitle}>{label}</Text><Text style={styles.smallBadge}>{target?'Open ›':'Coming later'}</Text></Pressable>;
-    })}
-    <View style={styles.notice}><Text style={styles.noticeText}>Prototype 0.4 · saved on this device. Reference library updated. No shop or cloud services are connected.</Text></View>
-  </ScrollView>;
+  const renderMore = () => {
+    const rows:{label:string;detail:string;target:Screen|null}[]=[
+      {label:"Account",detail:"Local-first today · passwordless sync planned",target:"profile"},
+      {label:"Notifications",detail:"Plan reminders, timing and permission status",target:"reminders"},
+      {label:"Inventory",detail:"Individual vials across active peptides",target:"inventory"},
+      {label:"History",detail:"Completed and skipped events",target:"history"},
+      {label:"Preferences",detail:"Units, appearance and planner defaults",target:"settings"},
+      {label:"My data & privacy",detail:"Local storage, export and deletion controls",target:"settings"},
+      {label:"Help & About",detail:"PepPlan 0.4, guidance and disclaimers",target:"settings"},
+      {label:"Shop",detail:"Future AURAPEP connection · not connected",target:null},
+    ];
+    return <ScrollView contentContainerStyle={styles.scrollContent}>
+      <Text style={[styles.kicker, { marginTop: 20 }]}>MORE</Text><Text style={styles.detailTitle}>Your PepPlan</Text><Text style={styles.detailMeta}>Account, reminders, preferences and support.</Text>
+      <View style={styles.lessonCard}><Text style={styles.sourceClass}>ACCOUNT DIRECTION</Text><Text style={styles.lessonTitle}>Start locally. Sync when you choose.</Text><Text style={styles.nextText}>PepPlan Starter remains useful without an account. Passwordless six-digit email verification will unlock backup, device transfer and Pro access after the secure service is connected.</Text><AppButton label="View account plan" secondary onPress={()=>setScreen("profile")}/></View>
+      {rows.map(row=><Pressable accessibilityRole="button" accessibilityLabel={row.label} disabled={!row.target} key={row.label} style={styles.moreRow} onPress={()=>row.target&&setScreen(row.target)}><View style={{flex:1}}><Text style={styles.planOptionTitle}>{row.label}</Text><Text style={styles.smallBadge}>{row.detail}</Text></View><Text style={styles.linkArrow}>{row.target?'›':'·'}</Text></Pressable>)}
+      <View style={styles.notice}><Text style={styles.noticeText}>Prototype 0.4 · plans are saved on this device. No cloud account, shop connection or customer-data integration is active.</Text></View>
+    </ScrollView>;
+  };
 
   const renderGuide = () => (
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -375,7 +385,7 @@ export default function App() {
         {screen === "schoolMore" && renderSchoolDetail(true)}
         {screen === "schoolSources" && renderSources()}
         {screen === "more" && renderMore()}
-        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Text style={styles.detailTitle}>{screen==='profile'?'Profile':'Settings'}</Text><Text style={styles.helper}>{screen==='profile'?'Your local planner. Accounts and cloud sync are not connected in this prototype.':'Plan-specific syringe size, reminders and supply can be changed from My Peptides → Edit. Preferences remain on this device.'}</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/><AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
+        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>{screen==='profile'?'ACCOUNT':'PREFERENCES & DATA'}</Text><Text style={styles.detailTitle}>{screen==='profile'?'Your account':'Your settings'}</Text>{screen==='profile'?<><View style={styles.lessonCard}><Text style={styles.sourceClass}>CURRENT MODE</Text><Text style={styles.lessonTitle}>Saved locally on this device</Text><Text style={styles.nextText}>No email address or password is required during the prototype. Clearing app storage removes unsynced local data.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>PLANNED ACCOUNT</Text><Text style={styles.lessonTitle}>Six-digit email verification</Text><Text style={styles.nextText}>Enter an email, receive a one-time code, and verify without creating a password. An account will add backup, device transfer and PepPlan Pro entitlement while keeping AURAPEP commerce separate unless you explicitly connect it.</Text><Text style={styles.smallBadge}>Backend and email delivery are not connected yet.</Text></View></>:<><View style={styles.lessonCard}><Text style={styles.lessonTitle}>Plan-specific controls</Text><Text style={styles.nextText}>Dose units, schedule, reminder lead time, syringe capacity and inventory are maintained per peptide so one plan never silently changes another.</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>My data & privacy</Text><Text style={styles.nextText}>Plans, calculations, event history and inventory currently remain in local app storage. Export, cloud backup and account deletion will be enabled with the account service.</Text><Text style={styles.smallBadge}>No AURAPEP order or customer data is connected.</Text></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>About PepPlan</Text><Text style={styles.nextText}>Prototype 0.4 · Learn. Plan. Track.</Text><Text style={styles.smallBadge}>Educational planning support. Evidence classes and route/formulation limits remain attached to School content.</Text></View></>}<AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
         {screen==='activeEditor'&&focused&&saved.store.activeEdit&&<ActivePeptideEditor key={focused.id+editorSection} initialSection={editorSection} plan={focused} edit={saved.store.activeEdit} change={edit=>saved.update(old=>({...old,activeEdit:edit}))} onSave={saveActiveEdits} onCancel={discardActiveEdits} onArchive={async()=>{const target=saved.store.activeEdit?.returnTo==='tracker'?'tracker':'plans';await saved.update(old=>({...archivePlan(old,focused.id),activeEdit:null}));setEditingActive(false);setScreen(target);}}/>}
