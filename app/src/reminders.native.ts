@@ -30,23 +30,32 @@ export async function enableReminders(){
  return (await Notifications.requestPermissionsAsync()).granted;
  }catch{return false;}
 }
+type DesiredReminder={planId:string;eventId:string;compoundName:string;at:number;urgent:boolean};
 let serial=Promise.resolve();
 export function reconcileReminders(input:SavedPlan|SavedPlan[]|null):Promise<ReminderReport>{
  const task=serial.catch(()=>{}).then(async()=>{
   const Notifications=getLocalNotifications();if(!Notifications)return unavailable();
-  const plans=Array.isArray(input)?input:input?[input]:[];const plan=plans.find(p=>p.reminderEnabled&&!p.pausedAt);
+  const plans=Array.isArray(input)?input:input?[input]:[];const enabledPlans=plans.filter(p=>p.reminderEnabled&&!p.pausedAt);
   const now=Date.now();const permission=await Notifications.getPermissionsAsync();
-  const upcoming=plan?.reminderEnabled&&permission.granted?plans.filter(p=>p.reminderEnabled&&!p.pausedAt).flatMap(p=>p.events.filter(e=>e.status==='pending').map(e=>({planId:p.id,event:e,at:e.snoozedUntil?new Date(e.snoozedUntil).getTime():new Date(e.scheduledAt).getTime()-p.reminderOffsetMinutes*60000}))).filter(e=>e.at>now).sort((a,b)=>a.at-b.at).slice(0,60):[];
-  const desired=new Map(upcoming.map(item=>['pep04:'+item.planId+':'+item.event.id+':'+item.at,item]));
+  const upcoming:DesiredReminder[]=permission.granted?enabledPlans.flatMap(p=>p.events.filter(e=>e.status==='pending').flatMap(e=>{
+   const scheduled=new Date(e.scheduledAt).getTime();
+   const primary=e.snoozedUntil?new Date(e.snoozedUntil).getTime():scheduled-p.reminderOffsetMinutes*60000;
+   const followUp=Math.max(primary+60*60000,scheduled+60*60000);
+   return [
+    {planId:p.id,eventId:e.id,compoundName:p.compoundName,at:primary,urgent:false},
+    {planId:p.id,eventId:e.id,compoundName:p.compoundName,at:followUp,urgent:true},
+   ];
+  })).filter(e=>e.at>now).sort((a,b)=>a.at-b.at).slice(0,60):[];
+  const desired=new Map(upcoming.map(item=>['pep04:'+item.planId+':'+item.eventId+':'+item.at,item]));
   const existing=await Notifications.getAllScheduledNotificationsAsync();
   for(const item of existing)if(item.content.data?.owner===owner&&!item.content.data?.test&&!desired.has(item.identifier))await Notifications.cancelScheduledNotificationAsync(item.identifier);
   const existingIds=new Set(existing.map(item=>item.identifier));
-  for(const [id,item]of desired)if(!existingIds.has(id))await Notifications.scheduleNotificationAsync({identifier:id,content:{title:'Plan reminder',body:'A saved plan event is ready to review.',sound:'default',data:{owner,eventId:item.event.id,planId:item.planId}},trigger:{type:Notifications.SchedulableTriggerInputTypes.DATE,date:new Date(item.at),channelId}});
+  for(const [id,item]of desired)if(!existingIds.has(id))await Notifications.scheduleNotificationAsync({identifier:id,content:{title:item.urgent?'Action needed · '+item.compoundName:'Time for '+item.compoundName,body:item.urgent?'This event is still waiting. Open PepPlan to mark Taken, Skip or Remind Later.':'Open PepPlan to review the amount and mark Taken, Skip or Remind Later.',sound:'default',data:{owner,eventId:item.eventId,planId:item.planId,urgent:item.urgent}},trigger:{type:Notifications.SchedulableTriggerInputTypes.DATE,date:new Date(item.at),channelId}});
   const through=upcoming.length?new Date(upcoming[upcoming.length-1].at).toISOString():undefined;
-  return {message:!plan?.reminderEnabled?'Reminders are off.':!permission.granted?'Notifications are not permitted. Enable them to receive reminders.':upcoming.length+' local reminders prepared. Android controls delivery timing.',count:upcoming.length,through,enabled:!!permission.granted};
+  return {message:!enabledPlans.length?'Reminders are off.':!permission.granted?'Notifications are not permitted. Enable them to receive reminders.':upcoming.length+' reminder alerts prepared, including unresolved follow-ups. Android controls exact delivery timing.',count:upcoming.length,through,enabled:!!permission.granted};
  }).catch(()=>({...unavailable(),message:'Local reminders could not be prepared. Your saved plan is unchanged. Check notification permissions or retry in a development build.'}));serial=task.then(()=>{});return task;
 }
-export async function testReminder(){const Notifications=getLocalNotifications();if(!Notifications)throw Error(unavailableMessage);if(!await enableReminders())throw Error('Notification permission is not enabled.');await Notifications.scheduleNotificationAsync({content:{title:'Peptide Planner test',body:'Local notifications are working.',data:{owner,test:true}},trigger:{type:Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,seconds:10,channelId}});}
+export async function testReminder(){const Notifications=getLocalNotifications();if(!Notifications)throw Error(unavailableMessage);if(!await enableReminders())throw Error('Notification permission is not enabled.');await Notifications.scheduleNotificationAsync({content:{title:'PepPlan test',body:'Local notifications are working.',data:{owner,test:true}},trigger:{type:Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,seconds:10,channelId}});}
 export function listenForReminder(callback:()=>void){
  const Notifications=getLocalNotifications();if(!Notifications)return()=>{};
  try{const sub=Notifications.addNotificationResponseReceivedListener(response=>{if(response.notification.request.content.data?.owner===owner)callback();});return()=>{try{sub.remove();}catch{}};}catch{return()=>{};}
