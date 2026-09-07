@@ -56,7 +56,7 @@ export function reconcileReminders(input:SavedPlan|SavedPlan[]|null):Promise<Rem
  }).catch(()=>({...unavailable(),message:'Local reminders could not be prepared. Your saved plan is unchanged. Check notification permissions or retry in a development build.'}));serial=task.then(()=>{});return task;
 }
 export async function testReminder(){const Notifications=getLocalNotifications();if(!Notifications)throw Error(unavailableMessage);if(!await enableReminders())throw Error('Notification permission is not enabled.');await Notifications.scheduleNotificationAsync({content:{title:'PepPlan test',body:'Local notifications are working.',data:{owner,test:true}},trigger:{type:Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,seconds:10,channelId}});}
-export function listenForReminder(callback:()=>void){
+export function listenForReminder(callback:(planId?:string,eventId?:string)=>void){
  const Notifications=getLocalNotifications();if(!Notifications)return()=>{};
- try{const sub=Notifications.addNotificationResponseReceivedListener(response=>{if(response.notification.request.content.data?.owner===owner)callback();});return()=>{try{sub.remove();}catch{}};}catch{return()=>{};}
+ try{const sub=Notifications.addNotificationResponseReceivedListener(response=>{const data=response.notification.request.content.data;if(data?.owner===owner)callback(typeof data.planId==='string'?data.planId:undefined,typeof data.eventId==='string'?data.eventId:undefined);});return()=>{try{sub.remove();}catch{}};}catch{return()=>{};}
 }

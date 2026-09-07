@@ -149,7 +149,7 @@ export default function App() {
     let mounted=true;const sync=()=>reconcileReminders(plans).then(()=>{if(mounted)setReminderError("");}).catch(e=>{if(mounted)setReminderError("Reminders need attention. Open More → Reminders. "+String(e));});
     sync();const sub=AppState.addEventListener("change",state=>{if(state==="active")sync();});return()=>{mounted=false;sub.remove();};
   },[saved.ready,saved.store.activePlans,saved.loadFailed]);
-  useEffect(()=>listenForReminder(()=>setScreen("tracker")),[]);
+  useEffect(()=>listenForReminder((planId)=>{if(planId)setSelectedPlanId(planId);setScreen("tracker");}),[]);
 
   const renderSchool = () => (
     <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
