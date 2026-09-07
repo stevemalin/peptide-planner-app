@@ -6,3 +6,8 @@ export function todaySections(rows:TodayRow[],now:Date){
  later.sort((a,b)=>Math.max(Date.parse(a.event.scheduledAt),Date.parse(a.event.snoozedUntil||a.event.scheduledAt))-Math.max(Date.parse(b.event.scheduledAt),Date.parse(b.event.snoozedUntil||b.event.scheduledAt)));
  return {due,later,completed,skipped};
 }
+
+export function upcomingGroup(rows:TodayRow[],now:Date,windowMinutes=60){
+ const horizon=now.getTime()+windowMinutes*60000;
+ return rows.filter(({event})=>event.status==='pending'&&Math.max(Date.parse(event.scheduledAt),Date.parse(event.snoozedUntil||event.scheduledAt))<=horizon).sort((a,b)=>Math.max(Date.parse(a.event.scheduledAt),Date.parse(a.event.snoozedUntil||a.event.scheduledAt))-Math.max(Date.parse(b.event.scheduledAt),Date.parse(b.event.snoozedUntil||b.event.scheduledAt)));
+}

@@ -7,7 +7,7 @@ import {Button,Card,u} from './ui';
 import Syringe from './Syringe';
 import MiniSyringe from './MiniSyringe';
 import TodayEventCard from './TodayEventCard';
-import {todaySections} from './today-sections';
+import {todaySections,upcomingGroup} from './today-sections';
 import {undoEvent, type UndoEvent} from './event-undo-v04';
 import {quantityFromMg} from './quantities';
 export default function AggregateTracker({plans,archives,update,initialTab='Today',onOpen,onEdit}:{plans:SavedPlan[];archives:SavedPlan[];update:(f:(s:Store)=>Store)=>Promise<void>;initialTab?:string;onOpen:(id:string)=>void;onEdit:(id:string)=>void}){
@@ -21,7 +21,7 @@ export default function AggregateTracker({plans,archives,update,initialTab='Toda
  const nextRows=all.filter(x=>x.event.status==='pending'&&new Date(x.event.scheduledAt)>now).slice(0,1);
  const needsLog=all.filter(x=>x.event.status==='pending'&&new Date(x.event.scheduledAt)<=now&&new Date(x.event.snoozedUntil||x.event.scheduledAt)<=now);
  const groupHorizon=now.getTime()+60*60000;
- const groupCandidates=todayRows.filter(({event})=>event.status==='pending'&&Date.parse(event.snoozedUntil||event.scheduledAt)<=groupHorizon);
+ const groupCandidates=upcomingGroup(todayRows,now);
  const groupKey=(planId:string,eventId:string)=>planId+':'+eventId;
  const selectedGroup=groupCandidates.filter(({plan,event})=>groupSelection.includes(groupKey(plan.id,event.id)));
  const completedToday=todayRows.filter(x=>x.event.status==='completed').length;

@@ -1,5 +1,26 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs');
+require('./register-tests.cjs');
+const {upcomingGroup}=require('./app/src/today-sections.ts');
 const tracker=fs.readFileSync('./app/src/AggregateTracker.tsx','utf8');
 test('tracker leads with operational today dashboard',()=>{assert.match(tracker,/Today at a glance/);assert.match(tracker,/need logging/);assert.match(tracker,/Up next/);});
 test('tracker preserves aggregate calendar and history',()=>{for(const term of ['Today','Calendar','History','Counts include every active plan|total across every active plan'])assert.match(tracker,new RegExp(term));});
 test('tracker keeps compound identity visually distinct',()=>{assert.match(tracker,/compoundColor/);assert.match(tracker,/compoundDot/);assert.match(tracker,/plan\.compoundName/);});
+
+test('upcoming group includes due and next-hour events while respecting snooze and status',()=>{
+ const now=new Date('2026-09-07T08:00:00.000Z');
+ const row=(id,scheduled,status='pending',snoozedUntil=null)=>({plan:{id:'p-'+id,compoundName:id},event:{id,scheduledAt:scheduled,snoozedUntil,status}});
+ const due=row('due','2026-09-07T07:45:00.000Z');
+ const soon=row('soon','2026-09-07T08:50:00.000Z');
+ const later=row('later','2026-09-07T09:01:00.000Z');
+ const snoozed=row('snoozed','2026-09-07T07:30:00.000Z','pending','2026-09-07T09:30:00.000Z');
+ const completed=row('completed','2026-09-07T08:15:00.000Z','completed');
+ assert.deepEqual(upcomingGroup([later,completed,soon,snoozed,due],now).map(x=>x.event.id),['due','soon']);
+});
+test('upcoming group window can be changed without including distant events',()=>{
+ const now=new Date('2026-09-07T08:00:00.000Z');
+ const rows=[30,31].map(minutes=>({plan:{id:String(minutes)},event:{id:String(minutes),status:'pending',scheduledAt:new Date(now.getTime()+minutes*60000).toISOString(),snoozedUntil:null}}));
+ assert.deepEqual(upcomingGroup(rows,now,30).map(x=>x.event.id),['30']);
+});
+test('tracker exposes review, selective confirmation and grouped undo',()=>{
+ for(const term of ['UPCOMING TOGETHER','Review & mark group taken','Uncheck anything','grouped completions undone'])assert.match(tracker,new RegExp(term));
+});
