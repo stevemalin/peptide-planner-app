@@ -124,8 +124,25 @@ export default function App() {
   const [onboarding,setOnboarding]=useState<OnboardingProfile|null|undefined>(undefined);
   const [experience,setExperience]=useState<Experience|null>(null);
   const [firstGoal,setFirstGoal]=useState<FirstGoal|null>(null);
+  const [restartingOnboarding,setRestartingOnboarding]=useState(false);
   useEffect(()=>{AsyncStorage.getItem("pepplan.onboarding.v1").then(value=>setOnboarding(value?JSON.parse(value):null)).catch(()=>setOnboarding(null));},[]);
-  const finishOnboarding=(profile:OnboardingProfile)=>{setOnboarding(profile);AsyncStorage.setItem("pepplan.onboarding.v1",JSON.stringify(profile)).catch(()=>{});setScreen("tracker");};
+  const finishOnboarding=(profile:OnboardingProfile)=>{setRestartingOnboarding(false);setOnboarding(profile);AsyncStorage.setItem("pepplan.onboarding.v1",JSON.stringify(profile)).catch(()=>{});setScreen("tracker");};
+  const confirmSkipOnboarding=()=>Alert.alert(
+    "Skip Quick Start?",
+    "Are you sure you want to skip Quick Start Onboarding? You can restart it at any time from More → Preferences.",
+    [
+      {text:"Keep going",style:"cancel"},
+      {text:"Skip for now",onPress:()=>finishOnboarding({experience:"familiar",goal:"setup"})},
+    ],
+  );
+  const restartOnboarding=()=>Alert.alert(
+    "Restart Quick Start?",
+    "This will reopen the welcome questions. Your saved plans, history and settings will not be changed.",
+    [
+      {text:"Cancel",style:"cancel"},
+      {text:"Restart",onPress:()=>{setRestartingOnboarding(true);setExperience(null);setFirstGoal(null);setOnboarding(null);AsyncStorage.removeItem("pepplan.onboarding.v1").catch(()=>{});setScreen("welcome");}},
+    ],
+  );
   const [selectedPlanId,setSelectedPlanId]=useState<string|null>(null);
   const [editingActive,setEditingActive]=useState(false);
   const [editorSection,setEditorSection]=useState('');
@@ -178,10 +195,10 @@ export default function App() {
   },[saved.ready,saved.store.activePlans,saved.loadFailed]);
   useEffect(()=>listenForReminder((planId)=>{if(planId)setSelectedPlanId(planId);setScreen("tracker");}),[]);
   useEffect(()=>{
-    if(!saved.ready||screen!=="welcome"||onboarding===undefined)return;
+    if(!saved.ready||screen!=="welcome"||onboarding===undefined||restartingOnboarding)return;
     if(onboarding){setScreen("tracker");return;}
     if(plans.length||saved.store.draft){const profile:OnboardingProfile={experience:plans.length?"experienced":"familiar",goal:plans.length?"track":"setup"};setOnboarding(profile);AsyncStorage.setItem("pepplan.onboarding.v1",JSON.stringify(profile)).catch(()=>{});setScreen("tracker");}
-  },[saved.ready,onboarding,plans.length,saved.store.draft]);
+  },[saved.ready,onboarding,plans.length,restartingOnboarding,saved.store.draft]);
 
   const renderWelcome=()=>(
     <ScrollView contentContainerStyle={styles.welcomeContent}>
@@ -201,7 +218,7 @@ export default function App() {
         ["learn","Learn the basics"],["research","Research a peptide"],["setup","Set up an existing routine"],["track","Track a routine underway"]
       ] as const).map(([value,label])=><Pressable accessibilityRole="radio" accessibilityState={{selected:firstGoal===value}} key={value} onPress={()=>setFirstGoal(value)} style={[styles.goalCard,firstGoal===value&&styles.goalCardSelected]}><Text style={[styles.goalText,firstGoal===value&&styles.goalTextSelected]}>{label}</Text></Pressable>)}</View>
       {experience&&firstGoal&&<AppButton label="Show me where to begin" onPress={()=>finishOnboarding({experience,goal:firstGoal})}/>}
-      <Pressable accessibilityRole="button" accessibilityLabel="Skip introduction" onPress={()=>finishOnboarding({experience:"familiar",goal:"setup"})} style={styles.skipButton}><Text style={styles.crossLinkText}>Skip for now</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Skip introduction" onPress={confirmSkipOnboarding} style={styles.skipButton}><Text style={styles.crossLinkText}>Skip for now</Text></Pressable>
       <Text style={styles.onboardingSafety}>EZPep Planner organizes educational research information and routines you enter. It does not select a peptide or prescribe a dose.</Text>
     </ScrollView>
   );
@@ -495,7 +512,7 @@ export default function App() {
         {screen === "schoolMore" && renderSchoolDetail(true)}
         {screen === "schoolSources" && renderSources()}
         {screen === "more" && renderMore()}
-        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>{screen==='profile'?'ACCOUNT':'PREFERENCES & DATA'}</Text><Text style={styles.detailTitle}>{screen==='profile'?'Your account':'Your settings'}</Text>{screen==='profile'?<><View style={styles.lessonCard}><Text style={styles.sourceClass}>CURRENT MODE</Text><Text style={styles.lessonTitle}>Saved locally on this device</Text><Text style={styles.nextText}>No email address or password is required in this development version. Clearing app storage removes unsynced local data.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>PLANNED ACCOUNT</Text><Text style={styles.lessonTitle}>Six-digit email verification</Text><Text style={styles.nextText}>Enter an email, receive a one-time code, and verify without creating a password. An account will add backup, device transfer and EZPep Planner Pro entitlement while keeping AURAPEP commerce separate unless you explicitly connect it.</Text><Text style={styles.smallBadge}>Backend and email delivery are not connected yet.</Text></View></>:<><View style={styles.lessonCard}><Text style={styles.lessonTitle}>Plan-specific controls</Text><Text style={styles.nextText}>Dose units, schedule, reminder lead time, syringe capacity and inventory are maintained per peptide so one plan never silently changes another.</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>My data & privacy</Text><Text style={styles.nextText}>Plans, calculations, event history and inventory currently remain in local app storage. Export, cloud backup and account deletion will be enabled with the account service.</Text><Text style={styles.smallBadge}>No AURAPEP order or customer data is connected.</Text></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>About EZPep Planner</Text><Text style={styles.nextText}>EZPep Planner 0.4 · Learn. Plan. Track.</Text><Text style={styles.smallBadge}>Educational planning support. Evidence classes and route/formulation limits remain attached to School content.</Text></View></>}<AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
+        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>{screen==='profile'?'ACCOUNT':'PREFERENCES & DATA'}</Text><Text style={styles.detailTitle}>{screen==='profile'?'Your account':'Your settings'}</Text>{screen==='profile'?<><View style={styles.lessonCard}><Text style={styles.sourceClass}>CURRENT MODE</Text><Text style={styles.lessonTitle}>Saved locally on this device</Text><Text style={styles.nextText}>No email address or password is required in this development version. Clearing app storage removes unsynced local data.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>PLANNED ACCOUNT</Text><Text style={styles.lessonTitle}>Six-digit email verification</Text><Text style={styles.nextText}>Enter an email, receive a one-time code, and verify without creating a password. An account will add backup, device transfer and EZPep Planner Pro entitlement while keeping AURAPEP commerce separate unless you explicitly connect it.</Text><Text style={styles.smallBadge}>Backend and email delivery are not connected yet.</Text></View></>:<><View style={styles.lessonCard}><Text style={styles.lessonTitle}>Plan-specific controls</Text><Text style={styles.nextText}>Dose units, schedule, reminder lead time, syringe capacity and inventory are maintained per peptide so one plan never silently changes another.</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>My data & privacy</Text><Text style={styles.nextText}>Plans, calculations, event history and inventory currently remain in local app storage. Export, cloud backup and account deletion will be enabled with the account service.</Text><Text style={styles.smallBadge}>No AURAPEP order or customer data is connected.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>QUICK START</Text><Text style={styles.lessonTitle}>Restart onboarding</Text><Text style={styles.nextText}>Review the welcome questions and choose a new starting path. Your saved plans, history and settings will stay exactly as they are.</Text><AppButton label="Restart Quick Start Onboarding" secondary onPress={restartOnboarding}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>About EZPep Planner</Text><Text style={styles.nextText}>EZPep Planner 0.4 · Learn. Plan. Track.</Text><Text style={styles.smallBadge}>Educational planning support. Evidence classes and route/formulation limits remain attached to School content.</Text></View></>}<AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
         {screen==='activeEditor'&&focused&&saved.store.activeEdit&&<ActivePeptideEditor key={focused.id+editorSection} initialSection={editorSection} plan={focused} edit={saved.store.activeEdit} change={edit=>saved.update(old=>({...old,activeEdit:edit}))} onSave={saveActiveEdits} onCancel={discardActiveEdits} onArchive={async()=>{const target=saved.store.activeEdit?.returnTo==='tracker'?'tracker':'plans';await saved.update(old=>({...archivePlan(old,focused.id),activeEdit:null}));setEditingActive(false);setScreen(target);}}/>}
