@@ -23,6 +23,7 @@ import {
   AppState,
   Linking,
   Image,
+  useWindowDimensions,
 } from "react-native";
 
 import {library as compounds,searchLibrary as searchCompounds} from "./src/library-v04";
@@ -107,6 +108,8 @@ function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Scree
 }
 
 export default function App() {
+  const {width:viewportWidth}=useWindowDimensions();
+  const compactLayout=viewportWidth<600;
   const [screen, setScreen] = useState<Screen>("welcome");
   const [selected, setSelected] = useState<Compound>(compounds[0]);
   const [query,setQuery] = useState("");
@@ -215,7 +218,7 @@ export default function App() {
       {n:"5",title:"Start tracking",detail:"Starting the plan creates Today, reminders and inventory forecasting."}
     ];
     return <ScrollView contentContainerStyle={styles.scrollContent}>
-      <View style={styles.startHero}><View style={styles.startHeroCopy}><Text style={styles.kicker}>START HERE WITH PROFESSOR LYNCH</Text><Text style={styles.welcomeTitle}>{draft?"Continue where you left off.":"Learn. Plan. Track."}</Text><Text style={styles.welcomeSub}>{newUser?"I’ll explain the essentials as you go.":"A simple path from research to a working daily schedule."}</Text></View><Image accessibilityLabel="Professor Lynch guide" source={require("./assets/professor-lynch-guide.webp")} resizeMode="contain" style={styles.professorStartGuide}/></View>
+      <View style={styles.startHero}><View style={styles.startHeroCopy}><Text style={styles.kicker}>START HERE WITH PROFESSOR LYNCH</Text><Text style={styles.welcomeTitle}>{draft?"Continue where you left off.":"Learn. Plan. Track."}</Text><Text style={styles.welcomeSub}>{newUser?"I’ll explain the essentials as you go.":"A simple path from research to a working daily schedule."}</Text><View style={[styles.guideSpeechBubble,compactLayout&&styles.guideSpeechBubbleCompact]}><View style={styles.guideSpeechTail}/><Text style={styles.schoolSpeechText}>{draft?"Let’s pick up where you left off. Your saved setup is ready.":"Start wherever you feel comfortable—I’ll keep the next step clear."}</Text></View></View><Image accessibilityLabel="Professor Lynch guide" source={require("./assets/professor-lynch-guide.webp")} resizeMode="contain" style={[styles.professorStartGuide,compactLayout&&styles.professorStartGuideCompact]}/></View>
       <View style={styles.pathLine}/>
       {steps.map((step,index)=><View key={step.n} style={[styles.startStep,draft&&index<2&&styles.startStepQuiet,index===recommended&&styles.startStepRecommended]}><View style={styles.stepNumber}><Text style={styles.stepNumberText}>{step.n}</Text></View><View style={{flex:1}}>{index===recommended&&<Text style={styles.sourceClass}>RECOMMENDED FIRST</Text>}<Text style={styles.lessonTitle}>{step.title}</Text><Text style={styles.nextText}>{step.detail}</Text>{step.action&&<Pressable accessibilityRole="button" accessibilityLabel={step.label} onPress={step.action} style={styles.inlineAction}><Text style={styles.crossLinkText}>{step.label} →</Text></Pressable>}</View></View>)}
       <Text style={styles.onboardingSafety}>You can move between Learn and Build Plan at any time. Your navigation stays the same after setup.</Text>
@@ -226,8 +229,9 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <View style={styles.heroBubbleOne} /><View style={styles.heroBubbleTwo} />
-          <View style={styles.schoolHeroCopy}><Text style={styles.kicker}>PEP SCHOOL · WITH PROFESSOR LYNCH</Text><Text style={styles.heroTitle}>A clearer place{"\n"}to begin.</Text><Text style={styles.heroSub}>Choose one learning area at a time.</Text><View style={styles.schoolSpeechBubble}><View style={styles.schoolSpeechTail}/><Text style={styles.schoolSpeechText}>Welcome! Pick a section and we’ll take it one clear step at a time.</Text></View></View>
-          <Image accessibilityLabel="Professor Lynch welcoming you to Pep School" source={require("./assets/professor-lynch-hero.webp")} resizeMode="contain" style={styles.professorSchoolHero}/>
+          <View style={styles.schoolHeroCopy}><Text style={styles.kicker}>PEP SCHOOL · WITH PROFESSOR LYNCH</Text><Text style={styles.heroTitle}>A clearer place{"\n"}to begin.</Text><Text style={styles.heroSub}>Choose one learning area at a time.</Text></View>
+          <View style={[styles.schoolSpeechBubble,compactLayout&&styles.schoolSpeechBubbleCompact]}><View style={styles.schoolSpeechTail}/><Text style={styles.schoolSpeechText}>Welcome! Pick a section and we’ll take it one clear step at a time.</Text></View>
+          <Image accessibilityLabel="Professor Lynch welcoming you to Pep School" source={require("./assets/professor-lynch-hero.webp")} resizeMode="contain" style={[styles.professorSchoolHero,compactLayout&&styles.professorSchoolHeroCompact]}/>
         </View>
         <View accessibilityRole="tablist" style={styles.schoolTabs}>
           <Pressable accessibilityRole="tab" accessibilityState={{selected:schoolSection==="library"}} onPress={()=>setSchoolSection("library")} style={[styles.schoolTab,schoolSection==="library"&&styles.schoolTabActive]}><Text numberOfLines={1} style={[styles.schoolTabText,schoolSection==="library"&&styles.schoolTabTextActive]}>Library</Text></Pressable>
@@ -535,7 +539,11 @@ const styles = StyleSheet.create({
   onboardingSafety:{color:COLORS.muted,fontSize:11,lineHeight:17,textAlign:"center",marginTop:16},
   startHero:{marginTop:16,minHeight:186,borderRadius:26,padding:20,backgroundColor:COLORS.paleBlue,borderWidth:1,borderColor:COLORS.border,overflow:"hidden"},
   startHeroCopy:{width:"63%",zIndex:1},
-  professorStartGuide:{position:"absolute",right:-20,bottom:-8,width:170,height:174},
+  professorStartGuide:{position:"absolute",right:-8,bottom:0,width:170,height:174},
+  professorStartGuideCompact:{right:-18,width:135,height:150},
+  guideSpeechBubble:{position:"relative",alignSelf:"flex-start",marginTop:14,width:280,paddingHorizontal:13,paddingVertical:10,borderRadius:16,backgroundColor:COLORS.white,borderWidth:1,borderColor:"#B8D9EF",boxShadow:"0px 2px 6px rgba(14,28,74,0.08)"},
+  guideSpeechBubbleCompact:{width:"100%",paddingRight:18},
+  guideSpeechTail:{position:"absolute",right:-7,top:18,width:14,height:14,backgroundColor:COLORS.white,borderTopWidth:1,borderRightWidth:1,borderColor:"#B8D9EF",transform:[{rotate:"45deg"}]},
   pathLine:{position:"absolute",left:38,top:215,bottom:75,width:2,backgroundColor:COLORS.border},
   startStep:{flexDirection:"row",gap:14,padding:15,marginTop:11,borderWidth:1,borderColor:COLORS.border,borderRadius:18,backgroundColor:COLORS.white},
   startStepQuiet:{backgroundColor:COLORS.pale},
@@ -552,10 +560,12 @@ const styles = StyleSheet.create({
   consideration: { fontSize: 13, lineHeight: 20, color: COLORS.muted, marginBottom: 8 },
   originLabel: { fontSize: 13, lineHeight: 19, fontWeight: "700", color: COLORS.ink },
   schoolHeroCopy:{width:"63%",zIndex:1},
-  schoolSpeechBubble:{alignSelf:"flex-start",position:"relative",marginTop:13,maxWidth:250,paddingHorizontal:13,paddingVertical:10,borderRadius:16,backgroundColor:COLORS.white,borderWidth:1,borderColor:"#B8D9EF",boxShadow:"0px 2px 6px rgba(14,28,74,0.08)"},
+  schoolSpeechBubble:{position:"absolute",right:150,bottom:24,width:270,paddingHorizontal:13,paddingVertical:10,borderRadius:16,backgroundColor:COLORS.white,borderWidth:1,borderColor:"#B8D9EF",boxShadow:"0px 2px 6px rgba(14,28,74,0.08)",zIndex:2},
+  schoolSpeechBubbleCompact:{position:"relative",right:undefined,bottom:undefined,width:"58%",marginTop:14},
   schoolSpeechTail:{position:"absolute",right:-7,top:18,width:14,height:14,backgroundColor:COLORS.white,borderTopWidth:1,borderRightWidth:1,borderColor:"#B8D9EF",transform:[{rotate:"45deg"}]},
   schoolSpeechText:{color:COLORS.ink,fontSize:12,lineHeight:17,fontWeight:"700"},
   professorSchoolHero:{position:"absolute",right:0,bottom:0,width:145,height:205},
+  professorSchoolHeroCompact:{right:-8,width:115,height:175},
   schoolTabs:{flexDirection:"row",marginTop:14,marginBottom:4,padding:4,borderRadius:18,backgroundColor:"#EDF4FC",borderWidth:1,borderColor:COLORS.border},
   schoolTab:{flex:1,minHeight:42,paddingHorizontal:5,alignItems:"center",justifyContent:"center",borderRadius:14},
   schoolTabActive:{backgroundColor:COLORS.white,borderWidth:1,borderColor:"#B8D9EF",boxShadow:"0px 2px 5px rgba(14,28,74,0.10)"},
