@@ -8,6 +8,7 @@ import SetupPreview from './src/SetupPreview';
 
 import React, { useEffect, useMemo, useState } from "react";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ScrollView,
   View,
@@ -105,6 +106,10 @@ export default function App() {
   const [selected, setSelected] = useState<Compound>(compounds[0]);
   const [query,setQuery] = useState("");
   const [schoolQuery,setSchoolQuery] = useState("");
+  const [schoolFilter,setSchoolFilter] = useState<"all"|"favorites"|"human"|"preclinical"|"blends">("all");
+  const [schoolFavorites,setSchoolFavorites] = useState<string[]>([]);
+  useEffect(()=>{AsyncStorage.getItem("pepplan.school.favorites").then(value=>{if(value)setSchoolFavorites(JSON.parse(value));}).catch(()=>{});},[]);
+  const toggleSchoolFavorite=(id:string)=>setSchoolFavorites(current=>{const next=current.includes(id)?current.filter(item=>item!==id):[...current,id];AsyncStorage.setItem("pepplan.school.favorites",JSON.stringify(next)).catch(()=>{});return next;});
 
   const saved = usePlannerStore();
   const [selectedPlanId,setSelectedPlanId]=useState<string|null>(null);
@@ -129,6 +134,14 @@ export default function App() {
   const workspaceNavigate=(target:any)=>{if(target==='tracker'){setScreen('planTracker');}else if(target==='inventory'&&focused)editPlan(focused.id,'Inventory');else setScreen(target);};
   const [reminderError,setReminderError] = useState("");
   const filtered=searchCompounds(query);
+  const schoolResults=useMemo(()=>searchCompounds(schoolQuery).filter(c=>{
+    const evidence=(c.supplied?.evidenceBadge??"").toLowerCase();
+    if(schoolFilter==="favorites")return schoolFavorites.includes(c.id);
+    if(schoolFilter==="human")return evidence.includes("human")||evidence.includes("approved");
+    if(schoolFilter==="preclinical")return evidence.includes("preclinical");
+    if(schoolFilter==="blends")return evidence.includes("blend");
+    return true;
+  }),[schoolQuery,schoolFilter,schoolFavorites]);
   const openCompound=(compound:Compound)=>{setSelected(compound);setScreen("detail");};
   const openSchool=(compound:Compound)=>{setSelected(compound);setScreen("schoolDetail");};
   const [replacement,setReplacement]=useState<{draft:Draft;target:Screen}|null>(null);
@@ -164,14 +177,20 @@ export default function App() {
       <View style={styles.searchWrap}><Text style={styles.searchIcon}>⌕</Text>
         <TextInput accessibilityLabel="Search Pep School" value={schoolQuery} onChangeText={setSchoolQuery} placeholder="Name, alias or abbreviation" style={styles.searchInput} />
       </View>
-      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>The 101 library</Text><Text style={styles.sectionLink}>{compounds.length} compounds</Text></View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.schoolFilters}>{([
+        ["all","All"],["favorites","★ Favorites"],["human","Human evidence"],["preclinical","Preclinical"],["blends","Blends"]
+      ] as const).map(([key,label])=><Pressable key={key} accessibilityRole="button" accessibilityState={{selected:schoolFilter===key}} onPress={()=>setSchoolFilter(key)} style={[styles.schoolFilter,schoolFilter===key&&styles.schoolFilterActive]}><Text style={[styles.schoolFilterText,schoolFilter===key&&styles.schoolFilterTextActive]}>{label}</Text></Pressable>)}</ScrollView>
+      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>The 101 library</Text><Text style={styles.sectionLink}>{schoolResults.length} shown</Text></View>
       <Text style={styles.helper}>Beginner introductions · evidence classes and primary sources included.</Text>
-      {searchCompounds(schoolQuery).map(c => (
-        <Pressable accessibilityRole="button" accessibilityLabel={c.name + " 101"} key={c.id} onPress={() => openSchool(c)} style={styles.schoolRow}>
-          <Molecule color={c.accent} /><View style={{ flex: 1 }}><Text style={styles.planOptionTitle}>{c.name}</Text><Text style={styles.detailMeta}>101 · Fundamentals & context</Text><Text style={styles.smallBadge}>{c.supplied?.evidenceBadge}</Text></View><Text style={styles.linkArrow}>›</Text>
-        </Pressable>
+      {schoolResults.map(c => (
+        <View key={c.id} style={styles.schoolRow}>
+          <Pressable accessibilityRole="button" accessibilityLabel={c.name + " 101"} onPress={() => openSchool(c)} style={styles.schoolOpen}>
+            <Molecule color={c.accent} /><View style={{ flex: 1 }}><Text style={styles.planOptionTitle}>{c.name}</Text><Text style={styles.detailMeta}>101 · Fundamentals & context</Text><Text style={styles.smallBadge}>{c.supplied?.evidenceBadge}</Text></View><Text style={styles.linkArrow}>›</Text>
+          </Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel={(schoolFavorites.includes(c.id)?"Remove ":"Add ") + c.name + (schoolFavorites.includes(c.id)?" from favorites":" to favorites")} onPress={()=>toggleSchoolFavorite(c.id)} style={styles.favoriteButton}><Text style={[styles.favoriteIcon,schoolFavorites.includes(c.id)&&styles.favoriteIconActive]}>{schoolFavorites.includes(c.id)?"★":"☆"}</Text></Pressable>
+        </View>
       ))}
-      {!searchCompounds(schoolQuery).length && <Text style={styles.emptyText}>No matches. Try another name or alias.</Text>}
+      {!schoolResults.length && <Text style={styles.emptyText}>{schoolFilter==="favorites"?"Star a School profile to keep it here.":"No matches. Try another name, alias or filter."}</Text>}
       <SchoolBasics/>
     </ScrollView>
   );
@@ -412,7 +431,16 @@ const styles = StyleSheet.create({
   referenceAmount: { fontSize: 16, fontWeight: "800", color: COLORS.ink },
   consideration: { fontSize: 13, lineHeight: 20, color: COLORS.muted, marginBottom: 8 },
   originLabel: { fontSize: 13, lineHeight: 19, fontWeight: "700", color: COLORS.ink },
-  schoolRow: { flexDirection: "row", alignItems: "center", gap: 16, padding: 16, borderWidth: 1, borderColor: COLORS.border, borderRadius: 22, marginBottom: 12 },
+  schoolRow: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.border, borderRadius: 22, marginBottom: 12, overflow:"hidden" },
+  schoolOpen:{flex:1,flexDirection:"row",alignItems:"center",gap:16,padding:16},
+  favoriteButton:{alignSelf:"stretch",width:48,alignItems:"center",justifyContent:"center",borderLeftWidth:StyleSheet.hairlineWidth,borderLeftColor:COLORS.border},
+  favoriteIcon:{fontSize:25,color:"#91A0BC"},
+  favoriteIconActive:{color:"#F2A31B"},
+  schoolFilters:{gap:8,paddingTop:12,paddingBottom:2},
+  schoolFilter:{paddingHorizontal:13,paddingVertical:9,borderRadius:16,borderWidth:1,borderColor:COLORS.border,backgroundColor:COLORS.white},
+  schoolFilterActive:{backgroundColor:COLORS.palePurple,borderColor:"#B8A8FA"},
+  schoolFilterText:{fontSize:11,fontWeight:"700",color:COLORS.muted},
+  schoolFilterTextActive:{color:"#5A42C7"},
   smallBadge: { color: COLORS.muted, fontSize: 11, marginTop: 6 },
   linkArrow: { color: COLORS.blue, fontSize: 26 },
   emptyText: { color: COLORS.muted, paddingVertical: 24, textAlign: "center" },
