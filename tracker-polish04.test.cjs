@@ -4,6 +4,7 @@ const {upcomingGroup}=require('./app/src/today-sections.ts');
 const tracker=fs.readFileSync('./app/src/AggregateTracker.tsx','utf8');
 const app=fs.readFileSync('./app/App.tsx','utf8');
 const planTracker=fs.readFileSync('./app/src/Tracker.tsx','utf8');
+const activeEditor=fs.readFileSync('./app/src/ActivePeptideEditor.tsx','utf8');
 test('tracker leads with operational today dashboard',()=>{assert.match(tracker,/Today at a glance/);assert.match(tracker,/need logging/);assert.match(tracker,/Up next/);});
 test('tracker preserves aggregate calendar and history',()=>{for(const term of ['Today','Calendar','History','Counts include every active plan|total across every active plan'])assert.match(tracker,new RegExp(term));});
 test('tracker keeps compound identity visually distinct',()=>{assert.match(tracker,/compoundColor/);assert.match(tracker,/compoundDot/);assert.match(tracker,/plan\.compoundName/);});
@@ -66,4 +67,10 @@ test('settings can export a private local backup without changing stored plans',
  assert.match(app,/The app does not upload this backup/);
  assert.match(app,/Share\.share/);
  assert.match(app,/link\.download=filename/);
+});
+
+test('active plan editor exposes confirmed stage removal while retaining at least one stage',()=>{
+ assert.match(activeEditor,/onRemove={d\.stages\.length>1/);
+ assert.match(activeEditor,/d\.stages\.filter\(item=>item\.id!==stage\.id\)/);
+ assert.match(activeEditor,/StageCard/);
 });
