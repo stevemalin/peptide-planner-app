@@ -24,7 +24,7 @@ import {
 
 import {library as compounds,searchLibrary as searchCompounds} from "./src/library-v04";
 import QuickStart from "./src/QuickStart";
-import {SchoolAccordion,RelatedSchoolCards,ResearchProductLink} from "./src/SchoolAccordion";
+import {SchoolAccordion,SchoolHighlights,RelatedSchoolCards,ResearchProductLink} from "./src/SchoolAccordion";
 import {schoolSections,relatedSchool} from "./src/school-profile-v04";
 import {beginActiveEdit,applyActiveEdit} from "./src/active-edit-v04";
 import MyPlans from "./src/MyPlans";
@@ -205,6 +205,7 @@ export default function App() {
         {[["What is it?", record.school101.whatIsIt], ["In Plain English", record.school101.plainEnglish], ["Studied / known for", record.school101.studiedFor]].map(([heading, text]) => <View key={heading} style={styles.lessonCard}><Text style={styles.lessonTitle}>{heading}</Text><Text style={styles.nextText}>{text}</Text></View>)}
       </>}
 
+      <SchoolHighlights compound={selected}/>
       <View testID="evidence-badge"><Evidence kind={record.evidenceBadge} text={record.evidenceBadge}/></View>
       <SchoolAccordion key={selected.id} sections={schoolSections(selected)}/>
       {deep && <>
