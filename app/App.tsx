@@ -40,7 +40,7 @@ import Workspace from "./src/Workspace";
 import { usePlannerStore } from "./src/store";
 import type { Draft } from "./src/engine";
 import { importReference, newDraft } from "./src/engine";
-import { Evidence } from "./src/ui";
+import { Evidence, ProfessorHelp } from "./src/ui";
 import { reconcileReminders, listenForReminder } from "./src/reminders";
 import type { PlanMode } from "./src/planning";
 type Experience = "new" | "familiar" | "experienced";
@@ -453,16 +453,16 @@ export default function App() {
       <Text style={styles.helper}>These choices start a blank, user-created plan. To carry in a reference amount, schedule and Common Research Setup, open a source-labelled plan in Pep School and choose “Use this reference setup in Guide.”</Text>
 
       {[
-        ["Staged plan", "Starts with three blank stages for amounts or timing that change over the plan."],
-        ["Steady plan", "Starts with one blank stage for the same amount and schedule throughout."],
-        ["Custom plan", "Starts with one blank stage; add or remove stages as you build."],
-      ].map(([title, sub], idx) => (
+        ["Staged plan", "Starts with three blank stages for amounts or timing that change over the plan.", "Use this when your research plan changes in planned steps. Each stage can have its own amount, duration and schedule, and you can edit or remove any stage."],
+        ["Steady plan", "Starts with one blank stage for the same amount and schedule throughout.", "Use this when the plan follows one repeating structure from beginning to end. You can still add stages later if the plan becomes more complex."],
+        ["Custom plan", "Starts with one blank stage; add or remove stages as you build.", "Use this when you want the least preset structure. Begin with one empty stage, then define the amount, duration, schedule and any additional stages yourself."],
+      ].map(([title, sub, help], idx) => (
         <Pressable accessibilityRole="button" accessibilityLabel={title} key={title} onPress={() => startPlan((["staged", "steady", "custom"] as PlanMode[])[idx])} style={styles.planOption}>
           <View style={[styles.planBars, { backgroundColor: idx === 0 ? COLORS.paleBlue : COLORS.palePurple }]}>
             <Text style={[styles.planBarsText, { color: idx === 0 ? COLORS.blue : COLORS.purple }]}>▥</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.planOptionTitle}>{title}</Text>
+            <View style={{flexDirection:"row",alignItems:"center"}}><Text style={styles.planOptionTitle}>{title}</Text><ProfessorHelp title={title} body={help} note="These structures organize information you enter; they do not select an amount or recommend a plan."/></View>
             <Text style={styles.planOptionSub}>{sub}</Text>
           </View>
           <Text style={styles.cardArrow}>›</Text>
