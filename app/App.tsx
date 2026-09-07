@@ -227,18 +227,19 @@ export default function App() {
 
   const renderSchool = () => (
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.hero}>
-          <View style={styles.heroBubbleOne} /><View style={styles.heroBubbleTwo} />
-          <View style={[styles.schoolHeroCopy,compactLayout&&styles.schoolHeroCopyCompact]}><Text style={styles.kicker}>PEP SCHOOL · WITH PROFESSOR LYNCH</Text><Text style={[styles.heroTitle,compactLayout&&styles.schoolHeroTitleCompact]}>A clearer place{"\n"}to begin.</Text><Text style={styles.heroSub}>Choose one learning area at a time.</Text></View>
-          <View style={[styles.schoolSpeechBubble,compactLayout&&styles.schoolSpeechBubbleCompact]}><View style={styles.schoolSpeechTail}/><Text style={styles.schoolSpeechText}>Welcome! Pick a section and we’ll take it one clear step at a time.</Text></View>
-          <Image accessibilityLabel="Professor Lynch welcoming you to Pep School" source={require("./assets/professor-lynch-hero.webp")} resizeMode="contain" style={[styles.professorSchoolHero,compactLayout&&styles.professorSchoolHeroCompact]}/>
-        </View>
         <View accessibilityRole="tablist" style={styles.schoolTabs}>
           <Pressable accessibilityRole="tab" accessibilityState={{selected:schoolSection==="library"}} onPress={()=>setSchoolSection("library")} style={[styles.schoolTab,schoolSection==="library"&&styles.schoolTabActive]}><Text numberOfLines={1} style={[styles.schoolTabText,schoolSection==="library"&&styles.schoolTabTextActive]}>Library</Text></Pressable>
           <Pressable accessibilityRole="tab" accessibilityState={{selected:schoolSection==="courses"}} onPress={()=>setSchoolSection("courses")} style={[styles.schoolTab,schoolSection==="courses"&&styles.schoolTabActive]}><Text numberOfLines={1} style={[styles.schoolTabText,schoolSection==="courses"&&styles.schoolTabTextActive]}>Courses</Text></Pressable>
           <Pressable accessibilityRole="tab" accessibilityState={{selected:schoolSection==="facts"}} onPress={()=>setSchoolSection("facts")} style={[styles.schoolTab,schoolSection==="facts"&&styles.schoolTabActive]}><Text numberOfLines={1} style={[styles.schoolTabText,schoolSection==="facts"&&styles.schoolTabTextActive]}>Quick Facts</Text></Pressable>
           <Pressable accessibilityRole="tab" accessibilityState={{selected:schoolSection==="community"}} onPress={()=>setSchoolSection("community")} style={[styles.schoolTab,schoolSection==="community"&&styles.schoolTabActive]}><Text numberOfLines={1} style={[styles.schoolTabText,schoolSection==="community"&&styles.schoolTabTextActive]}>Community</Text></Pressable>
         </View>
+        <View style={styles.hero}>
+          <View style={styles.heroBubbleOne} /><View style={styles.heroBubbleTwo} />
+          <View style={[styles.schoolHeroCopy,compactLayout&&styles.schoolHeroCopyCompact]}><Text style={styles.kicker}>PEP SCHOOL · WITH PROFESSOR LYNCH</Text><Text style={[styles.heroTitle,compactLayout&&styles.schoolHeroTitleCompact]}>A clearer place{"\n"}to begin.</Text><Text style={styles.heroSub}>Choose one learning area at a time.</Text></View>
+          <View style={[styles.schoolSpeechBubble,compactLayout&&styles.schoolSpeechBubbleCompact]}><View style={styles.schoolSpeechTail}/><Text style={styles.schoolSpeechText}>Welcome! Pick a section and we’ll take it one clear step at a time.</Text></View>
+          <Image accessibilityLabel="Professor Lynch welcoming you to Pep School" source={require("./assets/professor-lynch-hero.webp")} resizeMode="contain" style={[styles.professorSchoolHero,compactLayout&&styles.professorSchoolHeroCompact]}/>
+        </View>
+
 
         {schoolSection==="library"&&<>
           <View style={styles.schoolSectionIntro}><Text style={styles.kicker}>THE 101 LIBRARY</Text><Text style={styles.sectionTitle}>Research by peptide</Text><Text style={styles.helper}>Beginner introductions, evidence classes and primary sources—kept separate from courses and app help.</Text></View>
@@ -568,7 +569,7 @@ const styles = StyleSheet.create({
   schoolSpeechText:{color:COLORS.ink,fontSize:12,lineHeight:17,fontWeight:"700"},
   professorSchoolHero:{position:"absolute",right:5,bottom:3,width:132,height:185},
   professorSchoolHeroCompact:{right:0,bottom:4,width:104,height:154},
-  schoolTabs:{flexDirection:"row",marginTop:14,marginBottom:4,padding:4,borderRadius:18,backgroundColor:"#EDF4FC",borderWidth:1,borderColor:COLORS.border},
+  schoolTabs:{flexDirection:"row",marginTop:8,marginBottom:10,padding:4,borderRadius:18,backgroundColor:"#EDF4FC",borderWidth:1,borderColor:COLORS.border},
   schoolTab:{flex:1,minHeight:42,paddingHorizontal:5,alignItems:"center",justifyContent:"center",borderRadius:14},
   schoolTabActive:{backgroundColor:COLORS.white,borderWidth:1,borderColor:"#B8D9EF",boxShadow:"0px 2px 5px rgba(14,28,74,0.10)"},
   schoolTabText:{fontSize:10,fontWeight:"700",color:COLORS.muted},
