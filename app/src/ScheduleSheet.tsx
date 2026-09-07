@@ -2,7 +2,7 @@ import React,{useState}from'react';
 import{Modal,View,Text,ScrollView,Pressable,StyleSheet}from'react-native';
 import{blankSchedule,scheduleError}from'./engine';
 import type{Schedule}from'./engine';
-import{Button,Field,u,C}from'./ui';
+import{Button,Field,ProfessorHelp,u,C}from'./ui';
 import TimeChoice from './TimeChoice';
 export default function ScheduleSheet({initial,stageIndex,onClose,onSave}:{initial:Schedule|null;stageIndex:number|null;onClose:()=>void;onSave:(schedule:Schedule,all:boolean)=>void}){
  const [value,setValue]=useState<Schedule>({...JSON.parse(JSON.stringify(initial||blankSchedule())),times:initial?.times.length?initial.times:['09:00']}),[all,setAll]=useState(stageIndex===null),[advanced,setAdvanced]=useState(false),[error,setError]=useState(''),[newTime,setNewTime]=useState<number|null>(null);
@@ -18,7 +18,7 @@ export default function ScheduleSheet({initial,stageIndex,onClose,onSave}:{initi
   if(name==='Custom interval')change({kind:'intervalHours',interval:null,times:value.times.slice(0,1),timesPerWeek:null});
  };
  return <Modal transparent animationType="slide" onRequestClose={onClose}><View style={s.shade}><View style={s.sheet}><ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={u.scroll}>
-  <Text style={u.title}>Schedule</Text><Text style={u.body}>{stageIndex===null?'Plan default':`Stage ${stageIndex+1}`} · choose days and times</Text>
+  <View style={u.row}><Text style={[u.title,{marginBottom:0}]}>Schedule</Text><ProfessorHelp title="Schedule choices" body="Quick schedules fill common calendar patterns. Specific days lets you choose weekdays. Advanced schedules add repeating intervals or multiple times. Always review the days and times shown before saving."/></View><Text style={u.body}>{stageIndex===null?'Plan default':`Stage ${stageIndex+1}`} · choose days and times</Text>
   <Text style={[u.label,{marginTop:20}]}>QUICK SCHEDULES</Text><View style={s.options}>{['Daily','Once weekly','Mon / Wed / Fri','Every other day','Specific days'].map(name=><Pressable accessibilityRole="button" accessibilityLabel={name} key={name} onPress={()=>choose(name)} style={s.option}><Text style={s.optionLabel}>{name}</Text></Pressable>)}</View>
   {value.kind==='weekly'&&<><Text style={[u.label,{marginTop:16}]}>SPECIFIC DAYS</Text><View style={s.days}>{[1,2,3,4,5,6,0].map((d,i)=><Pressable key={d} accessibilityRole="checkbox" accessibilityLabel={['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'][i]} accessibilityState={{checked:value.days.includes(d)}} onPress={()=>change({days:value.days.includes(d)?value.days.filter(n=>n!==d):[...value.days,d].sort()})} style={[s.day,value.days.includes(d)&&u.selected]}><Text style={u.heading}>{['M','T','W','T','F','S','S'][i]}</Text></Pressable>)}</View>{!!value.timesPerWeek&&<Text style={u.small}>Choose {value.timesPerWeek} day(s) each week.</Text>}</>}
   <Pressable accessibilityRole="button" accessibilityLabel="Advanced schedules" onPress={()=>setAdvanced(!advanced)}><Text style={u.link}>Advanced {advanced?'−':'+'}</Text></Pressable>
@@ -29,7 +29,7 @@ export default function ScheduleSheet({initial,stageIndex,onClose,onSave}:{initi
   <Text style={[u.label,{marginTop:16}]}>TIME</Text>
   {value.times.map((time,i)=><View key={i} style={{marginBottom:12}}><TimeChoice autoOpen={newTime===i} label={`Time ${i+1}`} value={time} onChange={t=>change({times:value.times.map((old,n)=>n===i?t:old)})}/>{value.times.length>1&&<Pressable accessibilityRole="button" accessibilityLabel={`Remove time ${i+1}`} onPress={()=>change({times:value.times.filter((_,n)=>n!==i)})}><Text style={u.link}>Remove</Text></Pressable>}</View>)}
   {value.kind!=='intervalHours'&&value.times.length<8&&<Button label="+ Add another time" secondary onPress={()=>{setNewTime(value.times.length);const used=new Set(value.times);let hour=9;while(used.has(String(hour).padStart(2,'0')+':00'))hour=(hour+1)%24;change({times:[...value.times,String(hour).padStart(2,'0')+':00']});}}/>}
-  <Pressable accessibilityRole="checkbox" accessibilityLabel="Apply this schedule to all stages" accessibilityState={{checked:all}} onPress={()=>stageIndex!==null&&setAll(!all)} style={[u.evidence,all&&{borderLeftColor:C.blue}]}><Text style={u.body}>{all?'✓ ':'○ '}Apply this schedule to all stages</Text>{all&&<Text style={u.small}>Replaces existing stage overrides.</Text>}</Pressable>
+  <Pressable accessibilityRole="checkbox" accessibilityLabel="Apply this schedule to all stages" accessibilityState={{checked:all}} onPress={()=>stageIndex!==null&&setAll(!all)} style={[u.evidence,all&&{borderLeftColor:C.blue}]}><View style={u.row}><Text style={u.body}>{all?'✓ ':'○ '}Apply this schedule to all stages</Text><ProfessorHelp title="Apply to all stages" body="When selected, this becomes the plan default and replaces existing stage-specific schedules. When unselected, it changes only the stage you opened."/></View>{all&&<Text style={u.small}>Replaces existing stage overrides.</Text>}</Pressable>
   {!all&&<Text style={u.small}>Save for this stage only.</Text>}
   {error!==''&&<Text style={u.error}>{error}</Text>}
   <Button label="Save schedule" onPress={()=>{const err=scheduleError(value);if(err)setError(err);else onSave({...value,times:[...value.times].sort()},all);}}/>
