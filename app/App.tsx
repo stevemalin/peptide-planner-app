@@ -298,7 +298,7 @@ export default function App() {
     {(template.suppliedPlan.continuationRule || template.suppliedPlan.maintenance) && <Text style={styles.helper}>Continuation is described separately; only the supplied stages are copied.</Text>}
     {deep && referenceContext(template.suppliedPlan)}
     {deep && <Text selectable style={styles.helper}>Source IDs: {template.sourceIds.join(' · ')}</Text>}
-    <SetupPreview compoundId={selected.id} amountMg={String(template.originalStages[0]?.amountMg??'')}/><AppButton label="Model this in Guide →" onPress={() => copySchoolPlan(template)} secondary />
+    <SetupPreview compoundId={selected.id} amountMg={String(template.originalStages[0]?.amountMg??'')}/><AppButton label="Use this reference setup in Guide →" onPress={() => copySchoolPlan(template)} secondary />
   </View>;
   const renderSchoolDetail = (deep = false) => {
     const record = selected.supplied!;
@@ -336,7 +336,7 @@ export default function App() {
       <AppButton label="Sources" onPress={() => setScreen("schoolSources")} secondary />
       <RelatedSchoolCards items={relatedSchool(selected,compounds)} onOpen={id=>{const next=compounds.find(c=>c.id===id);if(next)openSchool(next);}}/>
       <ResearchProductLink label={"AURAPEP research product: "+selected.name}/>
-      <Pressable accessibilityRole="button" accessibilityLabel="Open in Guide" onPress={() => openCompound(selected)} style={styles.crossLink}><Text style={styles.crossLinkText}>Open in Guide →</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Open blank plan builder in Guide" onPress={() => openCompound(selected)} style={styles.crossLink}><Text style={styles.crossLinkText}>Build a plan from scratch in Guide →</Text></Pressable>
     </ScrollView>;
   };
   const renderSources = () => <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -450,12 +450,12 @@ export default function App() {
       </View>
 
       <Text style={styles.sectionTitle}>Your plan structures</Text>
-      <Text style={styles.helper}>User-created structures. These are separate from the source-labelled plans in Pep School.</Text>
+      <Text style={styles.helper}>These choices start a blank, user-created plan. To carry in a reference amount, schedule and Common Research Setup, open a source-labelled plan in Pep School and choose “Use this reference setup in Guide.”</Text>
 
       {[
-        ["Staged plan", "A visual sequence of stages with editable duration."],
-        ["Steady plan", "A simple fixed schedule structure."],
-        ["Custom plan", "Start blank and define the stages yourself."],
+        ["Staged plan", "Starts with three blank stages for amounts or timing that change over the plan."],
+        ["Steady plan", "Starts with one blank stage for the same amount and schedule throughout."],
+        ["Custom plan", "Starts with one blank stage; add or remove stages as you build."],
       ].map(([title, sub], idx) => (
         <Pressable accessibilityRole="button" accessibilityLabel={title} key={title} onPress={() => startPlan((["staged", "steady", "custom"] as PlanMode[])[idx])} style={styles.planOption}>
           <View style={[styles.planBars, { backgroundColor: idx === 0 ? COLORS.paleBlue : COLORS.palePurple }]}>
