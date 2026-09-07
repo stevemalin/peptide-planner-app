@@ -97,7 +97,7 @@ function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Scree
         const isActive = tab === item.key;
         return (
           <Pressable accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: isActive }} key={item.key} onPress={() => setScreen(item.key)} style={styles.navItem}>
-            <View testID={item.key==='tracker'?'today-center-button':undefined} style={item.key==='tracker'?[styles.todayCircle,isActive&&styles.todayCircleSelected]:[styles.iconWell,{backgroundColor:navColors[item.key]+(isActive?'25':'12')},isActive&&{borderWidth:1,borderColor:navColors[item.key]+'55'}]}><NavIcon name={item.key} color={item.key==='tracker'?'#ffffff':navColors[item.key]} size={item.key==='tracker'?31:25}/></View>
+            <View testID={item.key==='tracker'?'today-center-button':undefined} style={[styles.navArtWell,item.key==='tracker'&&styles.todayArtWell,isActive&&styles.navArtWellSelected]}><NavIcon name={item.key} color={navColors[item.key]} size={item.key==='tracker'?58:48}/></View>
             <Text style={[styles.navLabel,{color:navColors[item.key],fontWeight:isActive||item.key==='tracker'?'800':'600'}]}>{item.key==='tracker'?'Today':item.label}</Text>
           </Pressable>
         );
@@ -186,6 +186,7 @@ export default function App() {
       <Text style={styles.kicker}>WELCOME TO EZPEP PLANNER</Text>
       <Text style={styles.welcomeTitle}>A clearer place to begin.</Text>
       <Text style={styles.welcomeSub}>Tell us where you are starting. This changes the guidance you see—not your calculations or available features.</Text>
+      <View style={styles.professorWelcomeCard}><Image accessibilityLabel="Professor Lynch" source={require("./assets/professor-lynch-avatar.webp")} resizeMode="contain" style={styles.professorWelcomeAvatar}/><View style={styles.professorWelcomeCopy}><Text style={styles.professorName}>MEET PROFESSOR LYNCH</Text><Text style={styles.professorMessage}>I’ll help you understand the basics and find the right place to begin.</Text></View></View>
       <Text style={styles.onboardingQuestion}>How familiar are you with peptides?</Text>
       <View style={styles.choiceStack}>{([
         ["new","I’m new","Show the essentials and explain each step."],
@@ -214,7 +215,7 @@ export default function App() {
       {n:"5",title:"Start tracking",detail:"Starting the plan creates Today, reminders and inventory forecasting."}
     ];
     return <ScrollView contentContainerStyle={styles.scrollContent}>
-      <View style={styles.startHero}><Text style={styles.kicker}>START HERE</Text><Text style={styles.welcomeTitle}>{draft?"Continue where you left off.":"Learn. Plan. Track."}</Text><Text style={styles.welcomeSub}>{newUser?"We’ll explain the essentials as you go.":"A simple path from research to a working daily schedule."}</Text></View>
+      <View style={styles.startHero}><View style={styles.startHeroCopy}><Text style={styles.kicker}>START HERE WITH PROFESSOR LYNCH</Text><Text style={styles.welcomeTitle}>{draft?"Continue where you left off.":"Learn. Plan. Track."}</Text><Text style={styles.welcomeSub}>{newUser?"I’ll explain the essentials as you go.":"A simple path from research to a working daily schedule."}</Text></View><Image accessibilityLabel="Professor Lynch guide" source={require("./assets/professor-lynch-guide.webp")} resizeMode="contain" style={styles.professorStartGuide}/></View>
       <View style={styles.pathLine}/>
       {steps.map((step,index)=><View key={step.n} style={[styles.startStep,draft&&index<2&&styles.startStepQuiet,index===recommended&&styles.startStepRecommended]}><View style={styles.stepNumber}><Text style={styles.stepNumberText}>{step.n}</Text></View><View style={{flex:1}}>{index===recommended&&<Text style={styles.sourceClass}>RECOMMENDED FIRST</Text>}<Text style={styles.lessonTitle}>{step.title}</Text><Text style={styles.nextText}>{step.detail}</Text>{step.action&&<Pressable accessibilityRole="button" accessibilityLabel={step.label} onPress={step.action} style={styles.inlineAction}><Text style={styles.crossLinkText}>{step.label} →</Text></Pressable>}</View></View>)}
       <Text style={styles.onboardingSafety}>You can move between Learn and Build Plan at any time. Your navigation stays the same after setup.</Text>
@@ -225,9 +226,8 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <View style={styles.heroBubbleOne} /><View style={styles.heroBubbleTwo} />
-          <Text style={styles.kicker}>PEP SCHOOL</Text>
-          <Text style={styles.heroTitle}>A clearer place{"\n"}to begin.</Text>
-          <Text style={styles.heroSub}>Choose one learning area at a time.</Text>
+          <View style={styles.schoolHeroCopy}><Text style={styles.kicker}>PEP SCHOOL · WITH PROFESSOR LYNCH</Text><Text style={styles.heroTitle}>A clearer place{"\n"}to begin.</Text><Text style={styles.heroSub}>Choose one learning area at a time.</Text></View>
+          <Image accessibilityLabel="Professor Lynch welcoming you to Pep School" source={require("./assets/professor-lynch-hero.webp")} resizeMode="contain" style={styles.professorSchoolHero}/>
         </View>
         <View accessibilityRole="tablist" style={styles.schoolTabs}>
           <Pressable accessibilityRole="tab" accessibilityState={{selected:schoolSection==="library"}} onPress={()=>setSchoolSection("library")} style={[styles.schoolTab,schoolSection==="library"&&styles.schoolTabActive]}><Text numberOfLines={1} style={[styles.schoolTabText,schoolSection==="library"&&styles.schoolTabTextActive]}>Library</Text></Pressable>
@@ -510,6 +510,11 @@ const styles = StyleSheet.create({
   welcomeContent:{paddingHorizontal:22,paddingTop:28,paddingBottom:40},
   welcomeBrand:{width:"100%",maxWidth:390,height:106,alignItems:"flex-start",justifyContent:"center",marginBottom:18},
   welcomeBrandImage:{width:"100%",height:"100%"},
+  professorWelcomeCard:{flexDirection:"row",alignItems:"center",marginTop:18,padding:12,borderRadius:20,backgroundColor:COLORS.paleBlue,borderWidth:1,borderColor:COLORS.border},
+  professorWelcomeAvatar:{width:76,height:78,marginRight:12},
+  professorWelcomeCopy:{flex:1},
+  professorName:{color:"#5A42C7",fontSize:10,fontWeight:"800",letterSpacing:1.1,marginBottom:4},
+  professorMessage:{color:COLORS.ink,fontSize:13,lineHeight:18,fontWeight:"700"},
   welcomeTitle:{color:COLORS.ink,fontSize:31,lineHeight:36,fontWeight:"800",marginTop:10},
   welcomeSub:{color:COLORS.muted,fontSize:15,lineHeight:22,marginTop:10},
   onboardingQuestion:{color:COLORS.ink,fontSize:18,fontWeight:"800",marginTop:26,marginBottom:10},
@@ -527,7 +532,9 @@ const styles = StyleSheet.create({
   goalTextSelected:{color:"#5138BE"},
   skipButton:{alignItems:"center",padding:17},
   onboardingSafety:{color:COLORS.muted,fontSize:11,lineHeight:17,textAlign:"center",marginTop:16},
-  startHero:{marginTop:16,borderRadius:26,padding:20,backgroundColor:COLORS.paleBlue,borderWidth:1,borderColor:COLORS.border},
+  startHero:{marginTop:16,minHeight:186,borderRadius:26,padding:20,backgroundColor:COLORS.paleBlue,borderWidth:1,borderColor:COLORS.border,overflow:"hidden"},
+  startHeroCopy:{width:"63%",zIndex:1},
+  professorStartGuide:{position:"absolute",right:-20,bottom:-8,width:170,height:174},
   pathLine:{position:"absolute",left:38,top:215,bottom:75,width:2,backgroundColor:COLORS.border},
   startStep:{flexDirection:"row",gap:14,padding:15,marginTop:11,borderWidth:1,borderColor:COLORS.border,borderRadius:18,backgroundColor:COLORS.white},
   startStepQuiet:{backgroundColor:COLORS.pale},
@@ -543,6 +550,8 @@ const styles = StyleSheet.create({
   referenceAmount: { fontSize: 16, fontWeight: "800", color: COLORS.ink },
   consideration: { fontSize: 13, lineHeight: 20, color: COLORS.muted, marginBottom: 8 },
   originLabel: { fontSize: 13, lineHeight: 19, fontWeight: "700", color: COLORS.ink },
+  schoolHeroCopy:{width:"63%",zIndex:1},
+  professorSchoolHero:{position:"absolute",right:-8,bottom:-22,width:150,height:220},
   schoolTabs:{flexDirection:"row",marginTop:14,marginBottom:4,padding:4,borderRadius:18,backgroundColor:"#EDF4FC",borderWidth:1,borderColor:COLORS.border},
   schoolTab:{flex:1,minHeight:42,paddingHorizontal:5,alignItems:"center",justifyContent:"center",borderRadius:14},
   schoolTabActive:{backgroundColor:COLORS.white,borderWidth:1,borderColor:"#B8D9EF",boxShadow:"0px 2px 5px rgba(14,28,74,0.10)"},
@@ -700,6 +709,9 @@ const styles = StyleSheet.create({
   todayDestinationActive: { backgroundColor: "#d8f2ff", borderWidth: 2 },
   todayInk: { color: "#087ba5", fontWeight: "800" },
   iconWell: {width:44,height:40,borderRadius:13,alignItems:"center",justifyContent:"center"},
+  navArtWell:{width:52,height:48,borderRadius:15,alignItems:"center",justifyContent:"center"},
+  todayArtWell:{width:62,height:60,marginTop:-9},
+  navArtWellSelected:{transform:[{scale:1.06}],boxShadow:"0px 3px 8px rgba(32,101,190,0.18)"},
   todayCircle: {width:56,height:56,borderRadius:28,marginTop:-6,backgroundColor:"#06aacc",alignItems:"center",justifyContent:"center",boxShadow:"0px 3px 8px rgba(6,170,204,0.25)"},
   todayCircleSelected: {backgroundColor:"#009ebb",borderWidth:3,borderColor:"#a2eef6"},
   navItem: { minHeight: 64, flex: 1, alignItems: "center", justifyContent: "center" },
