@@ -23,7 +23,7 @@ import {
 } from "react-native";
 
 import {library as compounds,searchLibrary as searchCompounds} from "./src/library-v04";
-import QuickStart from "./src/QuickStart";
+import QuickStart,{LearningPaths} from "./src/QuickStart";
 import {SchoolAccordion,SchoolHighlights,RelatedSchoolCards,ResearchProductLink} from "./src/SchoolAccordion";
 import {schoolSections,relatedSchool} from "./src/school-profile-v04";
 import {beginActiveEdit,applyActiveEdit} from "./src/active-edit-v04";
@@ -160,6 +160,7 @@ export default function App() {
         <Text style={styles.heroSub}>Learn here. Plan in Guide.</Text>
       </View>
       <QuickStart/>
+      <LearningPaths/>
       <View style={styles.searchWrap}><Text style={styles.searchIcon}>⌕</Text>
         <TextInput accessibilityLabel="Search Pep School" value={schoolQuery} onChangeText={setSchoolQuery} placeholder="Name, alias or abbreviation" style={styles.searchInput} />
       </View>
