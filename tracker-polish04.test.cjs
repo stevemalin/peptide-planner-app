@@ -74,3 +74,9 @@ test('active plan editor exposes confirmed stage removal while retaining at leas
  assert.match(activeEditor,/d\.stages\.filter\(item=>item\.id!==stage\.id\)/);
  assert.match(activeEditor,/StageCard/);
 });
+
+test('Professor Lynch explains each active-plan maintenance section without adding plan values',()=>{
+ for(const section of ['Dose & Stages','Schedule','Vial & Concentration','Syringe','Inventory','Cycle / Break','Reminders','Pause / Archive'])assert.ok(activeEditor.includes("'"+section+"'"));
+ assert.match(activeEditor,/ProfessorHelp title={section}/);
+ assert.match(activeEditor,/do not verify preparation or clinical suitability/);
+});
