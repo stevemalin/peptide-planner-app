@@ -111,6 +111,7 @@ export default function App() {
   const [selected, setSelected] = useState<Compound>(compounds[0]);
   const [query,setQuery] = useState("");
   const [schoolQuery,setSchoolQuery] = useState("");
+  const [schoolSection,setSchoolSection] = useState<"library"|"courses"|"facts"|"community">("library");
   const [schoolFilter,setSchoolFilter] = useState<"all"|"favorites"|"human"|"preclinical"|"blends">("all");
   const [schoolFavorites,setSchoolFavorites] = useState<string[]>([]);
   useEffect(()=>{AsyncStorage.getItem("pepplan.school.favorites").then(value=>{if(value)setSchoolFavorites(JSON.parse(value));}).catch(()=>{});},[]);
