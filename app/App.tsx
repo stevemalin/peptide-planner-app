@@ -221,34 +221,59 @@ export default function App() {
   };
 
   const renderSchool = () => (
-    <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-      <View style={styles.hero}>
-        <View style={styles.heroBubbleOne} /><View style={styles.heroBubbleTwo} />
-        <Text style={styles.kicker}>PEP SCHOOL</Text>
-        <Text style={styles.heroTitle}>A clearer place{"\n"}to begin.</Text>
-        <Text style={styles.heroSub}>Learn here. Plan in Guide.</Text>
-      </View>
-      <QuickStart/>
-      <LearningPaths/>
-      <View style={styles.searchWrap}><Text style={styles.searchIcon}>⌕</Text>
-        <TextInput accessibilityLabel="Search Pep School" value={schoolQuery} onChangeText={setSchoolQuery} placeholder="Name, alias or abbreviation" style={styles.searchInput} />
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.schoolFilters}>{([
-        ["all","All"],["favorites","★ Favorites"],["human","Human evidence"],["preclinical","Preclinical"],["blends","Blends"]
-      ] as const).map(([key,label])=><Pressable key={key} accessibilityRole="button" accessibilityState={{selected:schoolFilter===key}} onPress={()=>setSchoolFilter(key)} style={[styles.schoolFilter,schoolFilter===key&&styles.schoolFilterActive]}><Text style={[styles.schoolFilterText,schoolFilter===key&&styles.schoolFilterTextActive]}>{label}</Text></Pressable>)}</ScrollView>
-      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>The 101 library</Text><Text style={styles.sectionLink}>{schoolResults.length} shown</Text></View>
-      <Text style={styles.helper}>Beginner introductions · evidence classes and primary sources included.</Text>
-      {schoolResults.map(c => (
-        <View key={c.id} style={styles.schoolRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel={c.name + " 101"} onPress={() => openSchool(c)} style={styles.schoolOpen}>
-            <Molecule color={c.accent} /><View style={{ flex: 1 }}><Text style={styles.planOptionTitle}>{c.name}</Text><Text style={styles.detailMeta}>101 · Fundamentals & context</Text><Text style={styles.smallBadge}>{c.supplied?.evidenceBadge}</Text></View><Text style={styles.linkArrow}>›</Text>
-          </Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel={(schoolFavorites.includes(c.id)?"Remove ":"Add ") + c.name + (schoolFavorites.includes(c.id)?" from favorites":" to favorites")} onPress={()=>toggleSchoolFavorite(c.id)} style={styles.favoriteButton}><Text style={[styles.favoriteIcon,schoolFavorites.includes(c.id)&&styles.favoriteIconActive]}>{schoolFavorites.includes(c.id)?"★":"☆"}</Text></Pressable>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <View style={styles.hero}>
+          <View style={styles.heroBubbleOne} /><View style={styles.heroBubbleTwo} />
+          <Text style={styles.kicker}>PEP SCHOOL</Text>
+          <Text style={styles.heroTitle}>A clearer place{"\n"}to begin.</Text>
+          <Text style={styles.heroSub}>Choose one learning area at a time.</Text>
         </View>
-      ))}
-      {!schoolResults.length && <Text style={styles.emptyText}>{schoolFilter==="favorites"?"Star a School profile to keep it here.":"No matches. Try another name, alias or filter."}</Text>}
-      <SchoolBasics/>
-    </ScrollView>
+        <View accessibilityRole="tablist" style={styles.schoolTabs}>
+          <Pressable accessibilityRole="tab" accessibilityState={{selected:schoolSection==="library"}} onPress={()=>setSchoolSection("library")} style={[styles.schoolTab,schoolSection==="library"&&styles.schoolTabActive]}><Text numberOfLines={1} style={[styles.schoolTabText,schoolSection==="library"&&styles.schoolTabTextActive]}>Library</Text></Pressable>
+          <Pressable accessibilityRole="tab" accessibilityState={{selected:schoolSection==="courses"}} onPress={()=>setSchoolSection("courses")} style={[styles.schoolTab,schoolSection==="courses"&&styles.schoolTabActive]}><Text numberOfLines={1} style={[styles.schoolTabText,schoolSection==="courses"&&styles.schoolTabTextActive]}>Courses</Text></Pressable>
+          <Pressable accessibilityRole="tab" accessibilityState={{selected:schoolSection==="facts"}} onPress={()=>setSchoolSection("facts")} style={[styles.schoolTab,schoolSection==="facts"&&styles.schoolTabActive]}><Text numberOfLines={1} style={[styles.schoolTabText,schoolSection==="facts"&&styles.schoolTabTextActive]}>Quick Facts</Text></Pressable>
+          <Pressable accessibilityRole="tab" accessibilityState={{selected:schoolSection==="community"}} onPress={()=>setSchoolSection("community")} style={[styles.schoolTab,schoolSection==="community"&&styles.schoolTabActive]}><Text numberOfLines={1} style={[styles.schoolTabText,schoolSection==="community"&&styles.schoolTabTextActive]}>Community</Text></Pressable>
+        </View>
+
+        {schoolSection==="library"&&<>
+          <View style={styles.schoolSectionIntro}><Text style={styles.kicker}>THE 101 LIBRARY</Text><Text style={styles.sectionTitle}>Research by peptide</Text><Text style={styles.helper}>Beginner introductions, evidence classes and primary sources—kept separate from courses and app help.</Text></View>
+          <View style={styles.searchWrap}><Text style={styles.searchIcon}>⌕</Text>
+            <TextInput accessibilityLabel="Search Pep School" value={schoolQuery} onChangeText={setSchoolQuery} placeholder="Name, alias or abbreviation" style={styles.searchInput} />
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.schoolFilters}>{([
+            ["all","All"],["favorites","★ Favorites"],["human","Human evidence"],["preclinical","Preclinical"],["blends","Blends"]
+          ] as const).map(([key,label])=><Pressable key={key} accessibilityRole="button" accessibilityState={{selected:schoolFilter===key}} onPress={()=>setSchoolFilter(key)} style={[styles.schoolFilter,schoolFilter===key&&styles.schoolFilterActive]}><Text style={[styles.schoolFilterText,schoolFilter===key&&styles.schoolFilterTextActive]}>{label}</Text></Pressable>)}</ScrollView>
+          <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Peptide profiles</Text><Text style={styles.sectionLink}>{schoolResults.length} shown</Text></View>
+          {schoolResults.map(c => (
+            <View key={c.id} style={styles.schoolRow}>
+              <Pressable accessibilityRole="button" accessibilityLabel={c.name + " 101"} onPress={() => openSchool(c)} style={styles.schoolOpen}>
+                <Molecule color={c.accent} /><View style={{ flex: 1 }}><Text style={styles.planOptionTitle}>{c.name}</Text><Text style={styles.detailMeta}>101 · Fundamentals & context</Text><Text style={styles.smallBadge}>{c.supplied?.evidenceBadge}</Text></View><Text style={styles.linkArrow}>›</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={(schoolFavorites.includes(c.id)?"Remove ":"Add ") + c.name + (schoolFavorites.includes(c.id)?" from favorites":" to favorites")} onPress={()=>toggleSchoolFavorite(c.id)} style={styles.favoriteButton}><Text style={[styles.favoriteIcon,schoolFavorites.includes(c.id)&&styles.favoriteIconActive]}>{schoolFavorites.includes(c.id)?"★":"☆"}</Text></Pressable>
+            </View>
+          ))}
+          {!schoolResults.length && <Text style={styles.emptyText}>{schoolFilter==="favorites"?"Star a School profile to keep it here.":"No matches. Try another name, alias or filter."}</Text>}
+        </>}
+
+        {schoolSection==="courses"&&<>
+          <View style={styles.schoolSectionIntro}><Text style={styles.kicker}>GUIDED LEARNING</Text><Text style={styles.sectionTitle}>Courses</Text><Text style={styles.helper}>Follow a short path when you want more structure. Only the course you open expands.</Text></View>
+          <QuickStart/>
+          <LearningPaths/>
+        </>}
+
+        {schoolSection==="facts"&&<>
+          <View style={styles.schoolSectionIntro}><Text style={styles.kicker}>QUICK FACTS</Text><Text style={styles.sectionTitle}>Answers without the course</Text><Text style={styles.helper}>Search practical app concepts, terminology and research-literacy fundamentals.</Text></View>
+          <SchoolBasics/>
+        </>}
+
+        {schoolSection==="community"&&
+          <View style={styles.communityCard}>
+            <View style={styles.communityIcon}><Text style={styles.communityIconText}>◎</Text></View>
+            <Text style={styles.kicker}>COMMUNITY · COMING LATER</Text>
+            <Text style={styles.sectionTitle}>Learn with context—not noise.</Text>
+            <Text style={styles.nextText}>This area is reserved for moderated questions, expert-reviewed discussions and useful shared learning. It will remain separate from your private plans and tracking.</Text>
+          </View>}
+      </ScrollView>
   );
 
   const referenceContext = (plan: PlanTemplate['suppliedPlan']) => <>
@@ -517,6 +542,15 @@ const styles = StyleSheet.create({
   referenceAmount: { fontSize: 16, fontWeight: "800", color: COLORS.ink },
   consideration: { fontSize: 13, lineHeight: 20, color: COLORS.muted, marginBottom: 8 },
   originLabel: { fontSize: 13, lineHeight: 19, fontWeight: "700", color: COLORS.ink },
+  schoolTabs:{flexDirection:"row",marginTop:14,marginBottom:4,padding:4,borderRadius:18,backgroundColor:"#EDF4FC",borderWidth:1,borderColor:COLORS.border},
+  schoolTab:{flex:1,minHeight:42,paddingHorizontal:5,alignItems:"center",justifyContent:"center",borderRadius:14},
+  schoolTabActive:{backgroundColor:COLORS.white,borderWidth:1,borderColor:"#B8D9EF",boxShadow:"0px 2px 5px rgba(14,28,74,0.10)"},
+  schoolTabText:{fontSize:10,fontWeight:"700",color:COLORS.muted},
+  schoolTabTextActive:{color:COLORS.ink,fontWeight:"800"},
+  schoolSectionIntro:{marginTop:18,marginBottom:2},
+  communityCard:{marginTop:18,padding:22,borderRadius:24,borderWidth:1,borderColor:COLORS.border,backgroundColor:COLORS.paleBlue},
+  communityIcon:{width:52,height:52,borderRadius:18,alignItems:"center",justifyContent:"center",backgroundColor:COLORS.white,marginBottom:16},
+  communityIconText:{fontSize:30,color:COLORS.purple,fontWeight:"800"},
   schoolRow: { flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: COLORS.border, borderRadius: 22, marginBottom: 12, overflow:"hidden" },
   schoolOpen:{flex:1,flexDirection:"row",alignItems:"center",gap:16,padding:16},
   favoriteButton:{alignSelf:"stretch",width:48,alignItems:"center",justifyContent:"center",borderLeftWidth:StyleSheet.hairlineWidth,borderLeftColor:COLORS.border},
