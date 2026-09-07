@@ -32,6 +32,14 @@ export async function enableReminders(){
 }
 type DesiredReminder={planId:string;eventId:string;compoundName:string;at:number;urgent:boolean};
 let serial=Promise.resolve();
+export function cancelEventReminders(events:{planId:string;eventId:string}[]):Promise<number>{
+ const keys=new Set(events.map(event=>event.planId+':'+event.eventId));
+ const task=serial.catch(()=>{}).then(async()=>{
+  const Notifications=getLocalNotifications();if(!Notifications)return 0;
+  try{const existing=await Notifications.getAllScheduledNotificationsAsync();let cancelled=0;for(const item of existing){const data=item.content.data;if(data?.owner===owner&&typeof data.planId==='string'&&typeof data.eventId==='string'&&keys.has(data.planId+':'+data.eventId)){await Notifications.cancelScheduledNotificationAsync(item.identifier);cancelled++;}}return cancelled;}catch{return 0;}
+ });
+ serial=task.then(()=>{});return task;
+}
 export function reconcileReminders(input:SavedPlan|SavedPlan[]|null):Promise<ReminderReport>{
  const task=serial.catch(()=>{}).then(async()=>{
   const Notifications=getLocalNotifications();if(!Notifications)return unavailable();

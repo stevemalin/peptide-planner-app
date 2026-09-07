@@ -24,3 +24,9 @@ test('upcoming group window can be changed without including distant events',()=
 test('tracker exposes review, selective confirmation and grouped undo',()=>{
  for(const term of ['UPCOMING TOGETHER','Review & mark group taken','Uncheck anything','grouped completions undone'])assert.match(tracker,new RegExp(term));
 });
+
+test('taking or skipping events triggers targeted reminder cancellation',()=>{
+ assert.match(tracker,/cancelEventReminders/);
+ assert.match(tracker,/value==='completed'\|\|value==='skipped'/);
+ assert.match(tracker,/selectedGroup\.map/);
+});
