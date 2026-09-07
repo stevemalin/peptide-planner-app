@@ -1,5 +1,5 @@
 {
-  "name": "peptide-planner-prototype",
+  "name": "ezpep-planner",
   "version": "0.4.0",
   "private": true,
   "main": "./index-v04.js",

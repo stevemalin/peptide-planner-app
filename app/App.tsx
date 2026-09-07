@@ -1,6 +1,6 @@
 import ActivePeptideEditor from './src/ActivePeptideEditor';
 import {archivePlan} from './src/plan-actions-v04';
-import NavIcon,{navColors,type NavGlyph} from './src/NavIcon';
+import NavIcon,{EZPMark,navColors,type NavGlyph} from './src/NavIcon';
 import ResearchPracticeCard from './src/ResearchPracticeCard';
 import Svg,{Circle,Path} from 'react-native-svg';
 import {researchPracticeFor,RESEARCH_PRACTICE_LABEL,RESEARCH_PRACTICE_NOTICE} from './src/research-practice';
@@ -179,8 +179,8 @@ export default function App() {
 
   const renderWelcome=()=>(
     <ScrollView contentContainerStyle={styles.welcomeContent}>
-      <View style={styles.welcomeMark}><Molecule color={COLORS.blue}/></View>
-      <Text style={styles.kicker}>WELCOME TO PEPPLAN</Text>
+      <View style={styles.welcomeMark}><EZPMark size={82}/></View>
+      <Text style={styles.kicker}>WELCOME TO EZPEP PLANNER</Text>
       <Text style={styles.welcomeTitle}>A clearer place to begin.</Text>
       <Text style={styles.welcomeSub}>Tell us where you are starting. This changes the guidance you see—not your calculations or available features.</Text>
       <Text style={styles.onboardingQuestion}>How familiar are you with peptides?</Text>
@@ -195,7 +195,7 @@ export default function App() {
       ] as const).map(([value,label])=><Pressable accessibilityRole="radio" accessibilityState={{selected:firstGoal===value}} key={value} onPress={()=>setFirstGoal(value)} style={[styles.goalCard,firstGoal===value&&styles.goalCardSelected]}><Text style={[styles.goalText,firstGoal===value&&styles.goalTextSelected]}>{label}</Text></Pressable>)}</View>
       {experience&&firstGoal&&<AppButton label="Show me where to begin" onPress={()=>finishOnboarding({experience,goal:firstGoal})}/>}
       <Pressable accessibilityRole="button" accessibilityLabel="Skip introduction" onPress={()=>finishOnboarding({experience:"familiar",goal:"setup"})} style={styles.skipButton}><Text style={styles.crossLinkText}>Skip for now</Text></Pressable>
-      <Text style={styles.onboardingSafety}>PepPlan organizes educational research information and routines you enter. It does not select a peptide or prescribe a dose.</Text>
+      <Text style={styles.onboardingSafety}>EZPep Planner organizes educational research information and routines you enter. It does not select a peptide or prescribe a dose.</Text>
     </ScrollView>
   );
 
@@ -322,12 +322,12 @@ export default function App() {
       {label:"History",detail:"Completed and skipped events",target:"history"},
       {label:"Preferences",detail:"Units, appearance and planner defaults",target:"settings"},
       {label:"My data & privacy",detail:"Local storage, export and deletion controls",target:"settings"},
-      {label:"Help & About",detail:"PepPlan 0.4, guidance and disclaimers",target:"settings"},
+      {label:"Help & About",detail:"EZPep Planner 0.4, guidance and disclaimers",target:"settings"},
       {label:"Shop",detail:"Future AURAPEP connection · not connected",target:null},
     ];
     return <ScrollView contentContainerStyle={styles.scrollContent}>
-      <Text style={[styles.kicker, { marginTop: 20 }]}>MORE</Text><Text style={styles.detailTitle}>Your PepPlan</Text><Text style={styles.detailMeta}>Account, reminders, preferences and support.</Text>
-      <View style={styles.lessonCard}><Text style={styles.sourceClass}>ACCOUNT DIRECTION</Text><Text style={styles.lessonTitle}>Start locally. Sync when you choose.</Text><Text style={styles.nextText}>PepPlan Starter remains useful without an account. Passwordless six-digit email verification will unlock backup, device transfer and Pro access after the secure service is connected.</Text><AppButton label="View account plan" secondary onPress={()=>setScreen("profile")}/></View>
+      <Text style={[styles.kicker, { marginTop: 20 }]}>MORE</Text><Text style={styles.detailTitle}>Your EZPep Planner</Text><Text style={styles.detailMeta}>Account, reminders, preferences and support.</Text>
+      <View style={styles.lessonCard}><Text style={styles.sourceClass}>ACCOUNT DIRECTION</Text><Text style={styles.lessonTitle}>Start locally. Sync when you choose.</Text><Text style={styles.nextText}>EZPep Planner remains useful without an account. Passwordless six-digit email verification will unlock backup, device transfer and Pro access after the secure service is connected.</Text><AppButton label="View account plan" secondary onPress={()=>setScreen("profile")}/></View>
       {rows.map(row=><Pressable accessibilityRole="button" accessibilityLabel={row.label} disabled={!row.target} key={row.label} style={styles.moreRow} onPress={()=>row.target&&setScreen(row.target)}><View style={{flex:1}}><Text style={styles.planOptionTitle}>{row.label}</Text><Text style={styles.smallBadge}>{row.detail}</Text></View><Text style={styles.linkArrow}>{row.target?'›':'·'}</Text></Pressable>)}
       <View style={styles.notice}><Text style={styles.noticeText}>Prototype 0.4 · plans are saved on this device. No cloud account, shop connection or customer-data integration is active.</Text></View>
     </ScrollView>;
@@ -338,7 +338,7 @@ export default function App() {
       <View style={styles.hero}>
         <View style={styles.heroBubbleOne} />
         <View style={styles.heroBubbleTwo} />
-        <Text style={styles.kicker}>PEPTIDE GUIDE</Text>
+        <Text style={styles.kicker}>BUILD PLAN</Text>
         <Text style={styles.heroTitle}>Peptide Research{"\n"}Made Simple</Text>
         <Text style={styles.heroSub}>Understand. Plan. Calculate. Track.</Text>
 
@@ -447,7 +447,7 @@ export default function App() {
     <SafeAreaProvider><SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
       <View style={styles.topLine}>
-        <Text style={styles.tempBrand}>PEPTIDE GUIDE</Text>
+        <View style={styles.brandLockup}><EZPMark size={38}/><Text style={styles.brandWord}><Text style={styles.brandAccent}>EZPep</Text> Planner</Text></View>
         <View style={{flexDirection:"row",alignItems:"center",gap:4}}><Text style={[styles.tempStatus,{fontSize:10}]}>Prototype 0.4</Text><Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={()=>setScreen("profile")} style={{width:36,minHeight:44,alignItems:"center",justifyContent:"center"}}><Svg width={20} height={22} viewBox="0 0 24 24"><Circle cx={12} cy={7} r={4} fill="none" stroke={COLORS.ink} strokeWidth={1.7}/><Path d="M 4 22 L 4 19 C 4 12 20 12 20 19 L 20 22 Z" fill="none" stroke={COLORS.ink} strokeWidth={1.7}/></Svg></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={()=>setScreen("settings")} style={{width:36,minHeight:44,alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:20,color:COLORS.ink}}>⚙</Text></Pressable></View>
       </View>
       <View style={{paddingHorizontal:20,paddingVertical:3}}><Text testID="save-status" style={styles.smallBadge}>{saved.saving?'Saving on device…':saved.error?saved.error:'Saved on this device'}</Text>{!!saved.error&&!saved.loadFailed&&<AppButton label="Retry save" onPress={()=>saved.retry().catch(()=>{})} secondary/>}{!!reminderError&&<Text style={styles.smallBadge}>{reminderError}</Text>}</View>
@@ -462,7 +462,7 @@ export default function App() {
         {screen === "schoolMore" && renderSchoolDetail(true)}
         {screen === "schoolSources" && renderSources()}
         {screen === "more" && renderMore()}
-        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>{screen==='profile'?'ACCOUNT':'PREFERENCES & DATA'}</Text><Text style={styles.detailTitle}>{screen==='profile'?'Your account':'Your settings'}</Text>{screen==='profile'?<><View style={styles.lessonCard}><Text style={styles.sourceClass}>CURRENT MODE</Text><Text style={styles.lessonTitle}>Saved locally on this device</Text><Text style={styles.nextText}>No email address or password is required during the prototype. Clearing app storage removes unsynced local data.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>PLANNED ACCOUNT</Text><Text style={styles.lessonTitle}>Six-digit email verification</Text><Text style={styles.nextText}>Enter an email, receive a one-time code, and verify without creating a password. An account will add backup, device transfer and PepPlan Pro entitlement while keeping AURAPEP commerce separate unless you explicitly connect it.</Text><Text style={styles.smallBadge}>Backend and email delivery are not connected yet.</Text></View></>:<><View style={styles.lessonCard}><Text style={styles.lessonTitle}>Plan-specific controls</Text><Text style={styles.nextText}>Dose units, schedule, reminder lead time, syringe capacity and inventory are maintained per peptide so one plan never silently changes another.</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>My data & privacy</Text><Text style={styles.nextText}>Plans, calculations, event history and inventory currently remain in local app storage. Export, cloud backup and account deletion will be enabled with the account service.</Text><Text style={styles.smallBadge}>No AURAPEP order or customer data is connected.</Text></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>About PepPlan</Text><Text style={styles.nextText}>Prototype 0.4 · Learn. Plan. Track.</Text><Text style={styles.smallBadge}>Educational planning support. Evidence classes and route/formulation limits remain attached to School content.</Text></View></>}<AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
+        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>{screen==='profile'?'ACCOUNT':'PREFERENCES & DATA'}</Text><Text style={styles.detailTitle}>{screen==='profile'?'Your account':'Your settings'}</Text>{screen==='profile'?<><View style={styles.lessonCard}><Text style={styles.sourceClass}>CURRENT MODE</Text><Text style={styles.lessonTitle}>Saved locally on this device</Text><Text style={styles.nextText}>No email address or password is required in this development version. Clearing app storage removes unsynced local data.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>PLANNED ACCOUNT</Text><Text style={styles.lessonTitle}>Six-digit email verification</Text><Text style={styles.nextText}>Enter an email, receive a one-time code, and verify without creating a password. An account will add backup, device transfer and EZPep Planner Pro entitlement while keeping AURAPEP commerce separate unless you explicitly connect it.</Text><Text style={styles.smallBadge}>Backend and email delivery are not connected yet.</Text></View></>:<><View style={styles.lessonCard}><Text style={styles.lessonTitle}>Plan-specific controls</Text><Text style={styles.nextText}>Dose units, schedule, reminder lead time, syringe capacity and inventory are maintained per peptide so one plan never silently changes another.</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>My data & privacy</Text><Text style={styles.nextText}>Plans, calculations, event history and inventory currently remain in local app storage. Export, cloud backup and account deletion will be enabled with the account service.</Text><Text style={styles.smallBadge}>No AURAPEP order or customer data is connected.</Text></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>About EZPep Planner</Text><Text style={styles.nextText}>EZPep Planner 0.4 · Learn. Plan. Track.</Text><Text style={styles.smallBadge}>Educational planning support. Evidence classes and route/formulation limits remain attached to School content.</Text></View></>}<AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
         {screen==='activeEditor'&&focused&&saved.store.activeEdit&&<ActivePeptideEditor key={focused.id+editorSection} initialSection={editorSection} plan={focused} edit={saved.store.activeEdit} change={edit=>saved.update(old=>({...old,activeEdit:edit}))} onSave={saveActiveEdits} onCancel={discardActiveEdits} onArchive={async()=>{const target=saved.store.activeEdit?.returnTo==='tracker'?'tracker':'plans';await saved.update(old=>({...archivePlan(old,focused.id),activeEdit:null}));setEditingActive(false);setScreen(target);}}/>}
@@ -539,6 +539,9 @@ const styles = StyleSheet.create({
   main: { flex: 1 },
   topLine: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.border },
   tempBrand: { color: COLORS.ink, fontWeight: "800", letterSpacing: 1.2, fontSize: 12 },
+  brandLockup: { flexDirection: "row", alignItems: "center", gap: 8 },
+  brandWord: { color: COLORS.ink, fontWeight: "800", letterSpacing: 0.1, fontSize: 16 },
+  brandAccent: { color: COLORS.purple },
   tempStatus: { color: COLORS.muted, fontSize: 11 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 28 },
   hero: { marginTop: 16, borderRadius: 28, padding: 20, overflow: "hidden", backgroundColor: COLORS.pale, borderWidth: 1, borderColor: COLORS.border },

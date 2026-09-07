@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Peptide Planner Prototype",
-    "slug": "peptide-planner-prototype",
+    "name": "EZPep Planner",
+    "slug": "ezpep-planner",
     "version": "0.4.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "android": {
-      "package": "com.prototype.peptideplanner",
+      "package": "com.ezpep.planner",
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM"
       ]

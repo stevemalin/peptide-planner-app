@@ -1,6 +1,6 @@
-# Peptide Planner app
+# EZPep Planner
 
-Private development source for the separately branded Peptide Planner Android app. Current development branch: **Prototype 0.4**, integrated into the established app. See [the 0.4 review handoff](README-0.4.md) for current browser behavior and persistence. Protected `main` baseline: **Prototype 0.3.3**. This repository contains only the mobile prototype and its tests. It is independent of AURAPEP WordPress/WooCommerce and has no production or customer-data integration.
+Private development source for the EZPep Planner Android app. Current development branch: **Prototype 0.4**, integrated into the established app. See [the 0.4 review handoff](README-0.4.md) for current browser behavior and persistence. Protected `main` baseline: **Prototype 0.3.3**. This repository contains only the mobile prototype and its tests. It is independent of AURAPEP WordPress/WooCommerce and has no production or customer-data integration.
 
 ## Architecture
 
@@ -13,7 +13,7 @@ React Native 0.86 / React 19.2 with Expo SDK 57 and TypeScript. The application 
 - `Workspace.tsx`, `StageCard.tsx`, `ScheduleSheet.tsx`, `VialSetup.tsx`, `Syringe.tsx`: review, plan editing, scheduling, calculator and syringe UI.
 - `Tracker.tsx`: Today, Calendar and History; inventory derives from saved plans/events.
 
-Flow: **Pep School → Guide → My Plan / Review → Schedule → Vial & Calculation → Start Plan → Tracker**. Compounds: **Retatrutide, Tirzepatide, Semaglutide, Glow 70 mg, GHK-Cu and KPV**. Branding is temporary. Do not invent scientific or dosing content; preserve source classes and provenance.
+Flow: **Pep School → Guide → My Plan / Review → Schedule → Vial & Calculation → Start Plan → Tracker**. Compounds: **Retatrutide, Tirzepatide, Semaglutide, Glow 70 mg, GHK-Cu and KPV**. The approved identity is EZPep Planner with the dimensional EZP/DNA monogram; Easy Pep Planner is the plain-language pronunciation. Do not invent scientific or dosing content; preserve source classes and provenance.
 
 ## Android testing
 
@@ -75,7 +75,7 @@ Never commit credentials, tokens, `.env` files, signing keys, production exports
 
 ## Days/Weeks and daily navigation refinement
 
-Customer navigation is Pep School, Guide, Today, My Peptides, More. Today is the raised central vector control; Tomorrow previews the next calendar day's events without future completion actions. Existing internal plan and storage identifiers are unchanged.
+Customer navigation is Learn, Build Plan, Today, My Peptides, More. Today is the raised central vector control; Tomorrow previews the next calendar day's events without future completion actions. Existing internal plan and storage identifiers are unchanged.
 
 Stages may store explicit `duration: { value, unit: 'days' | 'weeks' }`. Legacy `weeks` or `durationWeeks` values are interpreted as Weeks on read, without rewriting saved events or active-edit fingerprints. Calendar-day offsets drive stage ranges, transitions, progress and event generation. Days are never encoded as fractional weeks. Existing historical events remain unchanged during active edits.
 
