@@ -186,7 +186,7 @@ export default function App() {
       <Text style={styles.kicker}>WELCOME TO EZPEP PLANNER</Text>
       <Text style={styles.welcomeTitle}>A clearer place to begin.</Text>
       <Text style={styles.welcomeSub}>Tell us where you are starting. This changes the guidance you see—not your calculations or available features.</Text>
-      <View style={styles.professorWelcomeCard}><Image accessibilityLabel="Professor Lynch" source={require("./assets/professor-lynch-avatar.webp")} resizeMode="contain" style={styles.professorWelcomeAvatar}/><View style={styles.professorWelcomeCopy}><Text style={styles.professorName}>MEET PROFESSOR LYNCH</Text><Text style={styles.professorMessage}>I’ll help you understand the basics and find the right place to begin.</Text></View></View>
+      <View style={styles.professorWelcomeCard}><Image accessibilityLabel="Professor Lynch" source={require("./assets/professor-lynch-avatar.webp")} resizeMode="contain" style={styles.professorWelcomeAvatar}/><View style={styles.professorWelcomeBubble}><View style={styles.professorBubbleTail}/><Text style={styles.professorName}>HI, I’M PROFESSOR LYNCH</Text><Text style={styles.professorMessage}>I’m here to give you a clearer, guided way to learn the basics and organize your peptide research plans.</Text></View></View>
       <Text style={styles.onboardingQuestion}>How familiar are you with peptides?</Text>
       <View style={styles.choiceStack}>{([
         ["new","I’m new","Show the essentials and explain each step."],
@@ -226,7 +226,7 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <View style={styles.heroBubbleOne} /><View style={styles.heroBubbleTwo} />
-          <View style={styles.schoolHeroCopy}><Text style={styles.kicker}>PEP SCHOOL · WITH PROFESSOR LYNCH</Text><Text style={styles.heroTitle}>A clearer place{"\n"}to begin.</Text><Text style={styles.heroSub}>Choose one learning area at a time.</Text></View>
+          <View style={styles.schoolHeroCopy}><Text style={styles.kicker}>PEP SCHOOL · WITH PROFESSOR LYNCH</Text><Text style={styles.heroTitle}>A clearer place{"\n"}to begin.</Text><Text style={styles.heroSub}>Choose one learning area at a time.</Text><View style={styles.schoolSpeechBubble}><View style={styles.schoolSpeechTail}/><Text style={styles.schoolSpeechText}>Welcome! Pick a section and we’ll take it one clear step at a time.</Text></View></View>
           <Image accessibilityLabel="Professor Lynch welcoming you to Pep School" source={require("./assets/professor-lynch-hero.webp")} resizeMode="contain" style={styles.professorSchoolHero}/>
         </View>
         <View accessibilityRole="tablist" style={styles.schoolTabs}>
@@ -510,9 +510,10 @@ const styles = StyleSheet.create({
   welcomeContent:{paddingHorizontal:22,paddingTop:28,paddingBottom:40},
   welcomeBrand:{width:"100%",maxWidth:390,height:106,alignItems:"flex-start",justifyContent:"center",marginBottom:18},
   welcomeBrandImage:{width:"100%",height:"100%"},
-  professorWelcomeCard:{flexDirection:"row",alignItems:"center",marginTop:18,padding:12,borderRadius:20,backgroundColor:COLORS.paleBlue,borderWidth:1,borderColor:COLORS.border},
-  professorWelcomeAvatar:{width:76,height:78,marginRight:12},
-  professorWelcomeCopy:{flex:1},
+  professorWelcomeCard:{flexDirection:"row",alignItems:"center",marginTop:18},
+  professorWelcomeAvatar:{width:82,height:88,marginRight:14},
+  professorWelcomeBubble:{flex:1,position:"relative",paddingHorizontal:16,paddingVertical:14,borderRadius:20,backgroundColor:COLORS.white,borderWidth:1,borderColor:"#B8D9EF",boxShadow:"0px 3px 8px rgba(14,28,74,0.10)"},
+  professorBubbleTail:{position:"absolute",left:-8,top:28,width:16,height:16,backgroundColor:COLORS.white,borderLeftWidth:1,borderBottomWidth:1,borderColor:"#B8D9EF",transform:[{rotate:"45deg"}]},
   professorName:{color:"#5A42C7",fontSize:10,fontWeight:"800",letterSpacing:1.1,marginBottom:4},
   professorMessage:{color:COLORS.ink,fontSize:13,lineHeight:18,fontWeight:"700"},
   welcomeTitle:{color:COLORS.ink,fontSize:31,lineHeight:36,fontWeight:"800",marginTop:10},
@@ -551,7 +552,10 @@ const styles = StyleSheet.create({
   consideration: { fontSize: 13, lineHeight: 20, color: COLORS.muted, marginBottom: 8 },
   originLabel: { fontSize: 13, lineHeight: 19, fontWeight: "700", color: COLORS.ink },
   schoolHeroCopy:{width:"63%",zIndex:1},
-  professorSchoolHero:{position:"absolute",right:-8,bottom:-22,width:150,height:220},
+  schoolSpeechBubble:{alignSelf:"flex-start",position:"relative",marginTop:13,maxWidth:250,paddingHorizontal:13,paddingVertical:10,borderRadius:16,backgroundColor:COLORS.white,borderWidth:1,borderColor:"#B8D9EF",boxShadow:"0px 2px 6px rgba(14,28,74,0.08)"},
+  schoolSpeechTail:{position:"absolute",right:-7,top:18,width:14,height:14,backgroundColor:COLORS.white,borderTopWidth:1,borderRightWidth:1,borderColor:"#B8D9EF",transform:[{rotate:"45deg"}]},
+  schoolSpeechText:{color:COLORS.ink,fontSize:12,lineHeight:17,fontWeight:"700"},
+  professorSchoolHero:{position:"absolute",right:0,bottom:0,width:145,height:205},
   schoolTabs:{flexDirection:"row",marginTop:14,marginBottom:4,padding:4,borderRadius:18,backgroundColor:"#EDF4FC",borderWidth:1,borderColor:COLORS.border},
   schoolTab:{flex:1,minHeight:42,paddingHorizontal:5,alignItems:"center",justifyContent:"center",borderRadius:14},
   schoolTabActive:{backgroundColor:COLORS.white,borderWidth:1,borderColor:"#B8D9EF",boxShadow:"0px 2px 5px rgba(14,28,74,0.10)"},
