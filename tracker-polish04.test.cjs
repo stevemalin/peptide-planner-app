@@ -59,3 +59,11 @@ test('plan tracker claims horizontal swipes before the vertical scroll container
  assert.match(planTracker,/touchAction:'pan-y'/);
  assert.match(planTracker,/Math\.abs\(gesture\.dx\)<60/);
 });
+
+test('settings can export a private local backup without changing stored plans',()=>{
+ assert.match(app,/encodePlannerStore\(saved\.store\)/);
+ assert.match(app,/Export local backup/);
+ assert.match(app,/The app does not upload this backup/);
+ assert.match(app,/Share\.share/);
+ assert.match(app,/link\.download=filename/);
+});

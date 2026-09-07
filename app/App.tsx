@@ -23,6 +23,8 @@ import {
   AppState,
   Linking,
   Image,
+  Platform,
+  Share,
   useWindowDimensions,
 } from "react-native";
 
@@ -43,6 +45,7 @@ import { importReference, newDraft } from "./src/engine";
 import { Evidence, ProfessorHelp } from "./src/ui";
 import { reconcileReminders, listenForReminder } from "./src/reminders";
 import type { PlanMode } from "./src/planning";
+import {encodePlannerStore} from "./src/persistence-v04";
 type Experience = "new" | "familiar" | "experienced";
 type FirstGoal = "learn" | "research" | "setup" | "track";
 type OnboardingProfile = { experience: Experience; goal: FirstGoal };
@@ -143,6 +146,24 @@ export default function App() {
       {text:"Restart",onPress:()=>{setRestartingOnboarding(true);setExperience(null);setFirstGoal(null);setOnboarding(null);AsyncStorage.removeItem("pepplan.onboarding.v1").catch(()=>{});setScreen("welcome");}},
     ],
   );
+  const exportLocalBackup=async()=>{
+    const payload=encodePlannerStore(saved.store);
+    const filename="ezpep-planner-backup-"+new Date().toISOString().slice(0,10)+".json";
+    try{
+      if(Platform.OS==="web"){
+        const web=globalThis as any;
+        const url=web.URL.createObjectURL(new web.Blob([payload],{type:"application/json"}));
+        const link=web.document.createElement("a");
+        link.href=url;link.download=filename;link.click();
+        web.URL.revokeObjectURL(url);
+        Alert.alert("Backup downloaded","Keep this file private. It contains the plans and history saved in this browser.");
+      }else{
+        await Share.share({title:"EZPep Planner backup",message:payload});
+      }
+    }catch{
+      Alert.alert("Backup not created","Your saved plans were not changed. Please try again.");
+    }
+  };
   const [selectedPlanId,setSelectedPlanId]=useState<string|null>(null);
   const [editingActive,setEditingActive]=useState(false);
   const [editorSection,setEditorSection]=useState('');
@@ -512,7 +533,7 @@ export default function App() {
         {screen === "schoolMore" && renderSchoolDetail(true)}
         {screen === "schoolSources" && renderSources()}
         {screen === "more" && renderMore()}
-        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>{screen==='profile'?'ACCOUNT':'PREFERENCES & DATA'}</Text><Text style={styles.detailTitle}>{screen==='profile'?'Your account':'Your settings'}</Text>{screen==='profile'?<><View style={styles.lessonCard}><Text style={styles.sourceClass}>CURRENT MODE</Text><Text style={styles.lessonTitle}>Saved locally on this device</Text><Text style={styles.nextText}>No email address or password is required in this development version. Clearing app storage removes unsynced local data.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>PLANNED ACCOUNT</Text><Text style={styles.lessonTitle}>Six-digit email verification</Text><Text style={styles.nextText}>Enter an email, receive a one-time code, and verify without creating a password. An account will add backup, device transfer and EZPep Planner Pro entitlement while keeping AURAPEP commerce separate unless you explicitly connect it.</Text><Text style={styles.smallBadge}>Backend and email delivery are not connected yet.</Text></View></>:<><View style={styles.lessonCard}><Text style={styles.lessonTitle}>Plan-specific controls</Text><Text style={styles.nextText}>Dose units, schedule, reminder lead time, syringe capacity and inventory are maintained per peptide so one plan never silently changes another.</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>My data & privacy</Text><Text style={styles.nextText}>Plans, calculations, event history and inventory currently remain in local app storage. Export, cloud backup and account deletion will be enabled with the account service.</Text><Text style={styles.smallBadge}>No AURAPEP order or customer data is connected.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>QUICK START</Text><Text style={styles.lessonTitle}>Restart onboarding</Text><Text style={styles.nextText}>Review the welcome questions and choose a new starting path. Your saved plans, history and settings will stay exactly as they are.</Text><AppButton label="Restart Quick Start Onboarding" secondary onPress={restartOnboarding}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>About EZPep Planner</Text><Text style={styles.nextText}>EZPep Planner 0.4 · Learn. Plan. Track.</Text><Text style={styles.smallBadge}>Educational planning support. Evidence classes and route/formulation limits remain attached to School content.</Text></View></>}<AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
+        {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>{screen==='profile'?'ACCOUNT':'PREFERENCES & DATA'}</Text><Text style={styles.detailTitle}>{screen==='profile'?'Your account':'Your settings'}</Text>{screen==='profile'?<><View style={styles.lessonCard}><Text style={styles.sourceClass}>CURRENT MODE</Text><Text style={styles.lessonTitle}>Saved locally on this device</Text><Text style={styles.nextText}>No email address or password is required in this development version. Clearing app storage removes unsynced local data.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>PLANNED ACCOUNT</Text><Text style={styles.lessonTitle}>Six-digit email verification</Text><Text style={styles.nextText}>Enter an email, receive a one-time code, and verify without creating a password. An account will add backup, device transfer and EZPep Planner Pro entitlement while keeping AURAPEP commerce separate unless you explicitly connect it.</Text><Text style={styles.smallBadge}>Backend and email delivery are not connected yet.</Text></View></>:<><View style={styles.lessonCard}><Text style={styles.lessonTitle}>Plan-specific controls</Text><Text style={styles.nextText}>Dose units, schedule, reminder lead time, syringe capacity and inventory are maintained per peptide so one plan never silently changes another.</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>My data & privacy</Text><Text style={styles.nextText}>Plans, calculations, event history and inventory currently remain in local app storage. Download or share a private backup before changing browsers, clearing app data or moving to another test build.</Text><AppButton label="Export local backup" secondary onPress={exportLocalBackup}/><Text style={styles.smallBadge}>The app does not upload this backup. It may contain your saved schedule and history, so store it privately. Restore and cloud backup will be added with the account service.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>QUICK START</Text><Text style={styles.lessonTitle}>Restart onboarding</Text><Text style={styles.nextText}>Review the welcome questions and choose a new starting path. Your saved plans, history and settings will stay exactly as they are.</Text><AppButton label="Restart Quick Start Onboarding" secondary onPress={restartOnboarding}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>About EZPep Planner</Text><Text style={styles.nextText}>EZPep Planner 0.4 · Learn. Plan. Track.</Text><Text style={styles.smallBadge}>Educational planning support. Evidence classes and route/formulation limits remain attached to School content.</Text></View></>}<AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
         {screen==='activeEditor'&&focused&&saved.store.activeEdit&&<ActivePeptideEditor key={focused.id+editorSection} initialSection={editorSection} plan={focused} edit={saved.store.activeEdit} change={edit=>saved.update(old=>({...old,activeEdit:edit}))} onSave={saveActiveEdits} onCancel={discardActiveEdits} onArchive={async()=>{const target=saved.store.activeEdit?.returnTo==='tracker'?'tracker':'plans';await saved.update(old=>({...archivePlan(old,focused.id),activeEdit:null}));setEditingActive(false);setScreen(target);}}/>}
