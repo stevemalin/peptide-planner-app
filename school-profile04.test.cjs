@@ -16,3 +16,12 @@ test('first AURAPEP family expansion preserves route and evidence boundaries',()
  assert.match(expanded,/Cagrilintide[\s\S]*investigational schedules are not approved recommendations/);
  assert.doesNotMatch(expanded,/stack compatibility/i);
 });
+test('remaining current families preserve blend and route boundaries',()=>{
+ for(const id of ['wolverine','klow','melanotan-i','melanotan-ii','kisspeptin','semax'])assert.match(expanded,new RegExp("id:'"+id+"'"));
+ assert.match(expanded,/Wolverine[\s\S]*component-level evidence only/);
+ assert.match(expanded,/KLOW[\s\S]*synergy and formulation compatibility are unestablished/);
+ assert.match(expanded,/Melanotan I[\s\S]*implant and research-vial formulations are not interchangeable/);
+ assert.match(expanded,/Melanotan II[\s\S]*serious toxicity case reports/);
+ assert.match(expanded,/Kisspeptin[\s\S]*population, purpose and route are decisive/);
+ assert.match(expanded,/Semax[\s\S]*intranasal contexts; no injectable reference is inferred/);
+});

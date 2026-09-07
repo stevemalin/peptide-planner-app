@@ -98,3 +98,11 @@ Pep School expands from 10 to 15 profiles with BPC-157, TB-500 / thymosin beta-4
 All five entries are custom-only. They add no amount, schedule, vial strength, diluent, syringe calculation or transferable reference. Related-compound navigation covers the new families, and the School count is now data-driven.
 
 Validation: 102 automated tests passed; TypeScript passed; Expo dependencies are compatible; Expo Doctor passed 21/21. Browser inspection passed at 320, 412 and 1366 pixels with no overflow or console/runtime errors; the 320-pixel School screenshot was visually reviewed. This is browser acceptance only, not physical Android acceptance. No AURAPEP production connection, main change or merge was made.
+
+## Complete first-priority AURAPEP family coverage — 2026-09-06 Pacific
+
+Pep School now contains 21 current AURAPEP compound/blend families. This pass adds Wolverine, KLOW, Melanotan I / afamelanotide, Melanotan II, kisspeptin and Semax. Wolverine and KLOW use component-level evidence only and explicitly reject inferred blend synergy or formulation compatibility. Afamelanotide implant evidence remains separate from research-vial use; Melanotan II includes both small early human trials and a serious toxicity case report; kisspeptin retains population, purpose and route; Semax remains intranasal-context evidence with no injectable translation.
+
+All six are custom-only and transfer no amount, schedule, vial, diluent or syringe defaults. The library now has 21 profiles and related-compound routes for every newly added family.
+
+Validation: 103 automated tests passed; TypeScript passed; Expo dependencies are compatible; Expo Doctor passed 21/21. Browser inspection passed at 320, 412 and 1366 pixels with 21 profiles, no overflow and no console/runtime errors. The 320-pixel School screenshot was visually reviewed. Browser acceptance only; physical Android acceptance remains outstanding. Main and AURAPEP production were untouched.
