@@ -30,3 +30,21 @@ test('taking or skipping events triggers targeted reminder cancellation',()=>{
  assert.match(tracker,/value==='completed'\|\|value==='skipped'/);
  assert.match(tracker,/selectedGroup\.map/);
 });
+
+
+test('first-run guidance keeps navigation stable and Today becomes Start Here before a plan',()=>{
+ for(const term of ['WELCOME TO PEPPLAN','How familiar are you with peptides?','What would you like to do first?','Show me where to begin','START HERE','Learn the essentials','Research a peptide','Build your plan','Review calculations','Start tracking'])assert.match(tracker,new RegExp(term));
+ assert.match(tracker,/screen==='tracker'&&!plans\.length/);
+ assert.match(tracker,/screen==='tracker'&&!!plans\.length/);
+ assert.match(tracker,/{ key: "school", label: "Learn" }/);
+ assert.match(tracker,/{ key: "guide", label: "Build Plan" }/);
+ assert.match(tracker,/screen!=="welcome"&&<BottomNav/);
+ assert.match(tracker,/RECOMMENDED FIRST/);
+ assert.match(tracker,/plans\.length\|\|saved\.store\.draft/);
+});
+
+test('onboarding is local, optional and does not claim to recommend a peptide or dose',()=>{
+ assert.match(tracker,/pepplan\.onboarding\.v1/);
+ assert.match(tracker,/Skip for now/);
+ assert.match(tracker,/does not select a peptide or prescribe a dose/);
+});

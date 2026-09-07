@@ -40,7 +40,10 @@ import { importReference, newDraft } from "./src/engine";
 import { Evidence } from "./src/ui";
 import { reconcileReminders, listenForReminder } from "./src/reminders";
 import type { PlanMode } from "./src/planning";
-type Screen = "activeEditor" | "profile" | "settings" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "more";
+type Experience = "new" | "familiar" | "experienced";
+type FirstGoal = "learn" | "research" | "setup" | "track";
+type OnboardingProfile = { experience: Experience; goal: FirstGoal };
+type Screen = "welcome" | "activeEditor" | "profile" | "settings" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "more";
 
 const COLORS = {
   ink: "#0E1C4A",
@@ -79,8 +82,8 @@ function Molecule({ color = COLORS.blue }: { color?: string }) {
 
 function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Screen) => void }) {
   const items: { key: NavGlyph; label: string }[] = [
-    { key: "school", label: "Pep School" },
-    { key: "guide", label: "Guide" },
+    { key: "school", label: "Learn" },
+    { key: "guide", label: "Build Plan" },
     { key: "tracker", label: "TODAY" },
     { key: "plans", label: "My Peptides" },
     { key: "more", label: "More" },
@@ -102,7 +105,7 @@ function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Scree
 }
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("school");
+  const [screen, setScreen] = useState<Screen>("welcome");
   const [selected, setSelected] = useState<Compound>(compounds[0]);
   const [query,setQuery] = useState("");
   const [schoolQuery,setSchoolQuery] = useState("");
@@ -112,6 +115,11 @@ export default function App() {
   const toggleSchoolFavorite=(id:string)=>setSchoolFavorites(current=>{const next=current.includes(id)?current.filter(item=>item!==id):[...current,id];AsyncStorage.setItem("pepplan.school.favorites",JSON.stringify(next)).catch(()=>{});return next;});
 
   const saved = usePlannerStore();
+  const [onboarding,setOnboarding]=useState<OnboardingProfile|null|undefined>(undefined);
+  const [experience,setExperience]=useState<Experience|null>(null);
+  const [firstGoal,setFirstGoal]=useState<FirstGoal|null>(null);
+  useEffect(()=>{AsyncStorage.getItem("pepplan.onboarding.v1").then(value=>setOnboarding(value?JSON.parse(value):null)).catch(()=>setOnboarding(null));},[]);
+  const finishOnboarding=(profile:OnboardingProfile)=>{setOnboarding(profile);AsyncStorage.setItem("pepplan.onboarding.v1",JSON.stringify(profile)).catch(()=>{});setScreen("tracker");};
   const [selectedPlanId,setSelectedPlanId]=useState<string|null>(null);
   const [editingActive,setEditingActive]=useState(false);
   const [editorSection,setEditorSection]=useState('');
@@ -163,6 +171,52 @@ export default function App() {
     sync();const sub=AppState.addEventListener("change",state=>{if(state==="active")sync();});return()=>{mounted=false;sub.remove();};
   },[saved.ready,saved.store.activePlans,saved.loadFailed]);
   useEffect(()=>listenForReminder((planId)=>{if(planId)setSelectedPlanId(planId);setScreen("tracker");}),[]);
+  useEffect(()=>{
+    if(!saved.ready||screen!=="welcome"||onboarding===undefined)return;
+    if(onboarding){setScreen("tracker");return;}
+    if(plans.length||saved.store.draft){const profile:OnboardingProfile={experience:plans.length?"experienced":"familiar",goal:plans.length?"track":"setup"};setOnboarding(profile);AsyncStorage.setItem("pepplan.onboarding.v1",JSON.stringify(profile)).catch(()=>{});setScreen("tracker");}
+  },[saved.ready,onboarding,plans.length,saved.store.draft]);
+
+  const renderWelcome=()=>(
+    <ScrollView contentContainerStyle={styles.welcomeContent}>
+      <View style={styles.welcomeMark}><Molecule color={COLORS.blue}/></View>
+      <Text style={styles.kicker}>WELCOME TO PEPPLAN</Text>
+      <Text style={styles.welcomeTitle}>A clearer place to begin.</Text>
+      <Text style={styles.welcomeSub}>Tell us where you are starting. This changes the guidance you see—not your calculations or available features.</Text>
+      <Text style={styles.onboardingQuestion}>How familiar are you with peptides?</Text>
+      <View style={styles.choiceStack}>{([
+        ["new","I’m new","Show the essentials and explain each step."],
+        ["familiar","I know the basics","Keep guidance available without slowing setup."],
+        ["experienced","I’m experienced","Lead with the fastest planning path."]
+      ] as const).map(([value,label,detail])=><Pressable accessibilityRole="radio" accessibilityState={{selected:experience===value}} key={value} onPress={()=>setExperience(value)} style={[styles.choiceCard,experience===value&&styles.choiceCardSelected]}><View style={[styles.radio,experience===value&&styles.radioSelected]}/><View style={{flex:1}}><Text style={styles.choiceTitle}>{label}</Text><Text style={styles.choiceDetail}>{detail}</Text></View></Pressable>)}</View>
+      <Text style={styles.onboardingQuestion}>What would you like to do first?</Text>
+      <View style={styles.goalGrid}>{([
+        ["learn","Learn the basics"],["research","Research a peptide"],["setup","Set up an existing routine"],["track","Track a routine underway"]
+      ] as const).map(([value,label])=><Pressable accessibilityRole="radio" accessibilityState={{selected:firstGoal===value}} key={value} onPress={()=>setFirstGoal(value)} style={[styles.goalCard,firstGoal===value&&styles.goalCardSelected]}><Text style={[styles.goalText,firstGoal===value&&styles.goalTextSelected]}>{label}</Text></Pressable>)}</View>
+      {experience&&firstGoal&&<AppButton label="Show me where to begin" onPress={()=>finishOnboarding({experience,goal:firstGoal})}/>}
+      <Pressable accessibilityRole="button" accessibilityLabel="Skip introduction" onPress={()=>finishOnboarding({experience:"familiar",goal:"setup"})} style={styles.skipButton}><Text style={styles.crossLinkText}>Skip for now</Text></Pressable>
+      <Text style={styles.onboardingSafety}>PepPlan organizes educational research information and routines you enter. It does not select a peptide or prescribe a dose.</Text>
+    </ScrollView>
+  );
+
+  const renderStartHere=()=>{
+    const newUser=onboarding?.experience==="new";
+    const draft=saved.store.draft;
+    const recommended=onboarding?.goal==="learn"?0:onboarding?.goal==="research"?1:2;
+    const steps=[
+      {n:"1",title:"Learn the essentials",detail:newUser?"Start with terminology, storage and reconstitution concepts.":"Review fundamentals whenever you need them.",action:()=>setScreen("school"),label:"Open Learn"},
+      {n:"2",title:"Research a peptide",detail:"Review key facts, evidence, warnings and references.",action:()=>setScreen("school"),label:"Browse the library"},
+      {n:"3",title:draft?"Continue your plan":"Build your plan",detail:draft?draft.compoundName+" setup is waiting for you.":"Choose a peptide and enter the routine you want to track.",action:()=>setScreen(draft?"plan":"guide"),label:draft?"Continue setup":"Choose a peptide"},
+      {n:"4",title:"Review calculations",detail:"Confirm vial strength, diluent, concentration and syringe display inside the guided setup."},
+      {n:"5",title:"Start tracking",detail:"Starting the plan creates Today, reminders and inventory forecasting."}
+    ];
+    return <ScrollView contentContainerStyle={styles.scrollContent}>
+      <View style={styles.startHero}><Text style={styles.kicker}>START HERE</Text><Text style={styles.welcomeTitle}>{draft?"Continue where you left off.":"Learn. Plan. Track."}</Text><Text style={styles.welcomeSub}>{newUser?"We’ll explain the essentials as you go.":"A simple path from research to a working daily schedule."}</Text></View>
+      <View style={styles.pathLine}/>
+      {steps.map((step,index)=><View key={step.n} style={[styles.startStep,draft&&index<2&&styles.startStepQuiet,index===recommended&&styles.startStepRecommended]}><View style={styles.stepNumber}><Text style={styles.stepNumberText}>{step.n}</Text></View><View style={{flex:1}}>{index===recommended&&<Text style={styles.sourceClass}>RECOMMENDED FIRST</Text>}<Text style={styles.lessonTitle}>{step.title}</Text><Text style={styles.nextText}>{step.detail}</Text>{step.action&&<Pressable accessibilityRole="button" accessibilityLabel={step.label} onPress={step.action} style={styles.inlineAction}><Text style={styles.crossLinkText}>{step.label} →</Text></Pressable>}</View></View>)}
+      <Text style={styles.onboardingSafety}>You can move between Learn and Build Plan at any time. Your navigation stays the same after setup.</Text>
+    </ScrollView>;
+  };
 
   const renderSchool = () => (
     <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
@@ -402,6 +456,7 @@ export default function App() {
       {replacement&&<View style={{padding:16,backgroundColor:COLORS.paleBlue}}><Text style={styles.helper}>You have an unfinished {saved.store.draft?.compoundName} draft. Replace only that draft? Active plans and history will stay unchanged.</Text><AppButton label="Confirm replace draft" onPress={()=>{const next=replacement;saved.update(old=>({...old,draft:next.draft})).then(()=>{setReplacement(null);setScreen(next.target);}).catch(()=>{});}}/><AppButton label="Keep existing draft" secondary onPress={()=>setReplacement(null)}/></View>}
       {discardEdits&&<View style={{padding:16,backgroundColor:COLORS.paleBlue}}><Text style={styles.helper}>Discard saved edits? Active plans and history will stay unchanged.</Text><AppButton label="Confirm discard edits" onPress={()=>discardActiveEdits().then(()=>setDiscardEdits(false))}/><AppButton label="Keep edits" secondary onPress={()=>setDiscardEdits(false)}/></View>}
       <View key={screen==='schoolDetail'?screen+selected.id:screen} style={styles.main}>
+        {screen === "welcome" && renderWelcome()}
         {screen === "school" && renderSchool()}
         {screen === "schoolDetail" && renderSchoolDetail()}
         {screen === "schoolMore" && renderSchoolDetail(true)}
@@ -412,17 +467,45 @@ export default function App() {
         {screen === "detail" && renderDetail()}
         {screen==='activeEditor'&&focused&&saved.store.activeEdit&&<ActivePeptideEditor key={focused.id+editorSection} initialSection={editorSection} plan={focused} edit={saved.store.activeEdit} change={edit=>saved.update(old=>({...old,activeEdit:edit}))} onSave={saveActiveEdits} onCancel={discardActiveEdits} onArchive={async()=>{const target=saved.store.activeEdit?.returnTo==='tracker'?'tracker':'plans';await saved.update(old=>({...archivePlan(old,focused.id),activeEdit:null}));setEditingActive(false);setScreen(target);}}/>}
         {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onEdit={editPlan} onDraft={()=>setScreen('plan')} onGuide={()=>setScreen('guide')}/>}
-        {(screen==='tracker'||screen==='history')&&!saved.loadFailed&&<AggregateTracker plans={plans} archives={saved.store.archives} update={saved.update} initialTab={screen==='history'?'History':'Today'} onOpen={openPlan} onEdit={editPlan}/>}
+        {screen==='tracker'&&!plans.length&&!saved.loadFailed&&renderStartHere()}
+        {(screen==='history'||(screen==='tracker'&&!!plans.length))&&!saved.loadFailed&&<AggregateTracker plans={plans} archives={saved.store.archives} update={saved.update} initialTab={screen==='history'?'History':'Today'} onOpen={openPlan} onEdit={editPlan}/>}
         {screen==='inventory'&&!saved.loadFailed&&<MyPlans inventory store={saved.store} update={saved.update} onOpen={id=>editPlan(id,'Inventory')} onEdit={editPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
         {(["plan","planDetail","planInventory","review","schedule","calc","planTracker","reminders"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={(screen==='planDetail'?'plan':screen==='planInventory'?'inventory':screen==='planTracker'?'tracker':screen) as any} navigate={workspaceNavigate} store={scopedStore} update={scopedUpdate} editing={editing?{onSave:saveActiveEdits,supply:saved.store.activeEdit!.supplyVials,onSupplyChange:value=>saved.update(old=>old.activeEdit?{...old,activeEdit:{...old.activeEdit,supplyVials:value}}:old).catch(()=>{})}:undefined} onStarted={()=>setScreen("plans")} onDiscard={editing?discardActiveEdits:async()=>{const compound=compounds.find(c=>c.id===saved.store.draft?.compoundId);await saved.update(old=>({...old,draft:null}));if(compound)setSelected(compound);setScreen("detail");}} onGuide={()=>setScreen("guide")}/>}
       </View>
-      <BottomNav active={screen==='activeEditor'?(saved.store.activeEdit?.returnTo??'plans'):screen} setScreen={setScreen} />
+      {screen!=="welcome"&&<BottomNav active={screen==='activeEditor'?(saved.store.activeEdit?.returnTo??'plans'):screen} setScreen={setScreen} />}
     </SafeAreaView></SafeAreaProvider>
   );
 }
 
 
 const styles = StyleSheet.create({
+  welcomeContent:{paddingHorizontal:22,paddingTop:28,paddingBottom:40},
+  welcomeMark:{width:88,height:88,borderRadius:28,backgroundColor:COLORS.paleBlue,alignItems:"center",justifyContent:"center",marginBottom:18},
+  welcomeTitle:{color:COLORS.ink,fontSize:31,lineHeight:36,fontWeight:"800",marginTop:10},
+  welcomeSub:{color:COLORS.muted,fontSize:15,lineHeight:22,marginTop:10},
+  onboardingQuestion:{color:COLORS.ink,fontSize:18,fontWeight:"800",marginTop:26,marginBottom:10},
+  choiceStack:{gap:9},
+  choiceCard:{flexDirection:"row",alignItems:"center",gap:12,padding:14,borderWidth:1,borderColor:COLORS.border,borderRadius:17,backgroundColor:COLORS.white},
+  choiceCardSelected:{borderColor:COLORS.blue,backgroundColor:COLORS.paleBlue,borderWidth:2},
+  radio:{width:20,height:20,borderRadius:10,borderWidth:2,borderColor:"#A5B2C8"},
+  radioSelected:{borderWidth:6,borderColor:COLORS.blue,backgroundColor:COLORS.white},
+  choiceTitle:{color:COLORS.ink,fontSize:15,fontWeight:"800"},
+  choiceDetail:{color:COLORS.muted,fontSize:12,lineHeight:17,marginTop:2},
+  goalGrid:{flexDirection:"row",flexWrap:"wrap",gap:9},
+  goalCard:{width:"48%",minHeight:68,padding:12,borderRadius:16,borderWidth:1,borderColor:COLORS.border,justifyContent:"center",backgroundColor:COLORS.white},
+  goalCardSelected:{borderColor:COLORS.purple,backgroundColor:COLORS.palePurple,borderWidth:2},
+  goalText:{color:COLORS.ink,fontSize:13,fontWeight:"700",lineHeight:18},
+  goalTextSelected:{color:"#5138BE"},
+  skipButton:{alignItems:"center",padding:17},
+  onboardingSafety:{color:COLORS.muted,fontSize:11,lineHeight:17,textAlign:"center",marginTop:16},
+  startHero:{marginTop:16,borderRadius:26,padding:20,backgroundColor:COLORS.paleBlue,borderWidth:1,borderColor:COLORS.border},
+  pathLine:{position:"absolute",left:38,top:215,bottom:75,width:2,backgroundColor:COLORS.border},
+  startStep:{flexDirection:"row",gap:14,padding:15,marginTop:11,borderWidth:1,borderColor:COLORS.border,borderRadius:18,backgroundColor:COLORS.white},
+  startStepQuiet:{backgroundColor:COLORS.pale},
+  startStepRecommended:{borderColor:COLORS.blue,borderWidth:2,backgroundColor:"#F2FBFF"},
+  stepNumber:{width:32,height:32,borderRadius:16,backgroundColor:COLORS.palePurple,alignItems:"center",justifyContent:"center",zIndex:1},
+  stepNumberText:{color:COLORS.purple,fontWeight:"800"},
+  inlineAction:{alignSelf:"flex-start",paddingTop:8,paddingBottom:3},
   evidenceBadge: { borderLeftWidth: 4, padding: 14, borderRadius: 14, marginTop: 16, backgroundColor: COLORS.paleBlue },
   evidenceText: { color: COLORS.ink, fontWeight: "700", fontSize: 14, lineHeight: 21 },
   sourceClass: { color: "#286B9C", fontSize: 11, lineHeight: 16, fontWeight: "800", marginBottom: 6 },
