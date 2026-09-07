@@ -1,6 +1,6 @@
 import {stageDays,durationLabel} from './duration';
 import React,{useRef,useState}from'react';
-import{Text,View,Pressable,StyleSheet}from'react-native';
+import{Text,View,Pressable,StyleSheet,PanResponder}from'react-native';
 import type{SavedPlan,Event,Store}from'./engine';
 import{actualProgress,localDate,parseDate,prettyDate,prettyTime,eventStatus,logEvent,addDays,stageAmount}from'./engine';
 import{Button,Card,u}from'./ui';
@@ -9,7 +9,9 @@ import SetupSummary from './SetupSummary';
 import{quantityFromMg}from'./quantities';
 export default function Tracker({plan,archives,now,update,initialTab='Today'}:{plan:SavedPlan;archives:SavedPlan[];now:Date;update:(fn:(s:Store)=>Store)=>Promise<void>;initialTab?:string}){
  const [tab,setTab]=useState(initialTab),[selected,setSelected]=useState(localDate(now)),[month,setMonth]=useState(localDate(now).slice(0,7)+'-01'),[error,setError]=useState(''),[message,setMessage]=useState('');
- const actionLock=useRef(false);const [logging,setLogging]=useState(false);
+ const actionLock=useRef(false),tabRef=useRef(tab);tabRef.current=tab;const [logging,setLogging]=useState(false);
+ const tabOrder=['Today','Tomorrow','Calendar','History'];
+ const swipe=useRef(PanResponder.create({onMoveShouldSetPanResponder:(_,gesture)=>Math.abs(gesture.dx)>18&&Math.abs(gesture.dx)>Math.abs(gesture.dy)*1.3,onPanResponderRelease:(_,gesture)=>{if(Math.abs(gesture.dx)<60)return;const index=tabOrder.indexOf(tabRef.current),next=Math.max(0,Math.min(tabOrder.length-1,index+(gesture.dx<0?1:-1)));if(next!==index)setTab(tabOrder[next]);}})).current;
  const p=actualProgress(plan,now),pending=plan.events.filter(e=>e.status==='pending'),due=pending.filter(e=>new Date(e.scheduledAt)<=now),future=pending.find(e=>new Date(e.scheduledAt)>now);
  const candidate=due.find(e=>e.localDate===localDate(now))||due[due.length-1]||future;
  const action=async(e:Event,value:'completed'|'skipped'|'later')=>{if(actionLock.current)return;actionLock.current=true;setLogging(true);try{await update(s=>s.active?.id!==plan.id?s:{...s,active:logEvent(s.active,e.id,value,new Date())});setMessage(value==='later'?'Reminder moved 15 minutes later. The scheduled event time is unchanged.':'Event saved.');setError('');}catch(err){setError(String(err));}finally{setTimeout(()=>{actionLock.current=false;setLogging(false);},700);}};
@@ -18,8 +20,8 @@ export default function Tracker({plan,archives,now,update,initialTab='Today'}:{p
  const moveMonth=(n:number)=>{const d=parseDate(month)!;d.setMonth(d.getMonth()+n);setMonth(localDate(d));};
  const history=[...archives,plan].flatMap(owner=>owner.events.filter(e=>e.status!=='pending'||new Date(e.scheduledAt)<now).map(e=>({e,owner}))).sort((a,b)=>b.e.scheduledAt.localeCompare(a.e.scheduledAt));
  const [historyLimit,setHistoryLimit]=useState(30);
- return <>
-  <View style={u.row}>{['Today','Tomorrow','Calendar','History'].map(name=><Pressable key={name} accessibilityRole="tab" accessibilityLabel={name} accessibilityState={{selected:tab===name}} onPress={()=>setTab(name)} style={[u.pill,tab===name&&u.selected]}><Text style={u.heading}>{name}</Text></Pressable>)}</View>
+ return <View {...swipe.panHandlers} accessibilityLabel="Today tracker. Swipe left or right to change views.">
+  <View style={u.row}>{tabOrder.map(name=><Pressable key={name} accessibilityRole="tab" accessibilityLabel={name} accessibilityState={{selected:tab===name}} onPress={()=>setTab(name)} style={[u.pill,tab===name&&u.selected]}><Text style={u.heading}>{name}</Text></Pressable>)}</View>
   {!!error&&<Text style={u.error}>{error}</Text>}{!!message&&<Text accessibilityLiveRegion="polite" style={u.small}>{message}</Text>}
   {tab==='Today'&&<>
    <Card><Text style={u.title}>{plan.compoundName}</Text><Text style={u.heading}>{!p.started?'Starts '+prettyDate(plan.startDate):p.inBreak?'Planned break':p.ended?'End of modelled plan':`Day ${p.day} of ${p.totalDays}`}</Text>
@@ -49,7 +51,7 @@ export default function Tracker({plan,archives,now,update,initialTab='Today'}:{p
    {!plan.events.some(e=>e.localDate===selected)&&<Text style={u.body}>No events on this day.</Text>}
   </>}
   {tab==='History'&&<><Text style={[u.small,{marginTop:12}]}>Saved timestamps and original event calculations. Future events are in Calendar.</Text>{history.slice(0,historyLimit).map(({e,owner})=>eventCard(e,owner,owner.id===plan.id))}{!history.length&&<Text style={u.body}>No past activity yet.</Text>}{history.length>historyLimit&&<Button label="Show more history" secondary onPress={()=>setHistoryLimit(n=>n+30)}/>}</>}
- </>;
+ </View>;
 }
 const colors={Completed:'#178066',Scheduled:'#076eac',Missed:'#bd4352',Future:'#7a65b2',Skipped:'#737b87'};
 const s=StyleSheet.create({grid:{flexDirection:'row',flexWrap:'wrap',marginTop:12},weekday:{width:'14.2857%',textAlign:'center',fontWeight:'700',color:'#667896',padding:6},cell:{width:'14.2857%',height:59,alignItems:'center',justifyContent:'center',borderRadius:10},daySelected:{backgroundColor:'#dff6ff',borderWidth:1,borderColor:'#19b3e3'},dayText:{fontSize:16,color:'#18305c',marginBottom:4},dot:{width:5,height:5,borderRadius:3},marker:{fontSize:8,color:'#0b7192'}});
