@@ -23,7 +23,7 @@ import {
 } from "react-native";
 
 import {library as compounds,searchLibrary as searchCompounds} from "./src/library-v04";
-import QuickStart,{LearningPaths} from "./src/QuickStart";
+import QuickStart,{LearningPaths,SchoolBasics} from "./src/QuickStart";
 import {SchoolAccordion,SchoolHighlights,RelatedSchoolCards,ResearchProductLink} from "./src/SchoolAccordion";
 import {schoolSections,relatedSchool} from "./src/school-profile-v04";
 import {beginActiveEdit,applyActiveEdit} from "./src/active-edit-v04";
@@ -172,6 +172,7 @@ export default function App() {
         </Pressable>
       ))}
       {!searchCompounds(schoolQuery).length && <Text style={styles.emptyText}>No matches. Try another name or alias.</Text>}
+      <SchoolBasics/>
     </ScrollView>
   );
 
