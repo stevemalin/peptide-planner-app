@@ -1,6 +1,7 @@
 import ActivePeptideEditor from './src/ActivePeptideEditor';
 import {archivePlan} from './src/plan-actions-v04';
-import NavIcon,{EZPMark,navColors,type NavGlyph} from './src/NavIcon';
+import NavIcon,{navColors,type NavGlyph} from './src/NavIcon';
+import {EZPEP_LOCKUP_DATA_URI} from './src/brand-assets';
 import ResearchPracticeCard from './src/ResearchPracticeCard';
 import Svg,{Circle,Path} from 'react-native-svg';
 import {researchPracticeFor,RESEARCH_PRACTICE_LABEL,RESEARCH_PRACTICE_NOTICE} from './src/research-practice';
@@ -21,6 +22,7 @@ import {
   BackHandler,
   AppState,
   Linking,
+  Image,
 } from "react-native";
 
 import {library as compounds,searchLibrary as searchCompounds} from "./src/library-v04";
@@ -179,7 +181,7 @@ export default function App() {
 
   const renderWelcome=()=>(
     <ScrollView contentContainerStyle={styles.welcomeContent}>
-      <View style={styles.welcomeMark}><EZPMark size={82}/></View>
+      <View style={styles.welcomeBrand}><Image accessibilityLabel="EZPep Planner" source={{uri:EZPEP_LOCKUP_DATA_URI}} resizeMode="contain" style={styles.welcomeBrandImage}/></View>
       <Text style={styles.kicker}>WELCOME TO EZPEP PLANNER</Text>
       <Text style={styles.welcomeTitle}>A clearer place to begin.</Text>
       <Text style={styles.welcomeSub}>Tell us where you are starting. This changes the guidance you see—not your calculations or available features.</Text>
@@ -447,7 +449,7 @@ export default function App() {
     <SafeAreaProvider><SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
       <View style={styles.topLine}>
-        <View style={styles.brandLockup}><EZPMark size={38}/><Text style={styles.brandWord}><Text style={styles.brandAccent}>EZPep</Text> Planner</Text></View>
+        <View style={styles.brandLockup}><Image accessibilityLabel="EZPep Planner" source={{uri:EZPEP_LOCKUP_DATA_URI}} resizeMode="contain" style={styles.brandLockupImage}/></View>
         <View style={{flexDirection:"row",alignItems:"center",gap:4}}><Text style={[styles.tempStatus,{fontSize:10}]}>Prototype 0.4</Text><Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={()=>setScreen("profile")} style={{width:36,minHeight:44,alignItems:"center",justifyContent:"center"}}><Svg width={20} height={22} viewBox="0 0 24 24"><Circle cx={12} cy={7} r={4} fill="none" stroke={COLORS.ink} strokeWidth={1.7}/><Path d="M 4 22 L 4 19 C 4 12 20 12 20 19 L 20 22 Z" fill="none" stroke={COLORS.ink} strokeWidth={1.7}/></Svg></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={()=>setScreen("settings")} style={{width:36,minHeight:44,alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:20,color:COLORS.ink}}>⚙</Text></Pressable></View>
       </View>
       <View style={{paddingHorizontal:20,paddingVertical:3}}><Text testID="save-status" style={styles.smallBadge}>{saved.saving?'Saving on device…':saved.error?saved.error:'Saved on this device'}</Text>{!!saved.error&&!saved.loadFailed&&<AppButton label="Retry save" onPress={()=>saved.retry().catch(()=>{})} secondary/>}{!!reminderError&&<Text style={styles.smallBadge}>{reminderError}</Text>}</View>
@@ -480,7 +482,8 @@ export default function App() {
 
 const styles = StyleSheet.create({
   welcomeContent:{paddingHorizontal:22,paddingTop:28,paddingBottom:40},
-  welcomeMark:{width:88,height:88,borderRadius:28,backgroundColor:COLORS.paleBlue,alignItems:"center",justifyContent:"center",marginBottom:18},
+  welcomeBrand:{width:"100%",maxWidth:390,height:106,alignItems:"flex-start",justifyContent:"center",marginBottom:18},
+  welcomeBrandImage:{width:"100%",height:"100%"},
   welcomeTitle:{color:COLORS.ink,fontSize:31,lineHeight:36,fontWeight:"800",marginTop:10},
   welcomeSub:{color:COLORS.muted,fontSize:15,lineHeight:22,marginTop:10},
   onboardingQuestion:{color:COLORS.ink,fontSize:18,fontWeight:"800",marginTop:26,marginBottom:10},
@@ -539,9 +542,8 @@ const styles = StyleSheet.create({
   main: { flex: 1 },
   topLine: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.border },
   tempBrand: { color: COLORS.ink, fontWeight: "800", letterSpacing: 1.2, fontSize: 12 },
-  brandLockup: { flexDirection: "row", alignItems: "center", gap: 8 },
-  brandWord: { color: COLORS.ink, fontWeight: "800", letterSpacing: 0.1, fontSize: 16 },
-  brandAccent: { color: COLORS.purple },
+  brandLockup: { width: 218, height: 60, alignItems: "flex-start", justifyContent: "center" },
+  brandLockupImage: { width: "100%", height: "100%" },
   tempStatus: { color: COLORS.muted, fontSize: 11 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 28 },
   hero: { marginTop: 16, borderRadius: 28, padding: 20, overflow: "hidden", backgroundColor: COLORS.pale, borderWidth: 1, borderColor: COLORS.border },
