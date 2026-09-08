@@ -120,3 +120,59 @@ Validation: 103 automated tests passed; TypeScript passed; Expo dependencies are
 - Every successful store write also refreshes a separate last-known-good record. If the primary v4 record becomes unreadable, startup validates the recovery record, restores it and reports that recovery occurred. An unreadable primary with no valid recovery still fails closed instead of resetting plans.
 
 Validation: 115 automated tests passed and TypeScript passed after these changes. This remains browser/source acceptance; physical Android gestures, local notifications and install persistence still require the planned development-build device gate. No production deployment, main merge, customer integration or cloud account was added.
+
+
+## Invite-only beta readiness checklist — started 2026-09-08
+
+This checklist is the sustained release plan for moving from Steve's device-local prototype to a controlled multi-user beta. A checked item requires evidence; a code change or passing unit test alone does not close a phone-reported issue.
+
+### Gate 1 — feature-complete beta candidate
+
+- [ ] Plan creation and active-plan editing: verify manual/reference starts, no-end plans, stages, fixed/percentage taper generation, cycle presets, specific weekdays, intervals and multiple daily times on a phone-sized browser.
+- [ ] Today: verify dense cards, dose/draw/vial reference, Taken/Skip/Later/Undo, future grouping and swipe/button parity.
+- [ ] Inventory: verify tracking opt-in/out, add-vials, current-vial adjustment, correction, low/negative warnings and continued logging below zero.
+- [ ] History: verify per-plan summary, time on plan, totals, vial use, filtering and archived-history access without changing saved event calculations.
+- [ ] Import/export/recovery: verify clear import results, duplicate resolution, archived imports, private export, last-known-good recovery and preservation of existing device data.
+- [ ] Onboarding: verify first-run questions, skip/restart, empty states and first-plan guidance; beta consent is added at Gate 3.
+- [ ] Mobile and failure pass: remove blocked taps, stale banners, clipped controls, misleading success states and unexplained validation errors at supported phone widths.
+- [ ] Reconcile all device-reported issues in this handoff; do not close them from browser automation alone.
+
+### Gate 2 — internal release gate
+
+- [ ] Full unit, TypeScript, Expo dependency and Expo Doctor checks pass.
+- [ ] Complete browser flows pass at 320, 412 and desktop widths with zero runtime errors.
+- [ ] Fresh-device, upgrade, reload, backup/restore and multi-plan stress scenarios pass.
+- [ ] Steve completes the final owner acceptance checklist on the exact beta candidate.
+
+### Gate 3 — accounts and privacy foundation
+
+- [ ] Add invite-only passwordless accounts.
+- [ ] Add per-user cloud storage with strict row-level access controls.
+- [ ] Migrate device-local data only after preview and explicit confirmation; retain a recoverable local copy.
+- [ ] Add account export, deletion, session management, privacy notice and beta consent.
+- [ ] Keep plan content out of authentication and routine reminder emails.
+
+### Gate 4 — beta feedback
+
+- [ ] Add a prominent Beta Feedback destination under More.
+- [ ] Connect the School Community area to the same beta-feedback destination while keeping submitted reports private.
+- [ ] Support bug, confusion, suggestion and calculation-concern categories.
+- [ ] Include app version, screen and device/browser metadata; include screenshots or plan details only with explicit tester permission.
+- [ ] Provide tester acknowledgement and an owner review workflow.
+
+### Gate 5 — controlled web beta
+
+- [ ] Deploy an HTTPS beta address separate from the public app-store release.
+- [ ] Restrict registration to invitations and begin with 5–10 trusted testers.
+- [ ] Clearly disclose that web reminder delivery is limited; use in-app reminders and optional generic email notices during this phase.
+- [ ] Monitor onboarding completion, blocked flows, data failures and feedback without collecting unnecessary plan content.
+- [ ] Triage findings by safety/data integrity, blocked task, confusing task and visual polish.
+
+### Gate 6 — expanded and Android beta
+
+- [ ] Resolve first-cohort blockers and rerun Gates 1–2.
+- [ ] Expand the web cohort gradually.
+- [ ] Build and device-test the Android development release, installation persistence and native local notifications.
+- [ ] Move toward store preparation only after web and Android beta evidence is stable.
+
+Current active block: **Gate 1 — audit and finish core app functions.** Native and web notifications are not required to declare Gate 1 complete; reminder limitations must be accurately disclosed.
