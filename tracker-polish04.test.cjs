@@ -64,12 +64,15 @@ test('plan tracker claims horizontal swipes before the vertical scroll container
  assert.match(planTracker,/Math\.abs\(gesture\.dx\)<60/);
 });
 
-test('settings can export a private local backup without changing stored plans',()=>{
+test('settings can export and safely restore a private local backup',()=>{
  assert.match(app,/encodePlannerStore\(saved\.store\)/);
  assert.match(app,/Export local backup/);
- assert.match(app,/The app does not upload this backup/);
  assert.match(app,/Share\.share/);
  assert.match(app,/link\.download=filename/);
+ for(const term of ['Restore EZPep backup','RESTORE PREVIEW','Confirm restore backup','Cancel restore','pre-restore recovery copy','peptide-planner:pre-restore:','decodePlannerStore'])assert.match(app,new RegExp(term));
+ assert.match(app,/input\.accept='\.json,application\/json'/);
+ assert.match(app,/saved\.update\(\(\)=>restoreCandidate\.store\)/);
+ assert.match(app,/Backup not accepted/);
 });
 
 test('active plan editor exposes confirmed stage removal while retaining at least one stage',()=>{
@@ -209,5 +212,6 @@ test('guided import UI provides per-peptide missing-field cards and imports only
  assert.match(app,/Platform\.OS==='web'.*executeReadyImports/);
  assert.match(tracker,/calculationUnavailable/);
 });
+
 
 
