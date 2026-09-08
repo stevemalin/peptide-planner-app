@@ -140,9 +140,10 @@ const importCompoundId=(name:string)=>{
 };
 export function externalSetupErrors(setup:ExternalPeptideSetup){
  const errors:string[]=[];
- if(!setup.doseMg||!Number.isFinite(Number(setup.doseMg))||Number(setup.doseMg)<=0)errors.push('Enter the current dose.');
- if(!setup.vialMg||!Number.isFinite(Number(setup.vialMg))||Number(setup.vialMg)<=0)errors.push('Enter the vial strength.');
- if(!setup.waterMl||!Number.isFinite(Number(setup.waterMl))||Number(setup.waterMl)<=0)errors.push('Enter the diluent volume.');
+ if(!setup.archived&&(!setup.doseMg||!Number.isFinite(Number(setup.doseMg))||Number(setup.doseMg)<=0))errors.push('Enter the current dose.');
+ if(!setup.archived&&(!setup.vialMg||!Number.isFinite(Number(setup.vialMg))||Number(setup.vialMg)<=0))errors.push('Enter the vial strength.');
+ if(!setup.archived&&(!setup.waterMl||!Number.isFinite(Number(setup.waterMl))||Number(setup.waterMl)<=0))errors.push('Enter the bacteriostatic water volume.');
+ if(setup.archived&&!setup.historyCount)errors.push('Archived imports need at least one history entry.');
  if(!setup.archived&&!setup.indefinite&&(!setup.futureWeeks||!Number.isInteger(Number(setup.futureWeeks))||Number(setup.futureWeeks)<1||Number(setup.futureWeeks)>104))errors.push('Choose 1–104 future tracking weeks or select Indefinite.');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(setup.startDate))errors.push('Confirm the start date.');
  if(!setup.archived&&!setup.scheduleTimes.length)errors.push('Choose a schedule time.');
@@ -167,8 +168,8 @@ export function importReadyExternalPeptides(store:Store,preview:ExternalCsvPrevi
   if(destinationPlans.some(plan=>importName(plan.compoundName)===setup.key)){duplicatesSkipped++;continue;}
   const elapsedWeeks=Math.max(0,Math.ceil((daysBetween(setup.startDate,localDate(now))+1)/7)),totalWeeks=setup.archived?Math.max(1,elapsedWeeks):elapsedWeeks+(setup.indefinite?104:Number(setup.futureWeeks));
   const schedule:Schedule=setup.scheduleKind==='daily'?{kind:'daily',days:[],times:setup.scheduleTimes,interval:null}:{kind:'weekly',days:setup.scheduleDays,times:setup.scheduleTimes,interval:null,timesPerWeek:setup.scheduleDays.length};
-  const stageId=uid(),planId=uid();
-  const draft:Draft={id:planId,compoundId:setup.compoundId,compoundName:setup.peptideName,origin:null,customized:false,stages:[{id:stageId,amountMg:setup.doseMg,amountUnit:setup.doseUnit,weeks:String(totalWeeks),override:null}],defaultSchedule:schedule,breakWeeks:'0',startDate:setup.startDate,vialMg:setup.vialMg,waterMl:setup.waterMl,initialVials:'',reviewed:true,reminderEnabled:false,reminderOffsetMinutes:0};
+  const stageId=uid(),planId=uid(),fallbackDose=preview.rows.find(row=>row.recordType==='log'&&importName(row.peptideName)===setup.key)?.doseMg??1;
+  const draft:Draft={id:planId,compoundId:setup.compoundId,compoundName:setup.peptideName,origin:null,customized:false,stages:[{id:stageId,amountMg:setup.doseMg||String(fallbackDose),amountUnit:setup.doseUnit,weeks:String(totalWeeks),override:null}],defaultSchedule:schedule,breakWeeks:'0',startDate:setup.startDate,vialMg:setup.vialMg,waterMl:setup.waterMl,initialVials:'',reviewed:true,reminderEnabled:false,reminderOffsetMinutes:0};
   const active=activate(draft,now),today=localDate(now);
   const future=setup.archived?[]:active.events.filter(event=>event.localDate>=today);
   const sourceRows=preview.rows.filter(row=>row.recordType==='log'&&importName(row.peptideName)===setup.key);
@@ -176,9 +177,9 @@ export function importReadyExternalPeptides(store:Store,preview:ExternalCsvPrevi
   for(const row of sourceRows){
    const status=row.eventType==='skipped'?'skipped':'completed',fingerprint=eventFingerprint(setup.peptideName,row.date!,row.time!,row.doseMg!,status);
    if(seen.has(fingerprint)){duplicatesSkipped++;continue;}seen.add(fingerprint);
-   const at=new Date(row.date+'T'+row.time+':00').toISOString(),result=calculate(setup.vialMg,setup.waterMl,String(row.doseMg));
-   if(!result)throw Error('Could not calculate imported history for '+setup.peptideName+'.');
-   history.push({id:'import:'+encodeURIComponent(fingerprint),stageId,stageIndex:0,scheduledAt:at,localDate:row.date!,amountMg:row.doseMg!,amountUnit:row.originalDoseUnit??'mg',calculation:result,status,...(status==='completed'?{completedAt:at}:{skippedAt:at})});
+   const at=new Date(row.date+'T'+row.time+':00').toISOString(),result=calculate(setup.vialMg,setup.waterMl,String(row.doseMg)),calculationUnavailable=setup.archived&&!result;
+   if(!result&&!setup.archived)throw Error('Could not calculate imported history for '+setup.peptideName+'.');
+   history.push({id:'import:'+encodeURIComponent(fingerprint),stageId,stageIndex:0,scheduledAt:at,localDate:row.date!,amountMg:row.doseMg!,amountUnit:row.originalDoseUnit??'mg',calculation:result??{concentration:0,volume:0,units:0,exceedsSyringe:false},...(calculationUnavailable?{calculationUnavailable:true}:{}),status,...(status==='completed'?{completedAt:at}:{skippedAt:at})});
   }
   const used=history.filter(event=>event.status==='completed').reduce((sum,event)=>sum+event.amountMg,0),remaining=setup.inventoryCurrentMg===''?null:Number(setup.inventoryCurrentMg);
   const imported={...active,...(setup.indefinite?{indefinite:true}:{}),events:[...history,...future].sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)),inventoryTotalMg:remaining===null?null:remaining+used};

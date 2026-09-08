@@ -174,7 +174,8 @@ test('guided import setup requires only missing activation fields and creates a 
  assert.equal(setup.inventoryCurrentMg,'155');
  assert.deepEqual(setup.scheduleDays,[1,4]);
  assert.deepEqual(setup.scheduleTimes,['09:00']);
- assert.deepEqual(externalSetupErrors(setup),['Enter the vial strength.','Enter the diluent volume.','Choose 1–104 future tracking weeks or select Indefinite.']);
+ assert.deepEqual(externalSetupErrors(setup),['Enter the vial strength.','Enter the bacteriostatic water volume.','Choose 1–104 future tracking weeks or select Indefinite.']);
+ assert.deepEqual(externalSetupErrors({...setup,archived:true}),[]);
  Object.assign(setup,{vialMg:'20',waterMl:'2',futureWeeks:'12'});
  assert.deepEqual(externalSetupErrors(setup),[]);
  assert.deepEqual(externalSetupErrors({...setup,indefinite:true,futureWeeks:''}),[]);
@@ -201,10 +202,12 @@ test('guided import setup requires only missing activation fields and creates a 
 });
 
 test('guided import UI provides per-peptide missing-field cards and imports only ready selections',()=>{
- for(const term of ['READY TO IMPORT','READY TO ARCHIVE','Will import','Archive instead of active tracking','Indefinite — no planned end date','Vial strength','Diluent volume','Continue tracking for','Schedule days','Import all ready peptides','private pre-import backup'])assert.match(app,new RegExp(term,'i'));
+ for(const term of ['READY TO IMPORT','READY TO ARCHIVE','Will import','Archive instead of active tracking','Indefinite — no planned end date','Vial strength','Bacteriostatic water added','Continue tracking for','Schedule days','Import all ready peptides','Importing…','Import complete','private pre-import backup'])assert.match(app,new RegExp(term,'i'));
  assert.match(app,/externalSetupErrors/);
  assert.match(app,/importReadyExternalPeptides/);
  assert.match(app,/borderColor:'#c93f55'/);
+ assert.match(app,/Platform\.OS==='web'.*executeReadyImports/);
+ assert.match(tracker,/calculationUnavailable/);
 });
 
 
