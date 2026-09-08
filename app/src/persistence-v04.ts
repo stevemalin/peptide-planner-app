@@ -175,7 +175,7 @@ export function importReadyExternalPeptides(store:Store,preview:ExternalCsvPrevi
   const stageId=uid(),planId=uid(),fallbackDose=preview.rows.find(row=>row.recordType==='log'&&importName(row.peptideName)===setup.key)?.doseMg??1;
   const draft:Draft={id:planId,compoundId:setup.compoundId,compoundName:setup.peptideName,origin:null,customized:false,stages:[{id:stageId,amountMg:setup.doseMg||String(fallbackDose),amountUnit:setup.doseUnit,weeks:String(totalWeeks),override:null}],defaultSchedule:schedule,breakWeeks:'0',startDate:scheduleStartDate,vialMg:setup.vialMg,waterMl:setup.waterMl,initialVials:'',reviewed:true,reminderEnabled:false,reminderOffsetMinutes:0};
   const active:SavedPlan=setup.archived?{...draft,defaultSchedule:null,activatedAt:now.toISOString(),events:[],inventoryTotalMg:null,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone}:activate(draft,now);
-  const future=setup.archived?[]:active.events.filter(event=>event.localDate>=today);
+  const generatedFuture=setup.archived?[]:active.events.filter(event=>event.localDate>=today);
   const sourceRows=preview.rows.filter(row=>row.recordType==='log'&&importName(row.peptideName)===setup.key);
   const seen=new Set<string>(),history:Event[]=[];
   for(const row of sourceRows){
@@ -185,6 +185,8 @@ export function importReadyExternalPeptides(store:Store,preview:ExternalCsvPrevi
    if(!result&&!setup.archived)throw Error('Could not calculate imported history for '+setup.peptideName+'.');
    history.push({id:'import:'+encodeURIComponent(fingerprint),stageId,stageIndex:0,scheduledAt:at,localDate:row.date!,amountMg:row.doseMg!,amountUnit:row.originalDoseUnit??'mg',calculation:result??{concentration:0,volume:0,units:0,exceedsSyringe:false},...(calculationUnavailable?{calculationUnavailable:true}:{}),status,...(status==='completed'?{completedAt:at}:{skippedAt:at})});
   }
+  // A logged import at a generated timestamp is authoritative; never leave a duplicate pending event beside it.
+  const historyTimes=new Set(history.map(event=>event.scheduledAt)),future=generatedFuture.filter(event=>!historyTimes.has(event.scheduledAt));
   const used=history.filter(event=>event.status==='completed').reduce((sum,event)=>sum+event.amountMg,0),remaining=setup.inventoryCurrentMg===''?null:Number(setup.inventoryCurrentMg);
   const imported={...active,...(setup.indefinite?{indefinite:true}:{}),events:[...history,...future].sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)),inventoryTotalMg:remaining===null?null:remaining+used};
   if(setup.archived){archives=[...archives,imported];archivedCreated++;}else{plans=[...plans,imported];activeCreated++;}
