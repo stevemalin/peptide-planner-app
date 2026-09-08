@@ -131,17 +131,17 @@ This checklist is the sustained release plan for moving from Stone Lynch's devic
 - [ ] Plan creation and active-plan editing: verify manual/reference starts, no-end plans, stages, fixed/percentage taper generation, cycle presets, specific weekdays, intervals and multiple daily times on a phone-sized browser.
 - [ ] Today: verify dense cards, dose/draw/vial reference, Taken/Skip/Later/Undo, future grouping and swipe/button parity.
 - [ ] Inventory: verify tracking opt-in/out, add-vials, current-vial adjustment, correction, low/negative warnings and continued logging below zero.
-- [ ] History: verify per-plan summary, time on plan, totals, vial use, filtering and archived-history access without changing saved event calculations.
-- [ ] Import/export/recovery: verify clear import results, duplicate resolution, archived imports, private export, last-known-good recovery and preservation of existing device data.
-- [ ] Onboarding: verify first-run questions, skip/restart, empty states and first-plan guidance; beta consent is added at Gate 3.
+- [x] History: per-plan summary, time tracked, taken/skipped totals, total mass, vial-equivalent use, filtering and archived-history access retain saved event calculations.
+- [x] Import/export/recovery: clear import results, duplicate handling, archived imports, private export, validated restore preview, pre-restore safety copy and last-known-good recovery preserve existing data.
+- [x] Onboarding: first-run questions route by goal, skip/restart is non-destructive, and empty states lead clearly to the first plan; beta consent remains Gate 3.
 - [ ] Mobile and failure pass: remove blocked taps, stale banners, clipped controls, misleading success states and unexplained validation errors at supported phone widths.
 - [ ] Reconcile all device-reported issues in this handoff; do not close them from browser automation alone.
 
 ### Gate 2 — internal release gate
 
-- [ ] Full unit, TypeScript, Expo dependency and Expo Doctor checks pass.
+- [x] Full unit, TypeScript, Expo dependency and Expo Doctor checks pass (132/132 full tests, 88/88 v0.4, Expo Doctor 21/21).
 - [ ] Complete browser flows pass at 320, 412 and desktop widths with zero runtime errors.
-- [ ] Fresh-device, upgrade, reload, backup/restore and multi-plan stress scenarios pass.
+- [x] Fresh-device, upgrade, reload, validated backup/restore and 1/3/6/10-plan stress scenarios pass in automated coverage.
 - [ ] Stone Lynch completes the final owner acceptance checklist on the exact beta candidate.
 
 ### Gate 3 — accounts and privacy foundation
@@ -174,5 +174,12 @@ This checklist is the sustained release plan for moving from Stone Lynch's devic
 - [ ] Expand the web cohort gradually.
 - [ ] Build and device-test the Android development release, installation persistence and native local notifications.
 - [ ] Move toward store preparation only after web and Android beta evidence is stable.
+
+### Evidence checkpoint — 2026-09-08
+
+- Current beta-candidate checks: TypeScript passed; Expo dependencies compatible; Expo Doctor 21/21; full suite 132/132; v0.4 suite 88/88.
+- Browser inspection passed at 320, 412 and 1366 pixels with HTTP 200, no runtime/page errors and no horizontal overflow. Complete interactive flow acceptance remains open until the exact candidate is exercised end-to-end.
+- Inventory audit corrected a negative-balance display gap: the active editor now shows the actual deficit and explains that logging remains available.
+- Remaining Gate 1 focus: phone-sized plan/schedule acceptance, Today action parity, inventory action/warning acceptance, and final mobile failure/device-reported reconciliation.
 
 Current active block: **Gate 1 — audit and finish core app functions.** Native and web notifications are not required to declare Gate 1 complete; reminder limitations must be accurately disclosed.
