@@ -1,6 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs');
 require('./register-tests.cjs');
 const {upcomingGroup}=require('./app/src/today-sections.ts');
+const {previewPeptideLibraryCsv,externalHistoryKey}=require('./app/src/persistence-v04.ts');
 const tracker=fs.readFileSync('./app/src/AggregateTracker.tsx','utf8');
 const app=fs.readFileSync('./app/App.tsx','utf8');
 const planTracker=fs.readFileSync('./app/src/Tracker.tsx','utf8');
@@ -118,3 +119,43 @@ test('My Peptides cards show timeline and activity at a glance with direct plan 
  assert.match(app,/setScreen\('planHistory'\)/);
  assert.match(app,/screen==='planHistory'\?'history'/);
 });
+
+
+test('external peptide-library CSV preview normalizes units, times and duplicate history safely',()=>{
+ const csv=[
+  'record_type,peptide_id,peptide_name,date,time,dose_amount,dose_unit,event_type,inventory_start_amount,inventory_current_amount,inventory_unit,schedule_type,schedule_days,schedule_interval_days,schedule_times,notes',
+  'inventory,one,Retatrutide,,,,,,210,155,mg,,,,,',
+  'log,two,Retatrutide,2026-09-07,08:29,5000,mcg,taken,,,,,,,,',
+  'log,three,Retatrutide,2026-09-07,08:29,5000,mcg,taken,,,,,,,,',
+  'schedule,,Retatrutide,,,,,,,,,custom,"1,4",,09:00;09:00,2026-06-15',
+  'schedule,,Tesamorelin,,,,,,,,,custom,,,22:00;22:00,2026-09-06',
+ ].join('\n');
+ const result=previewPeptideLibraryCsv(csv);
+ assert.equal(result.inventoryCount,1);
+ assert.equal(result.historyCount,2);
+ assert.equal(result.scheduleCount,2);
+ assert.equal(result.rows.find(row=>row.recordType==='log').doseMg,5);
+ assert.deepEqual(result.rows.find(row=>row.peptideName==='Retatrutide'&&row.recordType==='schedule').scheduleTimes,['09:00']);
+ assert.deepEqual(result.rows.find(row=>row.peptideName==='Retatrutide'&&row.recordType==='schedule').scheduleDays,[1,4]);
+ assert.equal(result.duplicateKeys.length,1);
+ assert.match(result.warnings.join(' '),/Tesamorelin has a custom schedule with no weekdays/);
+ assert.equal(externalHistoryKey(result.rows[1]),externalHistoryKey(result.rows[2]));
+});
+
+test('external CSV preview rejects unsupported files and skips incomplete history rows',()=>{
+ assert.throws(()=>previewPeptideLibraryCsv('wrong,header\nx,y'),/not a supported peptide-library CSV/);
+ const csv='record_type,peptide_name,date,time,dose_amount,dose_unit,event_type\nlog,GHK-Cu,bad-date,09:00,3,mg,taken';
+ const result=previewPeptideLibraryCsv(csv);
+ assert.equal(result.historyCount,0);
+ assert.match(result.warnings[0],/incomplete history entry/);
+});
+
+
+test('My Data offers external CSV selection, paste and non-destructive preview before import',()=>{
+ for(const term of ['Import data from another app','Bring your history with you','Choose CSV file','Paste CSV for preview','IMPORT PREVIEW','Preview only—nothing has been saved yet'])assert.match(app,new RegExp(term));
+ assert.match(app,/input\.accept='\.csv,text\/csv'/);
+ assert.match(app,/previewPeptideLibraryCsv/);
+ assert.match(app,/duplicates will not be added twice|Duplicates will not be added twice/);
+});
+
+
