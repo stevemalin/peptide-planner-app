@@ -49,7 +49,7 @@ import {encodePlannerStore} from "./src/persistence-v04";
 type Experience = "new" | "familiar" | "experienced";
 type FirstGoal = "learn" | "research" | "setup" | "track";
 type OnboardingProfile = { experience: Experience; goal: FirstGoal };
-type Screen = "welcome" | "activeEditor" | "profile" | "settings" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "more";
+type Screen = "welcome" | "activeEditor" | "profile" | "settings" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "planHistory" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "more";
 
 const COLORS = {
   ink: "#0E1C4A",
@@ -97,7 +97,7 @@ function BottomNav({ active, setScreen }: { active: Screen; setScreen: (s: Scree
   return (
     <View testID="bottom-navigation" style={styles.nav}>
       {items.map((item) => {
-        const tab = active === "schoolDetail" || active === "schoolMore" || active === "schoolSources" ? "school" : active === "detail" ? "guide" : ["plan", "planDetail", "planInventory", "calc", "review", "schedule"].includes(active) ? "plans" : ["history","planTracker"].includes(active) ? "tracker" : ["inventory", "reminders","profile","settings"].includes(active) ? "more" : active;
+        const tab = active === "schoolDetail" || active === "schoolMore" || active === "schoolSources" ? "school" : active === "detail" ? "guide" : ["plan", "planDetail", "planInventory", "calc", "review", "schedule"].includes(active) ? "plans" : ["history","planTracker","planHistory"].includes(active) ? "tracker" : ["inventory", "reminders","profile","settings"].includes(active) ? "more" : active;
         const isActive = tab === item.key;
         return (
           <Pressable accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: isActive }} key={item.key} onPress={() => setScreen(item.key)} style={styles.navItem}>
@@ -178,7 +178,7 @@ export default function App() {
   const editPlan=(id:string,section='')=>{
    const plan=plans.find(p=>p.id===id);if(!plan)return;
    if(saved.store.activeEdit&&saved.store.activeEdit.planId!==id){setEditError('Finish or discard the existing plan edits first.');return;}
-   saved.update(old=>({...old,activeEdit:old.activeEdit??{...beginActiveEdit(plan),returnTo:screen==='tracker'||screen==='history'||screen==='planTracker'?'tracker':screen==='planDetail'?'planDetail':'plans'}})).then(()=>{setSelectedPlanId(id);setEditingActive(true);setEditorSection(section);setScreen('activeEditor');setEditError('');}).catch(()=>{});
+   saved.update(old=>({...old,activeEdit:old.activeEdit??{...beginActiveEdit(plan),returnTo:screen==='tracker'||screen==='history'||screen==='planTracker'||screen==='planHistory'?'tracker':screen==='planDetail'?'planDetail':'plans'}})).then(()=>{setSelectedPlanId(id);setEditingActive(true);setEditorSection(section);setScreen('activeEditor');setEditError('');}).catch(()=>{});
   };
   const saveActiveEdits=async()=>{const target=saved.store.activeEdit?.returnTo??'plans';await saved.update(old=>old.activeEdit?applyActiveEdit(old,old.activeEdit):old);setEditingActive(false);setScreen(target);};
   const discardActiveEdits=async()=>{const target=saved.store.activeEdit?.returnTo??'plans';await saved.update(old=>({...old,activeEdit:null}));setEditingActive(false);setScreen(target);setEditError('');};
@@ -205,7 +205,7 @@ export default function App() {
   useEffect(()=>{
     const subscription=BackHandler.addEventListener("hardwareBackPress",()=>{
       if(screen==='activeEditor'){discardActiveEdits().catch(()=>{});return true;}
-      const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"detail",review:"calc",schedule:"plan",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
+      const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",planHistory:"plans",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"detail",review:"calc",schedule:"plan",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
       if(!parent[screen])return false;setScreen(parent[screen]!);return true;
     });return()=>subscription.remove();
   },[screen]);
@@ -541,11 +541,11 @@ export default function App() {
         {screen === "guide" && renderGuide()}
         {screen === "detail" && renderDetail()}
         {screen==='activeEditor'&&focused&&saved.store.activeEdit&&<ActivePeptideEditor key={focused.id+editorSection} initialSection={editorSection} plan={focused} edit={saved.store.activeEdit} change={edit=>saved.update(old=>({...old,activeEdit:edit}))} onSave={saveActiveEdits} onCancel={discardActiveEdits} onArchive={async()=>{const target=saved.store.activeEdit?.returnTo==='tracker'?'tracker':'plans';await saved.update(old=>({...archivePlan(old,focused.id),activeEdit:null}));setEditingActive(false);setScreen(target);}}/>}
-        {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onEdit={editPlan} onDraft={()=>setScreen('plan')} onGuide={()=>setScreen('guide')}/>}
+        {screen==='plans'&&!saved.loadFailed&&<MyPlans store={saved.store} update={saved.update} onOpen={openPlan} onEdit={editPlan} onHistory={id=>{setSelectedPlanId(id);setScreen('planHistory');}} onDraft={()=>setScreen('plan')} onGuide={()=>setScreen('guide')}/>}
         {screen==='tracker'&&!plans.length&&!saved.loadFailed&&renderStartHere()}
         {(screen==='history'||(screen==='tracker'&&!!plans.length))&&!saved.loadFailed&&<AggregateTracker plans={plans} archives={saved.store.archives} update={saved.update} initialTab={screen==='history'?'History':'Today'} onOpen={openPlan} onEdit={editPlan}/>}
-        {screen==='inventory'&&!saved.loadFailed&&<MyPlans inventory store={saved.store} update={saved.update} onOpen={id=>editPlan(id,'Inventory')} onEdit={editPlan} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
-        {(["plan","planDetail","planInventory","review","schedule","calc","planTracker","reminders"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={(screen==='planDetail'?'plan':screen==='planInventory'?'inventory':screen==='planTracker'?'tracker':screen) as any} navigate={workspaceNavigate} store={scopedStore} update={scopedUpdate} editing={editing?{onSave:saveActiveEdits,supply:saved.store.activeEdit!.supplyVials,onSupplyChange:value=>saved.update(old=>old.activeEdit?{...old,activeEdit:{...old.activeEdit,supplyVials:value}}:old).catch(()=>{})}:undefined} onStarted={()=>setScreen("plans")} onDiscard={editing?discardActiveEdits:async()=>{const compound=compounds.find(c=>c.id===saved.store.draft?.compoundId);await saved.update(old=>({...old,draft:null}));if(compound)setSelected(compound);setScreen("detail");}} onGuide={()=>setScreen("guide")}/>}
+        {screen==='inventory'&&!saved.loadFailed&&<MyPlans inventory store={saved.store} update={saved.update} onOpen={id=>editPlan(id,'Inventory')} onEdit={editPlan} onHistory={id=>{setSelectedPlanId(id);setScreen('planHistory');}} onDraft={()=>setScreen('review')} onGuide={()=>setScreen('guide')}/>}
+        {(["plan","planDetail","planInventory","review","schedule","calc","planTracker","planHistory","reminders"] as Screen[]).includes(screen) && !saved.loadFailed && <Workspace screen={(screen==='planDetail'?'plan':screen==='planInventory'?'inventory':screen==='planTracker'?'tracker':screen==='planHistory'?'history':screen) as any} navigate={workspaceNavigate} store={scopedStore} update={scopedUpdate} editing={editing?{onSave:saveActiveEdits,supply:saved.store.activeEdit!.supplyVials,onSupplyChange:value=>saved.update(old=>old.activeEdit?{...old,activeEdit:{...old.activeEdit,supplyVials:value}}:old).catch(()=>{})}:undefined} onStarted={()=>setScreen("plans")} onDiscard={editing?discardActiveEdits:async()=>{const compound=compounds.find(c=>c.id===saved.store.draft?.compoundId);await saved.update(old=>({...old,draft:null}));if(compound)setSelected(compound);setScreen("detail");}} onGuide={()=>setScreen("guide")}/>}
       </View>
       {screen!=="welcome"&&<BottomNav active={screen==='activeEditor'?(saved.store.activeEdit?.returnTo??'plans'):screen} setScreen={setScreen} />}
     </SafeAreaView></SafeAreaProvider>

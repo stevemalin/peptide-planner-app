@@ -6,6 +6,7 @@ const app=fs.readFileSync('./app/App.tsx','utf8');
 const planTracker=fs.readFileSync('./app/src/Tracker.tsx','utf8');
 const activeEditor=fs.readFileSync('./app/src/ActivePeptideEditor.tsx','utf8');
 const store=fs.readFileSync('./app/src/store.ts','utf8');
+const myPlans=fs.readFileSync('./app/src/MyPlans.tsx','utf8');
 test('tracker leads with operational today dashboard',()=>{assert.match(tracker,/Today at a glance/);assert.match(tracker,/need logging/);assert.match(tracker,/Up next/);});
 test('tracker preserves aggregate calendar and history',()=>{for(const term of ['Today','Calendar','History','Counts include every active plan|total across every active plan'])assert.match(tracker,new RegExp(term));});
 test('tracker keeps compound identity visually distinct',()=>{assert.match(tracker,/compoundColor/);assert.match(tracker,/compoundDot/);assert.match(tracker,/plan\.compoundName/);});
@@ -107,4 +108,13 @@ test('active plan editing is one continuous page with stages expanded and one sa
  for(const section of ['Dose & Stages','Schedule','Vial & Concentration','Syringe','Inventory','Cycle / Break','Reminders','Pause / Archive'])assert.match(activeEditor,new RegExp('SectionTitle name="'+section.replace('/','\\/')+'"'));
  assert.match(activeEditor,/startExpanded/);
  assert.equal((activeEditor.match(/label="Save changes"/g)||[]).length,1);
+});
+
+
+test('My Peptides cards show timeline and activity at a glance with direct plan history',()=>{
+ for(const label of ['STARTED','TIME ON PLAN','LAST ACTIVITY','NEXT','SCHEDULE','SUPPLY','PROGRESS'])assert.match(myPlans,new RegExp(label));
+ assert.match(myPlans,/Week '\+week\+' · Day '/);
+ assert.match(myPlans,/History for '\+plan\.compoundName/);
+ assert.match(app,/setScreen\('planHistory'\)/);
+ assert.match(app,/screen==='planHistory'\?'history'/);
 });
