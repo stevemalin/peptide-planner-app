@@ -125,13 +125,13 @@ export function previewPeptideLibraryCsv(text:string):ExternalCsvPreview{
 
 
 export type ExternalPeptideSetup={
- key:string;peptideName:string;compoundId:string;selected:boolean;
+ key:string;peptideName:string;compoundId:string;selected:boolean;archived:boolean;indefinite:boolean;
  doseMg:string;doseUnit:'mg'|'mcg';startDate:string;futureWeeks:string;
  vialMg:string;waterMl:string;inventoryCurrentMg:string;
  scheduleKind:'daily'|'weekly';scheduleDays:number[];scheduleTimes:string[];
  historyCount:number;sourceWarnings:string[];
 };
-export type ExternalImportResult={store:Store;created:string[];historyAdded:number;duplicatesSkipped:number};
+export type ExternalImportResult={store:Store;created:string[];activeCreated:number;archivedCreated:number;historyAdded:number;duplicatesSkipped:number};
 
 const importName=(name:string)=>name.toLowerCase().replace(/\([^)]*\)/g,'').replace(/[^a-z0-9]+/g,' ').trim();
 const importCompoundId=(name:string)=>{
@@ -143,10 +143,10 @@ export function externalSetupErrors(setup:ExternalPeptideSetup){
  if(!setup.doseMg||!Number.isFinite(Number(setup.doseMg))||Number(setup.doseMg)<=0)errors.push('Enter the current dose.');
  if(!setup.vialMg||!Number.isFinite(Number(setup.vialMg))||Number(setup.vialMg)<=0)errors.push('Enter the vial strength.');
  if(!setup.waterMl||!Number.isFinite(Number(setup.waterMl))||Number(setup.waterMl)<=0)errors.push('Enter the diluent volume.');
- if(!setup.futureWeeks||!Number.isInteger(Number(setup.futureWeeks))||Number(setup.futureWeeks)<1||Number(setup.futureWeeks)>104)errors.push('Choose 1–104 future tracking weeks.');
+ if(!setup.archived&&!setup.indefinite&&(!setup.futureWeeks||!Number.isInteger(Number(setup.futureWeeks))||Number(setup.futureWeeks)<1||Number(setup.futureWeeks)>104))errors.push('Choose 1–104 future tracking weeks or select Indefinite.');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(setup.startDate))errors.push('Confirm the start date.');
- if(!setup.scheduleTimes.length)errors.push('Choose a schedule time.');
- if(setup.scheduleKind==='weekly'&&!setup.scheduleDays.length)errors.push('Choose at least one weekday.');
+ if(!setup.archived&&!setup.scheduleTimes.length)errors.push('Choose a schedule time.');
+ if(!setup.archived&&setup.scheduleKind==='weekly'&&!setup.scheduleDays.length)errors.push('Choose at least one weekday.');
  return errors;
 }
 export function externalSetups(preview:ExternalCsvPreview):ExternalPeptideSetup[]{
@@ -155,21 +155,22 @@ export function externalSetups(preview:ExternalCsvPreview):ExternalPeptideSetup[
   const latest=logs[logs.length-1],schedule=preview.rows.find(row=>row.recordType==='schedule'&&importName(row.peptideName)===key),inventory=preview.rows.find(row=>row.recordType==='inventory'&&importName(row.peptideName)===key);
   const scheduleKind=schedule?.scheduleType==='daily'?'daily':'weekly';
   const sourceWarnings=preview.warnings.filter(warning=>warning.toLowerCase().includes(peptideName.toLowerCase().split(' ')[0]));
-  return {key,peptideName,compoundId:importCompoundId(peptideName),selected:true,doseMg:latest?.doseMg?String(latest.doseMg):'',doseUnit:latest?.originalDoseUnit??'mg',startDate:schedule?.startDate??logs[0]?.date??'',futureWeeks:'',vialMg:'',waterMl:'',inventoryCurrentMg:inventory?.inventoryCurrentMg===undefined?'':String(Number(inventory.inventoryCurrentMg.toFixed(6))),scheduleKind,scheduleDays:schedule?.scheduleDays??[],scheduleTimes:schedule?.scheduleTimes??[],historyCount:logs.length,sourceWarnings};
+  return {key,peptideName,compoundId:importCompoundId(peptideName),selected:true,archived:false,indefinite:false,doseMg:latest?.doseMg?String(latest.doseMg):'',doseUnit:latest?.originalDoseUnit??'mg',startDate:schedule?.startDate??logs[0]?.date??'',futureWeeks:'',vialMg:'',waterMl:'',inventoryCurrentMg:inventory?.inventoryCurrentMg===undefined?'':String(Number(inventory.inventoryCurrentMg.toFixed(6))),scheduleKind,scheduleDays:schedule?.scheduleDays??[],scheduleTimes:schedule?.scheduleTimes??[],historyCount:logs.length,sourceWarnings};
  });
 }
 const eventFingerprint=(name:string,date:string,time:string,doseMg:number,status:string)=>[importName(name),date,time,doseMg.toFixed(8),status].join('|');
 export function importReadyExternalPeptides(store:Store,preview:ExternalCsvPreview,setups:ExternalPeptideSetup[],now=new Date()):ExternalImportResult{
- let plans=[...(store.activePlans??(store.active?[store.active]:[]))],historyAdded=0,duplicatesSkipped=0;const created:string[]=[];
+ let plans=[...(store.activePlans??(store.active?[store.active]:[]))],archives=[...store.archives],historyAdded=0,duplicatesSkipped=0,activeCreated=0,archivedCreated=0;const created:string[]=[];
  for(const setup of setups.filter(item=>item.selected)){
   const errors=externalSetupErrors(setup);if(errors.length)continue;
-  if(plans.some(plan=>importName(plan.compoundName)===setup.key)){duplicatesSkipped++;continue;}
-  const elapsedWeeks=Math.max(0,Math.ceil((daysBetween(setup.startDate,localDate(now))+1)/7)),totalWeeks=elapsedWeeks+Number(setup.futureWeeks);
+  const destinationPlans=setup.archived?archives:plans;
+  if(destinationPlans.some(plan=>importName(plan.compoundName)===setup.key)){duplicatesSkipped++;continue;}
+  const elapsedWeeks=Math.max(0,Math.ceil((daysBetween(setup.startDate,localDate(now))+1)/7)),totalWeeks=setup.archived?Math.max(1,elapsedWeeks):elapsedWeeks+(setup.indefinite?104:Number(setup.futureWeeks));
   const schedule:Schedule=setup.scheduleKind==='daily'?{kind:'daily',days:[],times:setup.scheduleTimes,interval:null}:{kind:'weekly',days:setup.scheduleDays,times:setup.scheduleTimes,interval:null,timesPerWeek:setup.scheduleDays.length};
   const stageId=uid(),planId=uid();
   const draft:Draft={id:planId,compoundId:setup.compoundId,compoundName:setup.peptideName,origin:null,customized:false,stages:[{id:stageId,amountMg:setup.doseMg,amountUnit:setup.doseUnit,weeks:String(totalWeeks),override:null}],defaultSchedule:schedule,breakWeeks:'0',startDate:setup.startDate,vialMg:setup.vialMg,waterMl:setup.waterMl,initialVials:'',reviewed:true,reminderEnabled:false,reminderOffsetMinutes:0};
   const active=activate(draft,now),today=localDate(now);
-  const future=active.events.filter(event=>event.localDate>=today);
+  const future=setup.archived?[]:active.events.filter(event=>event.localDate>=today);
   const sourceRows=preview.rows.filter(row=>row.recordType==='log'&&importName(row.peptideName)===setup.key);
   const seen=new Set<string>(),history:Event[]=[];
   for(const row of sourceRows){
@@ -180,8 +181,9 @@ export function importReadyExternalPeptides(store:Store,preview:ExternalCsvPrevi
    history.push({id:'import:'+encodeURIComponent(fingerprint),stageId,stageIndex:0,scheduledAt:at,localDate:row.date!,amountMg:row.doseMg!,amountUnit:row.originalDoseUnit??'mg',calculation:result,status,...(status==='completed'?{completedAt:at}:{skippedAt:at})});
   }
   const used=history.filter(event=>event.status==='completed').reduce((sum,event)=>sum+event.amountMg,0),remaining=setup.inventoryCurrentMg===''?null:Number(setup.inventoryCurrentMg);
-  plans=[...plans,{...active,events:[...history,...future].sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)),inventoryTotalMg:remaining===null?null:remaining+used}];
+  const imported={...active,...(setup.indefinite?{indefinite:true}:{}),events:[...history,...future].sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)),inventoryTotalMg:remaining===null?null:remaining+used};
+  if(setup.archived){archives=[...archives,imported];archivedCreated++;}else{plans=[...plans,imported];activeCreated++;}
   created.push(setup.peptideName);historyAdded+=history.length;
  }
- return {store:{...store,activePlans:plans,active:plans[0]??null},created,historyAdded,duplicatesSkipped};
+ return {store:{...store,activePlans:plans,active:plans[0]??null,archives},created,activeCreated,archivedCreated,historyAdded,duplicatesSkipped};
 }
