@@ -47,6 +47,10 @@ test('first-run guidance keeps navigation stable and Today becomes Start Here be
  assert.match(app,/screen!=="welcome"&&<BottomNav/);
  assert.match(app,/RECOMMENDED FIRST/);
  assert.match(app,/plans\.length\|\|saved\.store\.draft/);
+ assert.match(app,/const recommended=onboarding\?\.goal===\"learn\"\?0:onboarding\?\.goal===\"research\"\?1:2/);
+ assert.match(app,/draft\?\"Continue your plan\":\"Build your plan\"/);
+ assert.match(app,/Local storage, import, export and recovery/);
+ assert.doesNotMatch(app,/Local storage, export and deletion controls/);
 });
 
 test('onboarding is local, optional, restartable and does not alter saved plans',()=>{

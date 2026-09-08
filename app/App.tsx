@@ -481,7 +481,7 @@ export default function App() {
       {label:"Inventory",detail:"Individual vials across active peptides",target:"inventory"},
       {label:"History",detail:"Completed and skipped events",target:"history"},
       {label:"Preferences",detail:"Units, appearance and planner defaults",target:"settings"},
-      {label:"My data & privacy",detail:"Local storage, export and deletion controls",target:"settings"},
+      {label:"My data & privacy",detail:"Local storage, import, export and recovery",target:"settings"},
       {label:"Help & About",detail:"EZPep Planner 0.4, guidance and disclaimers",target:"settings"},
       {label:"Shop",detail:"Future AURAPEP connection · not connected",target:null},
     ];
