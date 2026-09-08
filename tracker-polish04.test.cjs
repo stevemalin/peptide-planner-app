@@ -78,7 +78,7 @@ test('active plan editor exposes confirmed stage removal while retaining at leas
 
 test('Professor Lynch explains each active-plan maintenance section without adding plan values',()=>{
  for(const section of ['Dose & Stages','Schedule','Vial & Concentration','Syringe','Inventory','Cycle / Break','Reminders','Pause / Archive'])assert.ok(activeEditor.includes("'"+section+"'"));
- assert.match(activeEditor,/ProfessorHelp title={section}/);
+ assert.match(activeEditor,/ProfessorHelp title={name}/);
  assert.match(activeEditor,/do not verify preparation or clinical suitability/);
 });
 
@@ -97,4 +97,14 @@ test('Build Plan hero introduces Professor Lynch without selecting plan values',
  assert.match(app,/A QUICK WORD FROM PROFESSOR LYNCH/);
  assert.match(app,/review its research context/);
  assert.match(app,/without choosing amounts or schedules for you/);
+});
+
+
+test('active plan editing is one continuous page with stages expanded and one save action',()=>{
+ assert.match(activeEditor,/Edit any fields below, then save all changes once at the bottom/);
+ assert.doesNotMatch(activeEditor,/Back to peptide sections/);
+ assert.doesNotMatch(activeEditor,/setSection\(/);
+ for(const section of ['Dose & Stages','Schedule','Vial & Concentration','Syringe','Inventory','Cycle / Break','Reminders','Pause / Archive'])assert.match(activeEditor,new RegExp('SectionTitle name="'+section.replace('/','\\/')+'"'));
+ assert.match(activeEditor,/startExpanded/);
+ assert.equal((activeEditor.match(/label="Save changes"/g)||[]).length,1);
 });
