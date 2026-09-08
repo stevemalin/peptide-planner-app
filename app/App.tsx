@@ -175,7 +175,7 @@ export default function App() {
   };
   const restoreLocalBackup=async()=>{
     if(!restoreCandidate)return;
-    try{await AsyncStorage.setItem('peptide-planner:pre-restore:'+new Date().toISOString(),encodePlannerStore(saved.store));await saved.update(()=>restoreCandidate.store);setRestoreCandidate(null);setSelectedPlanId(null);setScreen('plans');Alert.alert('Backup restored','The validated backup is now active on this device.');}
+    try{await AsyncStorage.setItem('peptide-planner:pre-restore:'+new Date().toISOString(),encodePlannerStore(saved.store));await (saved.loadFailed?saved.recover(restoreCandidate.store):saved.update(()=>restoreCandidate.store));setRestoreCandidate(null);setSelectedPlanId(null);setScreen('plans');Alert.alert('Backup restored','The validated backup is now active on this device.');}
     catch{Alert.alert('Backup not restored','Your current saved data was not replaced. Please try again.');}
   };
   const [importText,setImportText]=useState('');
@@ -607,12 +607,21 @@ export default function App() {
   );
 
   if(!saved.ready)return <SafeAreaProvider><SafeAreaView style={styles.safe}><Text style={styles.detailTitle}>Opening your saved plan…</Text></SafeAreaView></SafeAreaProvider>;
+  if(saved.loadFailed)return <SafeAreaProvider><SafeAreaView style={styles.safe}><ScrollView contentContainerStyle={styles.welcomeContent}>
+    <View style={styles.welcomeBrand}><Image accessibilityLabel="EZPep Planner" source={{uri:EZPEP_LOCKUP_DATA_URI}} resizeMode="contain" style={styles.welcomeBrandImage}/></View>
+    <Text style={styles.kicker}>LOCAL DATA RECOVERY</Text><Text style={styles.welcomeTitle}>Your saved planner data could not be opened.</Text>
+    <Text style={styles.welcomeSub}>The app has paused editing so the unreadable data is not replaced. Restore a valid EZPep Planner backup to continue on this device.</Text>
+    <View style={styles.notice}><Text style={styles.noticeText}>{saved.error}</Text></View>
+    <AppButton label="Choose backup file" onPress={chooseBackupFile}/>
+    <Text style={styles.smallBadge}>Your current browser data stays unchanged until a backup passes validation and you confirm the restore.</Text>
+    {restoreCandidate&&<Modal transparent animationType="fade" onRequestClose={()=>setRestoreCandidate(null)}><View style={styles.importModalShade}><View style={styles.importModalCard}><Text style={styles.sourceClass}>RESTORE PREVIEW</Text><Text style={styles.importModalTitle}>Replace the unreadable planner data?</Text><Text style={styles.nextText}>{restoreCandidate.plans} active plans · {restoreCandidate.archives} archived plans · {restoreCandidate.history} saved history entries</Text><Text style={styles.smallBadge}>The validated backup becomes active only after you confirm this replacement.</Text><AppButton label="Confirm restore backup" onPress={()=>{void restoreLocalBackup();}}/><AppButton label="Cancel restore" secondary onPress={()=>setRestoreCandidate(null)}/></View></View></Modal>}
+  </ScrollView></SafeAreaView></SafeAreaProvider>;
   return (
     <SafeAreaProvider><SafeAreaView style={styles.safe}>
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.white} />
       <View style={styles.topLine}>
         <View style={styles.brandLockup}><Image accessibilityLabel="EZPep Planner" source={{uri:EZPEP_LOCKUP_DATA_URI}} resizeMode="contain" style={styles.brandLockupImage}/></View>
-        <View style={{flexDirection:"row",alignItems:"center",gap:4}}><Text style={[styles.tempStatus,{fontSize:10}]}>Prototype 0.4</Text><Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={()=>setScreen("profile")} style={{width:36,minHeight:44,alignItems:"center",justifyContent:"center"}}><Svg width={20} height={22} viewBox="0 0 24 24"><Circle cx={12} cy={7} r={4} fill="none" stroke={COLORS.ink} strokeWidth={1.7}/><Path d="M 4 22 L 4 19 C 4 12 20 12 20 19 L 20 22 Z" fill="none" stroke={COLORS.ink} strokeWidth={1.7}/></Svg></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={()=>setScreen("settings")} style={{width:36,minHeight:44,alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:20,color:COLORS.ink}}>⚙</Text></Pressable></View>
+        <View style={{flexDirection:"row",alignItems:"center",gap:4}}><Pressable accessibilityRole="button" accessibilityLabel="Profile" onPress={()=>setScreen("profile")} style={{width:36,minHeight:44,alignItems:"center",justifyContent:"center"}}><Svg width={20} height={22} viewBox="0 0 24 24"><Circle cx={12} cy={7} r={4} fill="none" stroke={COLORS.ink} strokeWidth={1.7}/><Path d="M 4 22 L 4 19 C 4 12 20 12 20 19 L 20 22 Z" fill="none" stroke={COLORS.ink} strokeWidth={1.7}/></Svg></Pressable><Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={()=>setScreen("settings")} style={{width:36,minHeight:44,alignItems:"center",justifyContent:"center"}}><Text style={{fontSize:20,color:COLORS.ink}}>⚙</Text></Pressable></View>
       </View>
       <View style={{paddingHorizontal:20,paddingVertical:3}}><Text testID="save-status" style={styles.smallBadge}>{saved.saving?'Saving on device…':saved.error?saved.error:'Saved on this device'}</Text>{!!saved.error&&!saved.loadFailed&&<AppButton label="Retry save" onPress={()=>saved.retry().catch(()=>{})} secondary/>}{!!reminderError&&<Text style={styles.smallBadge}>{reminderError}</Text>}</View>
       {!!editError&&<Text style={styles.helper}>{editError}</Text>}
@@ -739,7 +748,7 @@ const styles = StyleSheet.create({
   main: { flex: 1 },
   topLine: { paddingHorizontal: 20, paddingTop: 6, paddingBottom: 8, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.border },
   tempBrand: { color: COLORS.ink, fontWeight: "800", letterSpacing: 1.2, fontSize: 12 },
-  brandLockup: { width: 218, height: 60, alignItems: "flex-start", justifyContent: "center" },
+  brandLockup: { width: 218, height: 60, flexShrink: 1, minWidth: 0, alignItems: "flex-start", justifyContent: "center" },
   brandLockupImage: { width: "100%", height: "100%" },
   tempStatus: { color: COLORS.muted, fontSize: 11 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 28 },

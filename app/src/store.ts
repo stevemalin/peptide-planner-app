@@ -35,6 +35,12 @@ export function usePlannerStore(){
   }catch(e){loadFailed.current=true;if(mounted)setError(String(e));}
   finally{if(mounted)setReady(true);}
  })();return()=>{mounted=false;};},[]);
+ const recover=async(next:Store)=>{
+  const encoded=encodePlannerStore(next);
+  await AsyncStorage.setItem(STORAGE_KEY,encoded);
+  await AsyncStorage.setItem(RECOVERY_STORAGE_KEY,encoded).catch(()=>{});
+  loadFailed.current=false;current.current=next;revision.current++;setStore(next);setSaving(false);setError('');
+ };
  const update=(change:(old:Store)=>Store)=>{
   if(!ready||loadFailed.current)return Promise.reject(Error('Saved data is not available.'));
   const next=change(current.current);current.current=next;setStore(next);setSaving(true);const rev=++revision.current;
@@ -43,5 +49,5 @@ export function usePlannerStore(){
   queue.current=write;write.then(()=>{if(rev===revision.current){setSaving(false);setError('');}},()=>{if(rev===revision.current){setSaving(false);setError('Could not save on this device. Keep the app open and tap Retry save.');}});
   return write;
  };
- return {store,ready,error,saving,update,loadFailed:loadFailed.current,retry:()=>update(old=>({...old}))};
+ return {store,ready,error,saving,update,recover,loadFailed:loadFailed.current,retry:()=>update(old=>({...old}))};
 }
