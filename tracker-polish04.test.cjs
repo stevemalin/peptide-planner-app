@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs');
 require('./register-tests.cjs');
 const {upcomingGroup}=require('./app/src/today-sections.ts');
-const {previewPeptideLibraryCsv,externalHistoryKey}=require('./app/src/persistence-v04.ts');
+const {previewPeptideLibraryCsv,externalHistoryKey,externalSetups,externalSetupErrors,importReadyExternalPeptides}=require('./app/src/persistence-v04.ts');
 const tracker=fs.readFileSync('./app/src/AggregateTracker.tsx','utf8');
 const app=fs.readFileSync('./app/App.tsx','utf8');
 const planTracker=fs.readFileSync('./app/src/Tracker.tsx','utf8');
@@ -159,3 +159,40 @@ test('My Data offers external CSV selection, paste and non-destructive preview b
 });
 
 
+
+
+test('guided import setup requires only missing activation fields and creates a real active plan',()=>{
+ const csv=[
+  'record_type,peptide_name,date,time,dose_amount,dose_unit,event_type,inventory_start_amount,inventory_current_amount,inventory_unit,schedule_type,schedule_days,schedule_times,notes',
+  'inventory,Retatrutide,,,,,,210,155,mg,,,,',
+  'log,Retatrutide,2026-09-03,09:00,5,mg,taken,,,,,,,',
+  'log,Retatrutide,2026-09-07,09:00,5,mg,taken,,,,,,,',
+  'schedule,Retatrutide,,,,,,,,,custom,"1,4",09:00;09:00,2026-06-15',
+ ].join('\n');
+ const preview=previewPeptideLibraryCsv(csv),setups=externalSetups(preview),setup=setups[0];
+ assert.equal(setup.doseMg,'5');
+ assert.equal(setup.inventoryCurrentMg,'155');
+ assert.deepEqual(setup.scheduleDays,[1,4]);
+ assert.deepEqual(setup.scheduleTimes,['09:00']);
+ assert.deepEqual(externalSetupErrors(setup),['Enter the vial strength.','Enter the diluent volume.','Choose 1–104 future tracking weeks.']);
+ Object.assign(setup,{vialMg:'20',waterMl:'2',futureWeeks:'12'});
+ assert.deepEqual(externalSetupErrors(setup),[]);
+ const blank={version:3,draft:null,active:null,activePlans:[],archives:[]};
+ const result=importReadyExternalPeptides(blank,preview,setups,new Date('2026-09-08T12:00:00'));
+ assert.deepEqual(result.created,['Retatrutide']);
+ assert.equal(result.historyAdded,2);
+ assert.equal(result.store.activePlans.length,1);
+ const plan=result.store.activePlans[0];
+ assert.equal(plan.inventoryTotalMg,165);
+ assert.equal(plan.events.filter(event=>event.status==='completed').length,2);
+ assert.ok(plan.events.some(event=>event.status==='pending'&&event.localDate>='2026-09-08'));
+ assert.ok(plan.events.every(event=>event.localDate>='2026-09-08'||event.status!=='pending'));
+ assert.equal(plan.reminderEnabled,false);
+});
+
+test('guided import UI provides per-peptide missing-field cards and imports only ready selections',()=>{
+ for(const term of ['READY TO IMPORT','Vial strength','Diluent volume','Continue tracking for','Schedule days','Import all ready peptides','private pre-import backup'])assert.match(app,new RegExp(term,'i'));
+ assert.match(app,/externalSetupErrors/);
+ assert.match(app,/importReadyExternalPeptides/);
+ assert.match(app,/borderColor:'#c93f55'/);
+});

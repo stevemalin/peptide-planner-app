@@ -1,4 +1,5 @@
-import {decodeStore, type Store} from './engine';
+import {decodeStore,activate,uid,localDate,daysBetween,type Store,type Draft,type Schedule,type Event} from './engine';
+import {calculate} from './planning';
 import {normalizeStoreV04} from './multiplan-migration-v04';
 export const STORAGE_KEY_V04='peptide-planner:local:v04';
 export const LEGACY_STORAGE_KEY='peptide-planner:local:v03';
@@ -121,3 +122,66 @@ export function previewPeptideLibraryCsv(text:string):ExternalCsvPreview{
 }
 
 
+
+
+export type ExternalPeptideSetup={
+ key:string;peptideName:string;compoundId:string;selected:boolean;
+ doseMg:string;doseUnit:'mg'|'mcg';startDate:string;futureWeeks:string;
+ vialMg:string;waterMl:string;inventoryCurrentMg:string;
+ scheduleKind:'daily'|'weekly';scheduleDays:number[];scheduleTimes:string[];
+ historyCount:number;sourceWarnings:string[];
+};
+export type ExternalImportResult={store:Store;created:string[];historyAdded:number;duplicatesSkipped:number};
+
+const importName=(name:string)=>name.toLowerCase().replace(/\([^)]*\)/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+const importCompoundId=(name:string)=>{
+ const aliases:Record<string,string>={'retatrutide':'retatrutide','ghk cu':'ghk-cu','mots c':'mots-c','nad':'nad-plus','nicotinamide adenine dinucleotide':'nad-plus','5 amino 1mq':'5-amino-1mq','ss 31':'ss-31','elamipretide':'ss-31','ipamorelin':'ipamorelin','tesamorelin':'tesamorelin','bpc 157':'bpc-157','tb 500':'tb-500','thymosin beta 4 fragment':'tb-500'};
+ const key=importName(name);return aliases[key]??'imported-'+key.replace(/\s+/g,'-');
+};
+export function externalSetupErrors(setup:ExternalPeptideSetup){
+ const errors:string[]=[];
+ if(!setup.doseMg||!Number.isFinite(Number(setup.doseMg))||Number(setup.doseMg)<=0)errors.push('Enter the current dose.');
+ if(!setup.vialMg||!Number.isFinite(Number(setup.vialMg))||Number(setup.vialMg)<=0)errors.push('Enter the vial strength.');
+ if(!setup.waterMl||!Number.isFinite(Number(setup.waterMl))||Number(setup.waterMl)<=0)errors.push('Enter the diluent volume.');
+ if(!setup.futureWeeks||!Number.isInteger(Number(setup.futureWeeks))||Number(setup.futureWeeks)<1||Number(setup.futureWeeks)>104)errors.push('Choose 1–104 future tracking weeks.');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(setup.startDate))errors.push('Confirm the start date.');
+ if(!setup.scheduleTimes.length)errors.push('Choose a schedule time.');
+ if(setup.scheduleKind==='weekly'&&!setup.scheduleDays.length)errors.push('Choose at least one weekday.');
+ return errors;
+}
+export function externalSetups(preview:ExternalCsvPreview):ExternalPeptideSetup[]{
+ return preview.peptides.map(peptideName=>{
+  const key=importName(peptideName),logs=preview.rows.filter(row=>row.recordType==='log'&&importName(row.peptideName)===key).sort((a,b)=>(a.date!+a.time!).localeCompare(b.date!+b.time!));
+  const latest=logs[logs.length-1],schedule=preview.rows.find(row=>row.recordType==='schedule'&&importName(row.peptideName)===key),inventory=preview.rows.find(row=>row.recordType==='inventory'&&importName(row.peptideName)===key);
+  const scheduleKind=schedule?.scheduleType==='daily'?'daily':'weekly';
+  const sourceWarnings=preview.warnings.filter(warning=>warning.toLowerCase().includes(peptideName.toLowerCase().split(' ')[0]));
+  return {key,peptideName,compoundId:importCompoundId(peptideName),selected:true,doseMg:latest?.doseMg?String(latest.doseMg):'',doseUnit:latest?.originalDoseUnit??'mg',startDate:schedule?.startDate??logs[0]?.date??'',futureWeeks:'',vialMg:'',waterMl:'',inventoryCurrentMg:inventory?.inventoryCurrentMg===undefined?'':String(Number(inventory.inventoryCurrentMg.toFixed(6))),scheduleKind,scheduleDays:schedule?.scheduleDays??[],scheduleTimes:schedule?.scheduleTimes??[],historyCount:logs.length,sourceWarnings};
+ });
+}
+const eventFingerprint=(name:string,date:string,time:string,doseMg:number,status:string)=>[importName(name),date,time,doseMg.toFixed(8),status].join('|');
+export function importReadyExternalPeptides(store:Store,preview:ExternalCsvPreview,setups:ExternalPeptideSetup[],now=new Date()):ExternalImportResult{
+ let plans=[...(store.activePlans??(store.active?[store.active]:[]))],historyAdded=0,duplicatesSkipped=0;const created:string[]=[];
+ for(const setup of setups.filter(item=>item.selected)){
+  const errors=externalSetupErrors(setup);if(errors.length)continue;
+  if(plans.some(plan=>importName(plan.compoundName)===setup.key)){duplicatesSkipped++;continue;}
+  const elapsedWeeks=Math.max(0,Math.ceil((daysBetween(setup.startDate,localDate(now))+1)/7)),totalWeeks=elapsedWeeks+Number(setup.futureWeeks);
+  const schedule:Schedule=setup.scheduleKind==='daily'?{kind:'daily',days:[],times:setup.scheduleTimes,interval:null}:{kind:'weekly',days:setup.scheduleDays,times:setup.scheduleTimes,interval:null,timesPerWeek:setup.scheduleDays.length};
+  const stageId=uid(),planId=uid();
+  const draft:Draft={id:planId,compoundId:setup.compoundId,compoundName:setup.peptideName,origin:null,customized:false,stages:[{id:stageId,amountMg:setup.doseMg,amountUnit:setup.doseUnit,weeks:String(totalWeeks),override:null}],defaultSchedule:schedule,breakWeeks:'0',startDate:setup.startDate,vialMg:setup.vialMg,waterMl:setup.waterMl,initialVials:'',reviewed:true,reminderEnabled:false,reminderOffsetMinutes:0};
+  const active=activate(draft,now),today=localDate(now);
+  const future=active.events.filter(event=>event.localDate>=today);
+  const sourceRows=preview.rows.filter(row=>row.recordType==='log'&&importName(row.peptideName)===setup.key);
+  const seen=new Set<string>(),history:Event[]=[];
+  for(const row of sourceRows){
+   const status=row.eventType==='skipped'?'skipped':'completed',fingerprint=eventFingerprint(setup.peptideName,row.date!,row.time!,row.doseMg!,status);
+   if(seen.has(fingerprint)){duplicatesSkipped++;continue;}seen.add(fingerprint);
+   const at=new Date(row.date+'T'+row.time+':00').toISOString(),result=calculate(setup.vialMg,setup.waterMl,String(row.doseMg));
+   if(!result)throw Error('Could not calculate imported history for '+setup.peptideName+'.');
+   history.push({id:'import:'+encodeURIComponent(fingerprint),stageId,stageIndex:0,scheduledAt:at,localDate:row.date!,amountMg:row.doseMg!,amountUnit:row.originalDoseUnit??'mg',calculation:result,status,...(status==='completed'?{completedAt:at}:{skippedAt:at})});
+  }
+  const used=history.filter(event=>event.status==='completed').reduce((sum,event)=>sum+event.amountMg,0),remaining=setup.inventoryCurrentMg===''?null:Number(setup.inventoryCurrentMg);
+  plans=[...plans,{...active,events:[...history,...future].sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)),inventoryTotalMg:remaining===null?null:remaining+used}];
+  created.push(setup.peptideName);historyAdded+=history.length;
+ }
+ return {store:{...store,activePlans:plans,active:plans[0]??null},created,historyAdded,duplicatesSkipped};
+}

@@ -45,7 +45,7 @@ import { importReference, newDraft } from "./src/engine";
 import { Evidence, ProfessorHelp } from "./src/ui";
 import { reconcileReminders, listenForReminder } from "./src/reminders";
 import type { PlanMode } from "./src/planning";
-import {encodePlannerStore,previewPeptideLibraryCsv,type ExternalCsvPreview} from "./src/persistence-v04";
+import {encodePlannerStore,previewPeptideLibraryCsv,externalSetups,externalSetupErrors,importReadyExternalPeptides,type ExternalCsvPreview,type ExternalPeptideSetup} from "./src/persistence-v04";
 type Experience = "new" | "familiar" | "experienced";
 type FirstGoal = "learn" | "research" | "setup" | "track";
 type OnboardingProfile = { experience: Experience; goal: FirstGoal };
@@ -167,9 +167,30 @@ export default function App() {
   const [importText,setImportText]=useState('');
   const [importPreview,setImportPreview]=useState<ExternalCsvPreview|null>(null);
   const [importError,setImportError]=useState('');
+  const [importSetups,setImportSetups]=useState<ExternalPeptideSetup[]>([]);
+  const [importResult,setImportResult]=useState('');
+  const changeImportSetup=(key:string,patch:Partial<ExternalPeptideSetup>)=>setImportSetups(current=>current.map(item=>item.key===key?{...item,...patch}:item));
+  const confirmReadyImports=()=>{
+    if(!importPreview)return;
+    const ready=importSetups.filter(item=>item.selected&&!externalSetupErrors(item).length),blocked=importSetups.filter(item=>item.selected&&externalSetupErrors(item).length);
+    if(!ready.length){setImportError('Complete the highlighted fields on at least one selected peptide.');return;}
+    Alert.alert('Import '+ready.length+' ready '+(ready.length===1?'peptide':'peptides')+'?',(blocked.length?blocked.length+' selected peptide card(s) will remain unimported until their highlighted fields are complete. ':'')+'Existing plans and history will not be replaced.',[
+      {text:'Cancel',style:'cancel'},
+      {text:'Import ready peptides',onPress:async()=>{
+        try{
+          await AsyncStorage.setItem('peptide-planner:pre-import:'+new Date().toISOString(),encodePlannerStore(saved.store));
+          let report:any=null;
+          await saved.update(old=>{report=importReadyExternalPeptides(old,importPreview,ready,new Date());return report.store;});
+          setImportResult(report.created.length+' active '+(report.created.length===1?'peptide':'peptides')+' created · '+report.historyAdded+' history entries added'+(report.duplicatesSkipped?' · '+report.duplicatesSkipped+' duplicates skipped':''));
+          setImportSetups(current=>current.filter(item=>!report.created.includes(item.peptideName)));
+          setImportError('');
+        }catch(error){setImportError('Import was not completed. '+String(error).replace(/^Error:\s*/,''));}
+      }},
+    ]);
+  };
   const previewImport=(text:string)=>{
     setImportText(text);
-    try{setImportPreview(previewPeptideLibraryCsv(text));setImportError('');}
+    try{const preview=previewPeptideLibraryCsv(text);setImportPreview(preview);setImportSetups(externalSetups(preview));setImportResult('');setImportError('');}
     catch(error){setImportPreview(null);setImportError(String(error).replace(/^Error:\s*/,''));}
   };
   const chooseImportFile=()=>{
@@ -412,8 +433,19 @@ export default function App() {
         <Text style={[styles.nextText,{marginTop:14}]}>{importPreview.peptides.join(' · ')}</Text>
         {!!importPreview.duplicateKeys.length&&<Text style={styles.smallBadge}>{importPreview.duplicateKeys.length} duplicate history {importPreview.duplicateKeys.length===1?'entry':'entries'} found in this file. Duplicates will not be added twice.</Text>}
         {importPreview.warnings.map((warning,index)=><Text key={index} style={[styles.helper,{color:'#b2384a',marginTop:10}]}>• {warning}</Text>)}
-        <Text style={styles.smallBadge}>Preview only—nothing has been saved yet. The next step will let you confirm name matches and merge choices before importing.</Text>
+        <Text style={styles.smallBadge}>Preview only—nothing has been saved yet. Complete each selected peptide card below, then import every card that is ready.</Text>
       </View>}
+      {importPreview&&importSetups.map(setup=>{const errors=externalSetupErrors(setup),bad=(phrase:string)=>errors.some(error=>error.toLowerCase().includes(phrase));return <View key={setup.key} style={[styles.lessonCard,!setup.selected&&{opacity:.55}]}>
+        <View style={{flexDirection:'row',justifyContent:'space-between',gap:10}}><View style={{flex:1}}><Text style={styles.sourceClass}>{errors.length?'NEEDS '+errors.length+' '+(errors.length===1?'ANSWER':'ANSWERS'):'READY TO IMPORT'}</Text><Text style={styles.lessonTitle}>{setup.peptideName}</Text><Text style={styles.helper}>{setup.historyCount} history entries · {setup.inventoryCurrentMg||'No'} mg remaining</Text></View><Pressable accessibilityRole="checkbox" accessibilityState={{checked:setup.selected}} onPress={()=>changeImportSetup(setup.key,{selected:!setup.selected})} style={[styles.goalCard,{flex:0,minWidth:78}]}><Text style={styles.goalText}>{setup.selected?'✓ Include':'Skip'}</Text></Pressable></View>
+        <Text style={styles.inputLabel}>Current dose</Text><View style={[styles.inputUnitRow,bad('current dose')&&{borderColor:'#c93f55',borderWidth:2}]}><TextInput accessibilityLabel={setup.peptideName+' current dose'} keyboardType="decimal-pad" value={setup.doseUnit==='mcg'&&setup.doseMg?String(Number(setup.doseMg)*1000):setup.doseMg} onChangeText={value=>changeImportSetup(setup.key,{doseMg:setup.doseUnit==='mcg'&&value?String(Number(value)/1000):value})} style={styles.largeInput}/><Text style={styles.unit}>{setup.doseUnit}</Text></View>
+        <View style={{flexDirection:'row',gap:10}}><View style={{flex:1}}><Text style={styles.inputLabel}>Vial strength</Text><View style={[styles.inputUnitRow,bad('vial strength')&&{borderColor:'#c93f55',borderWidth:2}]}><TextInput accessibilityLabel={setup.peptideName+' vial strength'} keyboardType="decimal-pad" value={setup.vialMg} onChangeText={vialMg=>changeImportSetup(setup.key,{vialMg})} style={styles.largeInput}/><Text style={styles.unit}>mg</Text></View></View><View style={{flex:1}}><Text style={styles.inputLabel}>Diluent volume</Text><View style={[styles.inputUnitRow,bad('diluent')&&{borderColor:'#c93f55',borderWidth:2}]}><TextInput accessibilityLabel={setup.peptideName+' diluent volume'} keyboardType="decimal-pad" value={setup.waterMl} onChangeText={waterMl=>changeImportSetup(setup.key,{waterMl})} style={styles.largeInput}/><Text style={styles.unit}>mL</Text></View></View></View>
+        <Text style={styles.inputLabel}>Continue tracking for</Text><View style={[styles.inputUnitRow,bad('future tracking')&&{borderColor:'#c93f55',borderWidth:2}]}><TextInput accessibilityLabel={setup.peptideName+' future tracking weeks'} keyboardType="number-pad" value={setup.futureWeeks} onChangeText={futureWeeks=>changeImportSetup(setup.key,{futureWeeks})} style={styles.largeInput}/><Text style={styles.unit}>weeks</Text></View>
+        <Text style={styles.inputLabel}>Start date</Text><TextInput accessibilityLabel={setup.peptideName+' start date'} value={setup.startDate} onChangeText={startDate=>changeImportSetup(setup.key,{startDate})} placeholder="YYYY-MM-DD" style={[styles.smallInput,bad('start date')&&{borderColor:'#c93f55',borderWidth:2}]}/>
+        <Text style={[styles.inputLabel,{marginTop:12}]}>Schedule days</Text>{setup.scheduleKind==='daily'?<Text style={styles.nextText}>Daily · {setup.scheduleTimes.join(' / ')}</Text>:<View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day,index)=>{const selected=setup.scheduleDays.includes(index);return <Pressable key={day} accessibilityRole="checkbox" accessibilityState={{checked:selected}} onPress={()=>changeImportSetup(setup.key,{scheduleDays:selected?setup.scheduleDays.filter(value=>value!==index):[...setup.scheduleDays,index].sort()})} style={[styles.goalCard,{flex:0,minWidth:63,borderColor:bad('weekday')?'#c93f55':undefined},selected&&styles.choiceCardSelected]}><Text style={styles.goalText}>{selected?'✓ ':''}{day}</Text></Pressable>;})}</View>}
+        <Text style={styles.nextText}>Time: {setup.scheduleTimes.join(' / ')||'No valid time found'} · Remaining inventory: {setup.inventoryCurrentMg||'not supplied'} mg</Text>
+        {errors.map(error=><Text key={error} style={[styles.helper,{color:'#b2384a',marginTop:6}]}>• {error}</Text>)}
+      </View>})}
+      {importPreview&&<View style={styles.lessonCard}><Text style={styles.lessonTitle}>{importSetups.filter(item=>item.selected&&!externalSetupErrors(item).length).length} ready to import</Text><Text style={styles.nextText}>Ready cards become active peptides with future schedules, imported history and remaining inventory. A private pre-import backup is saved first.</Text><AppButton label="Import all ready peptides" onPress={confirmReadyImports}/>{!!importResult&&<Text accessibilityLiveRegion="polite" style={styles.smallBadge}>{importResult}</Text>}</View>}
       <AppButton label="Back to My data & privacy" secondary onPress={()=>setScreen('settings')}/>
     </ScrollView>
   );
