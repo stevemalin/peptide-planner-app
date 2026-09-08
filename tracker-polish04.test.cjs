@@ -59,6 +59,8 @@ test('onboarding is local, optional, restartable and does not alter saved plans'
  assert.match(app,/Restart Quick Start Onboarding/);
  assert.match(app,/saved plans, history and settings will not be changed/);
  assert.match(app,/does not select a peptide or prescribe a dose/);
+ assert.match(app,/goal==="learn"\|\|goal==="research"\?"school":"guide"/);
+ assert.match(app,/goal:"setup"},"tracker"/);
 });
 
 test('plan tracker claims horizontal swipes before the vertical scroll container on web and native',()=>{

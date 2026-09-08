@@ -130,13 +130,14 @@ export default function App() {
   const [firstGoal,setFirstGoal]=useState<FirstGoal|null>(null);
   const [restartingOnboarding,setRestartingOnboarding]=useState(false);
   useEffect(()=>{AsyncStorage.getItem("pepplan.onboarding.v1").then(value=>setOnboarding(value?JSON.parse(value):null)).catch(()=>setOnboarding(null));},[]);
-  const finishOnboarding=(profile:OnboardingProfile)=>{setRestartingOnboarding(false);setOnboarding(profile);AsyncStorage.setItem("pepplan.onboarding.v1",JSON.stringify(profile)).catch(()=>{});setScreen("tracker");};
+  const onboardingDestination=(goal:FirstGoal):Screen=>goal==="learn"||goal==="research"?"school":"guide";
+  const finishOnboarding=(profile:OnboardingProfile,destination?:Screen)=>{setRestartingOnboarding(false);setOnboarding(profile);AsyncStorage.setItem("pepplan.onboarding.v1",JSON.stringify(profile)).catch(()=>{});setScreen(destination??onboardingDestination(profile.goal));};
   const confirmSkipOnboarding=()=>Alert.alert(
     "Skip Quick Start?",
     "Are you sure you want to skip Quick Start Onboarding? You can restart it at any time from More → Preferences.",
     [
       {text:"Keep going",style:"cancel"},
-      {text:"Skip for now",onPress:()=>finishOnboarding({experience:"familiar",goal:"setup"})},
+      {text:"Skip for now",onPress:()=>finishOnboarding({experience:"familiar",goal:"setup"},"tracker")},
     ],
   );
   const restartOnboarding=()=>Alert.alert(
