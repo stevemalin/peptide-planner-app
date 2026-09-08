@@ -166,11 +166,15 @@ export function importReadyExternalPeptides(store:Store,preview:ExternalCsvPrevi
   const errors=externalSetupErrors(setup);if(errors.length)continue;
   const destinationPlans=setup.archived?archives:plans;
   if(destinationPlans.some(plan=>importName(plan.compoundName)===setup.key)){duplicatesSkipped++;continue;}
-  const elapsedWeeks=Math.max(0,Math.ceil((daysBetween(setup.startDate,localDate(now))+1)/7)),totalWeeks=setup.archived?Math.max(1,elapsedWeeks):elapsedWeeks+(setup.indefinite?104:Number(setup.futureWeeks));
+  const today=localDate(now),elapsedWeeks=Math.max(0,Math.ceil((daysBetween(setup.startDate,today)+1)/7));
+  // History remains on its original dates. Future tracking starts today (or later)
+  // so old history cannot inflate a valid duration beyond the 104-week limit.
+  const scheduleStartDate=!setup.archived&&setup.startDate<today?today:setup.startDate;
+  const totalWeeks=setup.archived?Math.max(1,elapsedWeeks):(setup.indefinite?104:Number(setup.futureWeeks));
   const schedule:Schedule=setup.scheduleKind==='daily'?{kind:'daily',days:[],times:setup.scheduleTimes,interval:null}:{kind:'weekly',days:setup.scheduleDays,times:setup.scheduleTimes,interval:null,timesPerWeek:setup.scheduleDays.length};
   const stageId=uid(),planId=uid(),fallbackDose=preview.rows.find(row=>row.recordType==='log'&&importName(row.peptideName)===setup.key)?.doseMg??1;
-  const draft:Draft={id:planId,compoundId:setup.compoundId,compoundName:setup.peptideName,origin:null,customized:false,stages:[{id:stageId,amountMg:setup.doseMg||String(fallbackDose),amountUnit:setup.doseUnit,weeks:String(totalWeeks),override:null}],defaultSchedule:schedule,breakWeeks:'0',startDate:setup.startDate,vialMg:setup.vialMg,waterMl:setup.waterMl,initialVials:'',reviewed:true,reminderEnabled:false,reminderOffsetMinutes:0};
-  const active:SavedPlan=setup.archived?{...draft,defaultSchedule:null,activatedAt:now.toISOString(),events:[],inventoryTotalMg:null,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone}:activate(draft,now),today=localDate(now);
+  const draft:Draft={id:planId,compoundId:setup.compoundId,compoundName:setup.peptideName,origin:null,customized:false,stages:[{id:stageId,amountMg:setup.doseMg||String(fallbackDose),amountUnit:setup.doseUnit,weeks:String(totalWeeks),override:null}],defaultSchedule:schedule,breakWeeks:'0',startDate:scheduleStartDate,vialMg:setup.vialMg,waterMl:setup.waterMl,initialVials:'',reviewed:true,reminderEnabled:false,reminderOffsetMinutes:0};
+  const active:SavedPlan=setup.archived?{...draft,defaultSchedule:null,activatedAt:now.toISOString(),events:[],inventoryTotalMg:null,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone}:activate(draft,now);
   const future=setup.archived?[]:active.events.filter(event=>event.localDate>=today);
   const sourceRows=preview.rows.filter(row=>row.recordType==='log'&&importName(row.peptideName)===setup.key);
   const seen=new Set<string>(),history:Event[]=[];
