@@ -155,7 +155,7 @@ export function actualProgress(plan: SavedPlan,now=new Date()) {
 }
 export function inventoryCoverage(plan:SavedPlan,now=new Date()) {
  const used=plan.events.filter(e=>e.status==='completed').reduce((n,e)=>n+e.amountMg,0);
- const supply=plan.inventoryTotalMg===null?null:Math.max(0,plan.inventoryTotalMg-used);
+ const supply=plan.inventoryTotalMg===null?null:plan.inventoryTotalMg-used;
  const pending=plan.events.filter(e=>e.status==='pending'&&new Date(e.scheduledAt)>=now);
  const required=pending.reduce((n,e)=>n+e.amountMg,0);let budget=supply??0,firstUncovered:Event|undefined;
  for(const e of pending){if(budget+1e-9<e.amountMg){firstUncovered=e;break;}budget-=e.amountMg;}

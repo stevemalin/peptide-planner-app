@@ -9,3 +9,4 @@ test('pause hides pending aggregate events, preserves history and resume restore
 
 
 test('inventory and syringe maintenance preserve event arrays across time zones',()=>{const p={...plan(),timezone:'Pacific/Auckland'},edit=A.beginActiveEdit(p);edit.inventoryChange={kind:'add',value:'10'};edit.draft.syringeCapacityUnits=30;const next=A.applyActiveEdit(store(p),edit,now).active;assert.deepEqual(next.events,p.events);assert.equal(next.inventoryTotalMg,150);edit.draft.stages[0].amountMg='3';assert.throws(()=>A.applyActiveEdit(store(p),edit,now),/time zone/);});
+test('completed logging can pass zero inventory without blocking and reports the deficit',()=>{let p=plan();p.inventoryTotalMg=.5;p=E.logEvent(p,p.events[0].id,'completed',now);const coverage=E.inventoryCoverage(p,now),projection=I.inventoryProjection(p,now);assert.equal(coverage.supply,-.5);assert.equal(coverage.enough,false);assert.equal(projection.vials,-.05);assert.equal(p.events[0].status,'completed');});
