@@ -5,7 +5,7 @@ import{setupOriginFor}from'./reference-setup';
 import type{SetupOrigin}from'./reference-setup';
 import type { Compound, PlanTemplate } from './content';
 import { calculate } from './planning';
-export type Schedule = { kind: 'daily' | 'weekly' | 'intervalDays' | 'intervalHours'; days: number[]; times: string[]; interval: number | null; timesPerWeek?: number | null };
+export type Schedule = { kind: 'daily' | 'weekly' | 'intervalDays' | 'intervalHours' | 'cycle'; days: number[]; times: string[]; interval: number | null; timesPerWeek?: number | null; cycleOn?: number | null; cycleOff?: number | null };
 export type Stage = { id: string; amountMg: string; amountUnit: 'mg'|'mcg'; weeks: string; duration?:StageDuration; durationWeeks?:number|string; override: Schedule | null };
 export type Origin = { title: string; sourceClass: string; sourceTitle: string; sourceIds: string[]; originalStages: unknown[]; originalReference: Record<string, any>; packVersion: string; disclaimer?: string };
 export type Draft = { pausedAt?:string|null; indefinite?:boolean; inventoryTracking?:boolean; id: string; compoundId: string; compoundName: string; origin: Origin | null; customized: boolean; stages: Stage[]; defaultSchedule: Schedule | null; breakWeeks: string; startDate: string; vialMg: string; waterMl: string; initialVials: string; setupOrigin?:SetupOrigin|null; syringeCapacityUnits?:30|50|100|null; blendComposition?:{component:string;amountMg:number}[]; uxDefaults?: string[]; reviewed: boolean; reminderEnabled: boolean; reminderOffsetMinutes: number };
@@ -30,12 +30,12 @@ export const storedAmount=(text:string,unit?:string)=>text.trim()===''?'':Number
 export function scheduleSummary(s: Schedule | null) {
   if(!s)return 'Choose a schedule…';
   const names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const pattern=s.kind==='daily'?'Daily':s.kind==='weekly'?(s.days.length===1&&s.times.length<=1?'Once weekly':s.days.length?(s.days.length*Math.max(1,s.times.length))+'× per week':s.timesPerWeek===1?'Once weekly':s.timesPerWeek?s.timesPerWeek+'× per week':'Choose frequency')+' · '+(s.days.length?s.days.map(d=>names[d]).join(' / '):'Choose days'):s.kind==='intervalDays'?'Every '+(s.interval??'…')+' days':'Every '+(s.interval??'…')+' hours';
+  const pattern=s.kind==='daily'?'Daily':s.kind==='weekly'?(s.days.length===1&&s.times.length<=1?'Once weekly':s.days.length?(s.days.length*Math.max(1,s.times.length))+'× per week':s.timesPerWeek===1?'Once weekly':s.timesPerWeek?s.timesPerWeek+'× per week':'Choose frequency')+' · '+(s.days.length?s.days.map(d=>names[d]).join(' / '):'Choose days'):s.kind==='intervalDays'?'Every '+(s.interval??'…')+' days':s.kind==='cycle'?(s.cycleOn??'…')+' days on / '+(s.cycleOff??'…')+' days off':'Every '+(s.interval??'…')+' hours';
   return pattern+' · '+(s.times.filter(Boolean).map(timeLabel).join(' / ')||'Choose time');
 }
 export function scheduleError(s: Schedule | null): string | null {
   if(!s)return 'Choose a schedule.';
-  if(!['daily','weekly','intervalDays','intervalHours'].includes(s.kind))return 'Choose a supported schedule.';
+  if(!['daily','weekly','intervalDays','intervalHours','cycle'].includes(s.kind))return 'Choose a supported schedule.';
   if(!s.times.length || s.times.some(t=>!/^([01]\d|2[0-3]):[0-5]\d$/.test(t)))return 'Choose a valid time.';
   if(new Set(s.times).size!==s.times.length)return 'Scheduled times must be different.';
   if(s.times.length>8)return 'Use up to eight times per day.';
@@ -44,6 +44,7 @@ export function scheduleError(s: Schedule | null): string | null {
   if(s.kind==='weekly' && s.timesPerWeek && s.days.length!==s.timesPerWeek)return 'Choose exactly '+s.timesPerWeek+' weekdays.';
   if(['intervalDays','intervalHours'].includes(s.kind) && (!Number.isInteger(s.interval)||s.interval!<1||s.interval!>365))return 'Enter an interval from 1 to 365.';
   if(s.kind==='intervalHours' && s.times.length!==1)return 'An hourly interval uses one starting time.';
+  if(s.kind==='cycle'&&(!Number.isInteger(s.cycleOn)||!Number.isInteger(s.cycleOff)||s.cycleOn!<1||s.cycleOn!>30||s.cycleOff!<1||s.cycleOff!>30))return 'Choose 1–30 days on and 1–30 days off.';
   return null;
 }
 export function newDraft(compound: Compound, mode='custom'): Draft {
@@ -127,7 +128,8 @@ export function generateEvents(d: Draft): Event[] {
    for(let ms=anchorMs+Math.max(0,Math.ceil((startMs-anchorMs)/interval))*interval;ms<endMs;ms+=interval){dates.push(new Date(ms));if(dates.length>10000)throw Error('Schedule exceeds 10,000 events.');}
   } else for(let n=0;n<length;n++){
    const day=addDays(start,n),weekday=parseDate(day)!.getDay();
-   const matches=schedule.kind==='daily'||schedule.kind==='weekly'&&schedule.days.includes(weekday)||schedule.kind==='intervalDays'&&daysBetween(anchor,day) % schedule.interval! === 0;
+   const cyclePosition=schedule.kind==='cycle'?daysBetween(anchor,day)%((schedule.cycleOn??0)+(schedule.cycleOff??0)):0;
+   const matches=schedule.kind==='daily'||schedule.kind==='weekly'&&schedule.days.includes(weekday)||schedule.kind==='intervalDays'&&daysBetween(anchor,day) % schedule.interval! === 0||schedule.kind==='cycle'&&cyclePosition<(schedule.cycleOn??0);
    if(matches)for(const time of [...schedule.times].sort())dates.push(atTime(day,time));
   }
   for(const date of dates){const scheduledAt=date.toISOString();events.push({id:d.id+':'+stage.id+':'+scheduledAt,stageId:stage.id,stageIndex:i,scheduledAt,localDate:localDate(date),amountMg:Number(stage.amountMg),amountUnit:stage.amountUnit||'mg',calculation:calculate(d.vialMg,d.waterMl,stage.amountMg)!,status:'pending'});if(events.length>10000)throw Error('Schedule exceeds 10,000 events. Reduce the schedule or plan length.');}
@@ -184,6 +186,17 @@ export function referenceDrawComponents(raw:Record<string,any>){
 }
 
 export function sameSchedule(a:Schedule|null,b:Schedule|null){
- const key=(v:Schedule|null)=>v?JSON.stringify({kind:v.kind,days:v.kind==='weekly'?[...v.days].sort():[],times:[...v.times].sort(),interval:v.kind.startsWith('interval')?v.interval:null}):null;
+ const key=(v:Schedule|null)=>v?JSON.stringify({kind:v.kind,days:v.kind==='weekly'?[...v.days].sort():[],times:[...v.times].sort(),interval:v.kind.startsWith('interval')?v.interval:null,cycleOn:v.kind==='cycle'?v.cycleOn:null,cycleOff:v.kind==='cycle'?v.cycleOff:null}):null;
  return key(a)===key(b);
+}
+
+
+export type TaperOptions={type:'fixed'|'percentage';increment:string;period:string;periodUnit:'days'|'weeks';steps:string};
+export function buildTaperStages(first:Stage,options:TaperOptions):Stage[]{
+ const start=Number(first.amountMg),increment=Number(options.increment),period=Number(options.period),steps=Number(options.steps);
+ if(!Number.isFinite(start)||start<=0)throw Error('Enter the first-stage amount before building a taper.');
+ if(!Number.isFinite(increment)||increment<=0)throw Error('Enter a positive taper increase.');
+ if(!Number.isSafeInteger(period)||period<1||(options.periodUnit==='days'?period>728:period>104))throw Error('Choose a valid taper period.');
+ if(!Number.isSafeInteger(steps)||steps<2||steps>24)throw Error('Choose 2–24 taper stages.');
+ return Array.from({length:steps},(_,index)=>{const amount=options.type==='fixed'?start+increment*index:start*Math.pow(1+increment/100,index);return {...first,id:uid(),amountMg:String(Number(amount.toFixed(8))),weeks:options.periodUnit==='weeks'?String(period):'',duration:{value:String(period),unit:options.periodUnit},override:index===0?first.override:null};});
 }

@@ -29,14 +29,14 @@ export function applyActiveEdit(store:Store,edit:ActiveEdit,now=new Date()):Stor
   const original=priorById.get(e.id);
   return original?.status==='pending'&&original.amountMg===e.amountMg&&JSON.stringify(original.calculation)===JSON.stringify(e.calculation)?{...e,...(original.snoozedUntil?{snoozedUntil:original.snoozedUntil}:{})}:e;
  });
- let inventoryTotalMg=plan.inventoryTotalMg;
- if(edit.supplyVials!==''){
+ let inventoryTotalMg=draft.inventoryTracking===false?null:plan.inventoryTotalMg;
+ if(draft.inventoryTracking!==false&&edit.supplyVials!==''){
   if(!/^\d+$/.test(edit.supplyVials)||!Number.isSafeInteger(Number(edit.supplyVials)))throw Error('Enter a whole number of individual vials remaining, or leave it blank.');
   inventoryTotalMg=inventoryCoverage(plan,now).used+Number(edit.supplyVials)*Number(draft.vialMg);
   if(!Number.isFinite(inventoryTotalMg))throw Error('The supply quantity is too large.');
  }
- if(edit.inventoryChange)inventoryTotalMg=adjustedInventory(plan,edit.inventoryChange,Number(draft.vialMg),now);
- const ledger=edit.inventoryChange?[...(plan.inventoryLedger??[]),{at:now.toISOString(),kind:edit.inventoryChange.kind,previousTotalMg:plan.inventoryTotalMg,totalMg:inventoryTotalMg!}]:plan.inventoryLedger;
+ if(draft.inventoryTracking!==false&&edit.inventoryChange)inventoryTotalMg=adjustedInventory(plan,edit.inventoryChange,Number(draft.vialMg),now);
+ const ledger=draft.inventoryTracking!==false&&edit.inventoryChange?[...(plan.inventoryLedger??[]),{at:now.toISOString(),kind:edit.inventoryChange.kind,previousTotalMg:plan.inventoryTotalMg,totalMg:inventoryTotalMg!}]:plan.inventoryLedger;
  const revised:SavedPlan={...plan,...draft,...(ledger?{inventoryLedger:ledger}:{}),inventoryTotalMg,events:eventsChanged?[...retained,...upcoming].sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt)):plan.events,revisions:[...(plan.revisions??[]),{changedAt:now.toISOString(),previous:planDraft(plan),inventoryTotalMg:plan.inventoryTotalMg}]};
  return {...replacePlan(store,revised),activeEdit:null};
 }
