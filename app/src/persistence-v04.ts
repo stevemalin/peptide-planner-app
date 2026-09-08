@@ -1,4 +1,4 @@
-import {decodeStore,activate,uid,localDate,daysBetween,type Store,type Draft,type Schedule,type Event} from './engine';
+import {decodeStore,activate,uid,localDate,daysBetween,type Store,type Draft,type Schedule,type Event,type SavedPlan} from './engine';
 import {calculate} from './planning';
 import {normalizeStoreV04} from './multiplan-migration-v04';
 export const STORAGE_KEY_V04='peptide-planner:local:v04';
@@ -170,7 +170,7 @@ export function importReadyExternalPeptides(store:Store,preview:ExternalCsvPrevi
   const schedule:Schedule=setup.scheduleKind==='daily'?{kind:'daily',days:[],times:setup.scheduleTimes,interval:null}:{kind:'weekly',days:setup.scheduleDays,times:setup.scheduleTimes,interval:null,timesPerWeek:setup.scheduleDays.length};
   const stageId=uid(),planId=uid(),fallbackDose=preview.rows.find(row=>row.recordType==='log'&&importName(row.peptideName)===setup.key)?.doseMg??1;
   const draft:Draft={id:planId,compoundId:setup.compoundId,compoundName:setup.peptideName,origin:null,customized:false,stages:[{id:stageId,amountMg:setup.doseMg||String(fallbackDose),amountUnit:setup.doseUnit,weeks:String(totalWeeks),override:null}],defaultSchedule:schedule,breakWeeks:'0',startDate:setup.startDate,vialMg:setup.vialMg,waterMl:setup.waterMl,initialVials:'',reviewed:true,reminderEnabled:false,reminderOffsetMinutes:0};
-  const active=activate(draft,now),today=localDate(now);
+  const active:SavedPlan=setup.archived?{...draft,defaultSchedule:null,activatedAt:now.toISOString(),events:[],inventoryTotalMg:null,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone}:activate(draft,now),today=localDate(now);
   const future=setup.archived?[]:active.events.filter(event=>event.localDate>=today);
   const sourceRows=preview.rows.filter(row=>row.recordType==='log'&&importName(row.peptideName)===setup.key);
   const seen=new Set<string>(),history:Event[]=[];

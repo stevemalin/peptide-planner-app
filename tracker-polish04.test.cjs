@@ -175,7 +175,7 @@ test('guided import setup requires only missing activation fields and creates a 
  assert.deepEqual(setup.scheduleDays,[1,4]);
  assert.deepEqual(setup.scheduleTimes,['09:00']);
  assert.deepEqual(externalSetupErrors(setup),['Enter the vial strength.','Enter the bacteriostatic water volume.','Choose 1–104 future tracking weeks or select Indefinite.']);
- assert.deepEqual(externalSetupErrors({...setup,archived:true}),[]);
+ assert.deepEqual(externalSetupErrors({...setup,archived:true,scheduleDays:[],scheduleTimes:[]}),[]);
  Object.assign(setup,{vialMg:'20',waterMl:'2',futureWeeks:'12'});
  assert.deepEqual(externalSetupErrors(setup),[]);
  assert.deepEqual(externalSetupErrors({...setup,indefinite:true,futureWeeks:''}),[]);
@@ -192,7 +192,7 @@ test('guided import setup requires only missing activation fields and creates a 
  assert.ok(plan.events.some(event=>event.status==='pending'&&event.localDate>='2026-09-08'));
  assert.ok(plan.events.every(event=>event.localDate>='2026-09-08'||event.status!=='pending'));
  assert.equal(plan.reminderEnabled,false);
- const archived=importReadyExternalPeptides(blank,preview,[{...setup,archived:true,indefinite:false,futureWeeks:''}],new Date('2026-09-08T12:00:00'));
+ const archived=importReadyExternalPeptides(blank,preview,[{...setup,archived:true,indefinite:false,futureWeeks:'',vialMg:'',waterMl:'',scheduleDays:[],scheduleTimes:[]}],new Date('2026-09-08T12:00:00'));
  assert.equal(archived.activeCreated,0);
  assert.equal(archived.archivedCreated,1);
  assert.equal(archived.store.activePlans.length,0);
@@ -202,7 +202,7 @@ test('guided import setup requires only missing activation fields and creates a 
 });
 
 test('guided import UI provides per-peptide missing-field cards and imports only ready selections',()=>{
- for(const term of ['READY TO IMPORT','READY TO ARCHIVE','Will import','Archive instead of active tracking','Indefinite — no planned end date','Vial strength','Bacteriostatic water added','Continue tracking for','Schedule days','Import all ready peptides','Importing…','Import complete','private pre-import backup'])assert.match(app,new RegExp(term,'i'));
+ for(const term of ['READY TO IMPORT','READY TO ARCHIVE','Will import','Archive instead of active tracking','Indefinite — no planned end date','Vial strength','\\(bac water\\)','Continue tracking for','Schedule days','Import all ready peptides','Importing…','Import complete','Import error:','View imported peptides','private pre-import backup'])assert.match(app,new RegExp(term,'i'));
  assert.match(app,/externalSetupErrors/);
  assert.match(app,/importReadyExternalPeptides/);
  assert.match(app,/borderColor:'#c93f55'/);
