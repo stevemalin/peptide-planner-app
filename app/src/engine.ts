@@ -8,7 +8,7 @@ import { calculate } from './planning';
 export type Schedule = { kind: 'daily' | 'weekly' | 'intervalDays' | 'intervalHours'; days: number[]; times: string[]; interval: number | null; timesPerWeek?: number | null };
 export type Stage = { id: string; amountMg: string; amountUnit: 'mg'|'mcg'; weeks: string; duration?:StageDuration; durationWeeks?:number|string; override: Schedule | null };
 export type Origin = { title: string; sourceClass: string; sourceTitle: string; sourceIds: string[]; originalStages: unknown[]; originalReference: Record<string, any>; packVersion: string; disclaimer?: string };
-export type Draft = { pausedAt?:string|null; id: string; compoundId: string; compoundName: string; origin: Origin | null; customized: boolean; stages: Stage[]; defaultSchedule: Schedule | null; breakWeeks: string; startDate: string; vialMg: string; waterMl: string; initialVials: string; setupOrigin?:SetupOrigin|null; syringeCapacityUnits?:30|50|100|null; blendComposition?:{component:string;amountMg:number}[]; uxDefaults?: string[]; reviewed: boolean; reminderEnabled: boolean; reminderOffsetMinutes: number };
+export type Draft = { pausedAt?:string|null; indefinite?:boolean; inventoryTracking?:boolean; id: string; compoundId: string; compoundName: string; origin: Origin | null; customized: boolean; stages: Stage[]; defaultSchedule: Schedule | null; breakWeeks: string; startDate: string; vialMg: string; waterMl: string; initialVials: string; setupOrigin?:SetupOrigin|null; syringeCapacityUnits?:30|50|100|null; blendComposition?:{component:string;amountMg:number}[]; uxDefaults?: string[]; reviewed: boolean; reminderEnabled: boolean; reminderOffsetMinutes: number };
 export type Event = { id: string; stageId: string; stageIndex: number; scheduledAt: string; localDate: string; amountMg: number; amountUnit: 'mg'|'mcg'; calculation: NonNullable<ReturnType<typeof calculate>>; calculationUnavailable?: boolean; status: 'pending' | 'completed' | 'skipped'; completedAt?: string; skippedAt?: string; snoozedUntil?: string };
 export type PlanRevision = {changedAt:string;previous:Draft;inventoryTotalMg:number|null};
 export type ActiveEdit = {planId:string;draft:Draft;baseSettings:string;supplyVials:string;returnTo?:'tracker'|'plans'|'planDetail';inventoryChange?:import('./inventory-maintenance').InventoryChange};
@@ -47,7 +47,7 @@ export function scheduleError(s: Schedule | null): string | null {
   return null;
 }
 export function newDraft(compound: Compound, mode='custom'): Draft {
- return {id:uid(),compoundId:compound.id,compoundName:compound.name,origin:null,customized:false,stages:Array.from({length:mode==='staged'?3:1},()=>({id:uid(),amountMg:'',amountUnit:'mg',weeks:'',override:null})),defaultSchedule:null,breakWeeks:'',startDate:'',vialMg:compound.id==='glow-70'?'70':'',waterMl:'',initialVials:'',reviewed:false,reminderEnabled:true,reminderOffsetMinutes:0};
+ return {id:uid(),compoundId:compound.id,compoundName:compound.name,origin:null,customized:false,stages:Array.from({length:mode==='staged'?3:1},()=>({id:uid(),amountMg:'',amountUnit:'mg',weeks:'',override:null})),defaultSchedule:null,breakWeeks:'',startDate:'',vialMg:compound.id==='glow-70'?'70':'',waterMl:'',initialVials:'',inventoryTracking:true,reviewed:false,reminderEnabled:true,reminderOffsetMinutes:0};
 }
 export function importReference(compound: Compound, template?: PlanTemplate): Draft {
  const draft=newDraft(compound);const raw:Record<string,any>=JSON.parse(JSON.stringify(template?template.suppliedPlan:compound.researchPracticeReference?practiceTransfer(compound.researchPracticeReference):compound.supplied?.commonResearchPractice||{}));
@@ -137,7 +137,7 @@ export function generateEvents(d: Draft): Event[] {
  return events.sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt));
 }
 export function activate(d: Draft,now=new Date()):SavedPlan {
- return {...JSON.parse(JSON.stringify(d)),stages:d.stages.map(s=>({...s,amountUnit:s.amountUnit||'mg'})),activatedAt:now.toISOString(),events:generateEvents(d),inventoryTotalMg:d.initialVials===''?null:Number(d.initialVials)*Number(d.vialMg),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone};
+ return {...JSON.parse(JSON.stringify(d)),stages:d.stages.map(s=>({...s,amountUnit:s.amountUnit||'mg'})),activatedAt:now.toISOString(),events:generateEvents(d),inventoryTotalMg:d.inventoryTracking===false||d.initialVials===''?null:Number(d.initialVials)*Number(d.vialMg),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone};
 }
 export function eventStatus(e: Event,now=new Date()): 'Completed'|'Skipped'|'Missed'|'Scheduled'|'Future' {
  if(e.status==='completed')return 'Completed';if(e.status==='skipped')return 'Skipped';
