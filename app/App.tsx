@@ -26,6 +26,7 @@ import {
   Platform,
   Share,
   useWindowDimensions,
+  Modal,
 } from "react-native";
 
 import {library as compounds,searchLibrary as searchCompounds} from "./src/library-v04";
@@ -169,6 +170,7 @@ export default function App() {
   const [importError,setImportError]=useState('');
   const [importSetups,setImportSetups]=useState<ExternalPeptideSetup[]>([]);
   const [importResult,setImportResult]=useState('');
+  const [importSummary,setImportSummary]=useState('');
   const [importing,setImporting]=useState(false);
   const changeImportSetup=(key:string,patch:Partial<ExternalPeptideSetup>)=>setImportSetups(current=>current.map(item=>item.key===key?{...item,...patch}:item));
   const executeReadyImports=async(ready:ExternalPeptideSetup[])=>{
@@ -178,8 +180,10 @@ export default function App() {
       await AsyncStorage.setItem('peptide-planner:pre-import:'+new Date().toISOString(),encodePlannerStore(saved.store));
       let report:any=null;
       await saved.update(old=>{report=importReadyExternalPeptides(old,importPreview,ready,new Date());return report.store;});
-      setImportResult('Import complete · '+report.activeCreated+' active · '+report.archivedCreated+' archived · '+report.historyAdded+' history entries added'+(report.duplicatesSkipped?' · '+report.duplicatesSkipped+' duplicates skipped':''));
-      setImportSetups(current=>current.filter(item=>!report.created.includes(item.peptideName)));
+      const total=report.activeCreated+report.archivedCreated;
+      const summary=total+' '+(total===1?'peptide':'peptides')+' imported · '+report.activeCreated+' active · '+report.archivedCreated+' archived · '+report.historyAdded+' history entries added'+(report.duplicatesSkipped?' · '+report.duplicatesSkipped+' duplicate skipped':'');
+      setImportResult(summary);setImportSummary(summary);
+      setImportPreview(null);setImportSetups([]);setImportText('');
     }catch(error){setImportResult('');setImportError('Import was not completed. '+String(error).replace(/^Error:\s*/,''));}
     finally{setImporting(false);}
   };
@@ -212,7 +216,7 @@ export default function App() {
  const [discardEdits,setDiscardEdits]=useState(false);
   const editing=editingActive&&!!saved.store.activeEdit&&['activeEditor','plan','review','schedule','calc'].includes(screen);
   const plans=getActivePlans(saved.store);
-  const focused=plans.find(p=>p.id===selectedPlanId)??plans[0]??null;
+  const focused=plans.find(p=>p.id===selectedPlanId)??saved.store.archives.find(p=>p.id===selectedPlanId)??plans[0]??null;
   const scopedStore={...saved.store,active:focused,draft:editing?saved.store.activeEdit!.draft:screen==='planDetail'?null:saved.store.draft};
   const scopedUpdate=(change:Parameters<typeof saved.update>[0])=>saved.update(old=>{if(editing&&old.activeEdit){const changed=change({...old,active:focused,draft:old.activeEdit.draft});return {...old,activeEdit:{...old.activeEdit,draft:changed.draft!}};}const next=scopedPlanUpdate(old,focused?.id??null,change);if(getActivePlans(next).length>getActivePlans(old).length)setSelectedPlanId(getActivePlans(next).at(-1)!.id);return next;});
   const openPlan=(id:string)=>{setEditingActive(false);setSelectedPlanId(id);setScreen('planDetail');};
@@ -431,6 +435,8 @@ export default function App() {
       <Pressable accessibilityRole="button" onPress={()=>setScreen('settings')}><Text style={styles.back}>‹ My data & privacy</Text></Pressable>
       <Text style={styles.kicker}>IMPORT DATA</Text><Text style={styles.detailTitle}>Bring your history with you</Text>
       <Text style={styles.detailMeta}>Preview a supported CSV before anything is added. Importing never silently replaces existing EZPep Planner data.</Text>
+      {!!importResult&&!importPreview&&<View style={[styles.lessonCard,{borderColor:'#2f9e62',borderWidth:2,backgroundColor:'#f1fbf5'}]}><Text style={[styles.sourceClass,{color:'#178066'}]}>IMPORT COMPLETE</Text><Text style={styles.lessonTitle}>{importResult}</Text><AppButton label="View imported peptides" onPress={()=>setScreen('plans')}/><AppButton label="Import another CSV" secondary onPress={()=>setImportResult('')}/></View>}
+      <Modal visible={!!importSummary} transparent animationType="fade" onRequestClose={()=>setImportSummary('')}><View style={styles.importModalShade}><View style={styles.importModalCard}><Text style={[styles.sourceClass,{color:'#178066'}]}>IMPORT COMPLETE</Text><Text style={styles.importModalTitle}>{importSummary.split(' · ')[0]}</Text><Text style={styles.nextText}>{importSummary.split(' · ').slice(1).join(' · ')}</Text><AppButton label="View My Peptides" onPress={()=>{setImportSummary('');setScreen('plans');}}/><AppButton label="Stay here" secondary onPress={()=>setImportSummary('')}/></View></View></Modal>
       <View style={styles.lessonCard}><Text style={styles.sourceClass}>SUPPORTED NOW</Text><Text style={styles.lessonTitle}>Peptide Library CSV export</Text><Text style={styles.nextText}>Choose the exported CSV on the web build, or paste its contents below. The preview checks peptide names, schedules, inventory, units and possible duplicate history.</Text><AppButton label="Choose CSV file" onPress={chooseImportFile}/></View>
       <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Paste CSV for preview</Text><TextInput accessibilityLabel="CSV data" multiline value={importText} onChangeText={setImportText} placeholder="Paste CSV contents here…" style={[styles.smallInput,{minHeight:150,textAlignVertical:'top'}]}/><AppButton label="Preview imported data" secondary onPress={()=>previewImport(importText)}/>{!!importError&&<Text accessibilityLiveRegion="polite" style={[styles.helper,{color:'#b2384a',marginTop:10}]}>{importError}</Text>}</View>
       {importPreview&&<View style={styles.lessonCard}><Text style={styles.sourceClass}>IMPORT PREVIEW</Text><Text style={styles.lessonTitle}>{importPreview.peptides.length} peptides found</Text>
@@ -625,6 +631,9 @@ export default function App() {
 
 
 const styles = StyleSheet.create({
+  importModalShade:{flex:1,backgroundColor:'rgba(9,20,49,0.55)',alignItems:'center',justifyContent:'center',padding:24},
+  importModalCard:{width:'100%',maxWidth:430,padding:22,borderRadius:24,backgroundColor:'#fff'},
+  importModalTitle:{fontSize:27,lineHeight:33,fontWeight:'800',color:COLORS.ink,marginTop:5},
   welcomeContent:{paddingHorizontal:22,paddingTop:28,paddingBottom:40},
   welcomeBrand:{width:"100%",maxWidth:390,height:106,alignItems:"flex-start",justifyContent:"center",marginBottom:18},
   welcomeBrandImage:{width:"100%",height:"100%"},
