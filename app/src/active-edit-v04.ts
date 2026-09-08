@@ -29,7 +29,8 @@ export function applyActiveEdit(store:Store,edit:ActiveEdit,now=new Date()):Stor
   const original=priorById.get(e.id);
   return original?.status==='pending'&&original.amountMg===e.amountMg&&JSON.stringify(original.calculation)===JSON.stringify(e.calculation)?{...e,...(original.snoozedUntil?{snoozedUntil:original.snoozedUntil}:{})}:e;
  });
- let inventoryTotalMg=draft.inventoryTracking===false?null:plan.inventoryTotalMg;
+ // Disabling warnings is a presentation preference, not permission to erase the ledger.
+ let inventoryTotalMg=plan.inventoryTotalMg;
  if(draft.inventoryTracking!==false&&edit.supplyVials!==''){
   if(!/^\d+$/.test(edit.supplyVials)||!Number.isSafeInteger(Number(edit.supplyVials)))throw Error('Enter a whole number of individual vials remaining, or leave it blank.');
   inventoryTotalMg=inventoryCoverage(plan,now).used+Number(edit.supplyVials)*Number(draft.vialMg);
