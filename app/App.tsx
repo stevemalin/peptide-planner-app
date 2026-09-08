@@ -412,6 +412,10 @@ export default function App() {
         <Text style={styles.kicker}>BUILD PLAN</Text>
         <Text style={styles.heroTitle}>Peptide Research{"\n"}Made Simple</Text>
         <Text style={styles.heroSub}>Understand. Plan. Calculate. Track.</Text>
+        <View style={styles.professorWelcomeCard}>
+          <Image accessibilityLabel="Professor Lynch" source={require("./assets/professor-lynch-avatar.webp")} resizeMode="contain" style={styles.professorWelcomeAvatar}/>
+          <View style={styles.professorWelcomeBubble}><View style={styles.professorBubbleTail}/><Text style={styles.professorName}>A QUICK WORD FROM PROFESSOR LYNCH</Text><Text style={styles.professorMessage}>Choose a peptide to review its research context, then build a plan from the information you enter. I’ll help explain each step without choosing amounts or schedules for you.</Text></View>
+        </View>
 
         <View style={styles.featureRow}>
           {[

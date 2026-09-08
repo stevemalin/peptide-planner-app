@@ -90,3 +90,11 @@ test('planner persistence keeps and automatically restores a last-known-good loc
  assert.match(store,/last complete local save was recovered automatically/);
  assert.match(store,/AsyncStorage\.setItem\(RECOVERY_STORAGE_KEY,encoded\)/);
 });
+
+
+test('Build Plan hero introduces Professor Lynch without selecting plan values',()=>{
+ assert.match(app,/Peptide Research/);
+ assert.match(app,/A QUICK WORD FROM PROFESSOR LYNCH/);
+ assert.match(app,/review its research context/);
+ assert.match(app,/without choosing amounts or schedules for you/);
+});
