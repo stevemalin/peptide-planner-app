@@ -13,7 +13,7 @@ React Native 0.86 / React 19.2 with Expo SDK 57 and TypeScript. The application 
 - `Workspace.tsx`, `StageCard.tsx`, `ScheduleSheet.tsx`, `VialSetup.tsx`, `Syringe.tsx`: review, plan editing, scheduling, calculator and syringe UI.
 - `Tracker.tsx`: Today, Calendar and History; inventory derives from saved plans/events.
 
-Flow: **Pep School → Guide → My Plan / Review → Schedule → Vial & Calculation → Start Plan → Tracker**. Compounds: **Retatrutide, Tirzepatide, Semaglutide, Glow 70 mg, GHK-Cu and KPV**. The approved identity is EZPep Planner with the dimensional EZP/DNA monogram; Easy Pep Planner is the plain-language pronunciation. Do not invent scientific or dosing content; preserve source classes and provenance.
+Flow: **Learn / Pep School → Build Plan → Amount & Stages → Schedule → Vial & Calculation → Review → Start Plan → Today / My Peptides**. Compounds: **Retatrutide, Tirzepatide, Semaglutide, Glow 70 mg, GHK-Cu and KPV**. The approved identity is EZPep Planner with the dimensional EZP/DNA monogram; Easy Pep Planner is the plain-language pronunciation. Do not invent scientific or dosing content; preserve source classes and provenance.
 
 ## Android testing
 
@@ -31,7 +31,7 @@ No Google Play publishing, cloud backend or account is configured. An Android de
 
 ## Persistence and notifications
 
-AsyncStorage stores the draft, active plan, archived history, provenance, setup defaults, start date, schedules, generated events, logging timestamps, calculation inputs, inventory and selected syringe capacity under `peptide-planner:local:v03`. Compatible older saved data is retained. Clearing Expo Go storage deletes local data; there is no cloud backup.
+AsyncStorage stores drafts, active plans, archived history, provenance, setup defaults, dates, schedules, generated events, logging timestamps, calculation inputs, inventory, edits and syringe capacity under `peptide-planner:local:v04`. Compatible v3 data is validated and migrated while the original v3 bytes remain untouched. Successful writes also maintain a last-known-good local recovery copy, and More → Preferences & Data can export a private JSON backup. Clearing browser/app storage still deletes local data; there is no account or cloud synchronization.
 
 The reminder data model is implemented. Notification loading is guarded: Expo Go skips the notification package to avoid its unsupported Android remote-push initialization path. OS reminder delivery is paused in Expo Go; local-notification delivery in a supported development build still needs physical-device validation. No remote push token service is configured.
 

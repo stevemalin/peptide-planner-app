@@ -106,3 +106,17 @@ Pep School now contains 21 current AURAPEP compound/blend families. This pass ad
 All six are custom-only and transfer no amount, schedule, vial, diluent or syringe defaults. The library now has 21 profiles and related-compound routes for every newly added family.
 
 Validation: 103 automated tests passed; TypeScript passed; Expo dependencies are compatible; Expo Doctor passed 21/21. Browser inspection passed at 320, 412 and 1366 pixels with 21 profiles, no overflow and no console/runtime errors. The 320-pixel School screenshot was visually reviewed. Browser acceptance only; physical Android acceptance remains outstanding. Main and AURAPEP production were untouched.
+
+
+## Mobile-first guidance and local-data safeguards — 2026-09-07 Pacific
+
+- Learn navigation (Library, Courses, Quick Facts and Community) appears before the Pep School hero so the section controls are immediately available.
+- The five persistent destinations use the approved full-colour icon set while retaining the earlier vector/icon work in source as a fallback.
+- Professor Lynch help is reusable and contextual. Plan-mode choices and all eight active-plan maintenance areas can explain unfamiliar terms without crowding the main forms or supplying plan values.
+- Guided setup validation is field-local: invalid stage amounts/durations, schedule choices, start date, break, vial strength, diluent and optional supply visibly mark their own control or card. Validation opens collapsed stages and keeps unexpected system/save failures separate.
+- Stage cards expose a visible Remove/trash control without first opening the card, require confirmation, renumber after removal and retain at least one stage.
+- Quick Start Onboarding can be skipped with confirmation and restarted from More → Preferences without altering plans, history or settings.
+- More → Preferences & Data exports the complete local planner store as a private JSON backup. Web downloads a file; native uses the operating-system share sheet. The app does not upload it.
+- Every successful store write also refreshes a separate last-known-good record. If the primary v4 record becomes unreadable, startup validates the recovery record, restores it and reports that recovery occurred. An unreadable primary with no valid recovery still fails closed instead of resetting plans.
+
+Validation: 115 automated tests passed and TypeScript passed after these changes. This remains browser/source acceptance; physical Android gestures, local notifications and install persistence still require the planned development-build device gate. No production deployment, main merge, customer integration or cloud account was added.
