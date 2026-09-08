@@ -79,7 +79,7 @@ Customer navigation is Learn, Build Plan, Today, My Peptides, More. Today is the
 
 Stages may store explicit `duration: { value, unit: 'days' | 'weeks' }`. Legacy `weeks` or `durationWeeks` values are interpreted as Weeks on read, without rewriting saved events or active-edit fingerprints. Calendar-day offsets drive stage ranges, transitions, progress and event generation. Days are never encoded as fractional weeks. Existing historical events remain unchanged during active edits.
 
-Run `node --test duration04.test.cjs` and `node duration-ui04.cjs` for focused duration, migration, Tomorrow and navigation checks. Browser fixtures use isolated profiles; Steve's Chrome and Edge storage must remain separate and untouched.
+Run `node --test duration04.test.cjs` and `node duration-ui04.cjs` for focused duration, migration, Tomorrow and navigation checks. Browser fixtures use isolated profiles; Stone Lynch's Chrome and Edge storage must remain separate and untouched.
 
 ## Active peptide maintenance and inventory
 
@@ -89,4 +89,4 @@ Inventory keeps the existing total-mass-minus-logged-Taken model. Adding individ
 
 Inventory and syringe-only maintenance do not regenerate event records. Schedule/calculation edits regenerate future pending events while retaining every past or logged event. Setup provenance is retained and marked customized. Pause hides pending aggregate events and suppresses native reminder scheduling; dates continue and resume restores pending events. Archive retains history.
 
-`node --test maintenance04.test.cjs` covers maintenance, stock adjustments, logged consumption, projections and persistence. `MAINTENANCE_PROFILE` selects a new isolated directory for `node maintenance-ui04.cjs`; after restarting Expo, `node maintenance-ui04.cjs after` reopens those profiles and verifies exact saved state. Never point these tests at Steve's normal browser profile.
+`node --test maintenance04.test.cjs` covers maintenance, stock adjustments, logged consumption, projections and persistence. `MAINTENANCE_PROFILE` selects a new isolated directory for `node maintenance-ui04.cjs`; after restarting Expo, `node maintenance-ui04.cjs after` reopens those profiles and verifies exact saved state. Never point these tests at Stone Lynch's normal browser profile.

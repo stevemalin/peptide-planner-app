@@ -22,7 +22,7 @@ The Git baseline `main` remains `4360bffa2d14fe44a7774109ad6219cbeb9c5118`. Retu
 - TypeScript passed; Expo dependencies compatible; Expo Doctor 21/21 passed.
 - Original six full browser reference flows passed. Browser tests were updated only for intentional 0.4 navigation, storage, supply label and coexistence expectations.
 - Integrated browser checks passed at 320×915, 412×915 and 1366×915 with 1, 3, 6 and 10 active plans. Screenshots inspected; cramped 320px Tracker tabs/month controls corrected. Zero browser console/runtime errors.
-- Browser test data lives in isolated test profiles, never Steve's normal browser storage. Visual artifacts are ignored under `checks/`.
+- Browser test data lives in isolated test profiles, never Stone Lynch's normal browser storage. Visual artifacts are ignored under `checks/`.
 
 Run `npm test`, `npm run test:ui` (with `PLAYWRIGHT_CHANNEL=msedge` on this machine), and `npm run test:integration-ui` against `http://localhost:8081`. The last command currently uses installed Edge. From `app`, launch the browser build with `expo start --web --localhost --port 8081`.
 
@@ -124,7 +124,7 @@ Validation: 115 automated tests passed and TypeScript passed after these changes
 
 ## Invite-only beta readiness checklist — started 2026-09-08
 
-This checklist is the sustained release plan for moving from Steve's device-local prototype to a controlled multi-user beta. A checked item requires evidence; a code change or passing unit test alone does not close a phone-reported issue.
+This checklist is the sustained release plan for moving from Stone Lynch's device-local prototype to a controlled multi-user beta. A checked item requires evidence; a code change or passing unit test alone does not close a phone-reported issue.
 
 ### Gate 1 — feature-complete beta candidate
 
@@ -142,7 +142,7 @@ This checklist is the sustained release plan for moving from Steve's device-loca
 - [ ] Full unit, TypeScript, Expo dependency and Expo Doctor checks pass.
 - [ ] Complete browser flows pass at 320, 412 and desktop widths with zero runtime errors.
 - [ ] Fresh-device, upgrade, reload, backup/restore and multi-plan stress scenarios pass.
-- [ ] Steve completes the final owner acceptance checklist on the exact beta candidate.
+- [ ] Stone Lynch completes the final owner acceptance checklist on the exact beta candidate.
 
 ### Gate 3 — accounts and privacy foundation
 
