@@ -154,9 +154,9 @@ This checklist is the sustained release plan for moving from Stone Lynch's devic
 
 ### Gate 4 — beta feedback
 
-- [ ] Add a prominent Beta Feedback destination under More.
-- [ ] Connect the School Community area to the same beta-feedback destination while keeping submitted reports private.
-- [ ] Support bug, confusion, suggestion and calculation-concern categories.
+- [x] Add a prominent Beta Feedback destination under More.
+- [x] Connect the School Community area to the same private beta-feedback destination.
+- [x] Support bug, confusion, suggestion and calculation-concern categories.
 - [ ] Include app version, screen and device/browser metadata; include screenshots or plan details only with explicit tester permission.
 - [ ] Provide tester acknowledgement and an owner review workflow.
 
@@ -177,9 +177,10 @@ This checklist is the sustained release plan for moving from Stone Lynch's devic
 
 ### Evidence checkpoint — 2026-09-08
 
-- Current beta-candidate checks: TypeScript passed; Expo dependencies compatible; Expo Doctor 21/21; full suite 132/132; v0.4 suite 88/88.
+- Current beta-candidate checks: TypeScript passed; Expo dependencies compatible; Expo Doctor 21/21; full suite 132/132; v0.4 suite 89/89 after adding feedback regression coverage.
 - Browser inspection passed at 320, 412 and 1366 pixels with HTTP 200, no runtime/page errors and no horizontal overflow. Complete interactive flow acceptance remains open until the exact candidate is exercised end-to-end.
 - Inventory audit corrected a negative-balance display gap: the active editor now shows the actual deficit and explains that logging remains available.
 - Remaining Gate 1 focus: phone-sized plan/schedule acceptance, Today action parity, inventory action/warning acceptance, and final mobile failure/device-reported reconciliation.
+- Beta feedback foundation is available from More and Community. Before cloud accounts, it exports a private report locally and excludes active peptide names unless the tester explicitly opts in.
 
 Current active block: **Gate 1 — audit and finish core app functions.** Native and web notifications are not required to declare Gate 1 complete; reminder limitations must be accurately disclosed.
