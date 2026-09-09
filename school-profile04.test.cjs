@@ -37,3 +37,14 @@ test('5-Amino-1MQ keeps its numeric protocol preclinical and non-transferable',(
 test('NAD+ keeps its IV pharmacokinetic pilot route-specific and non-transferable',()=>{const start=expanded.indexOf("{id:'nad-plus'"),end=expanded.indexOf("{id:'mots-c'",start),entry=expanded.slice(start,end);assert.match(entry,/NAD-IV-PK-2019/);assert.match(entry,/10\.3389\/fnagi\.2019\.00257/);assert.match(entry,/11 men aged 30–55 years with BMI below 30 kg\/m²/);assert.match(entry,/eight received NAD\+ and three received saline control/);assert.match(entry,/one supervised intravenous infusion of 750 mg NAD\+ in normal saline over 6 hours/);assert.match(entry,/approximately 2 mg\/min \(3 μmol\/min\)/);assert.match(entry,/pharmacokinetics and metabolomic changes, not clinical effectiveness/);assert.match(entry,/cannot be converted into subcutaneous, intramuscular, oral-precursor or research-vial instructions/);assert.match(entry,/no amount, vial strength, diluent, syringe setting, schedule or stage transfers into Guide/);assert.match(entry,/referenceMode:'custom-only'/);});
 
 test('MOTS-c separates endogenous human observations from preclinical intervention',()=>{const start=expanded.indexOf("{id:'mots-c'"),entry=expanded.slice(start);assert.match(entry,/MOTSC-EXERCISE-2021/);assert.match(entry,/s41467-020-20790-0/);assert.match(entry,/10 sedentary healthy young men/);assert.match(entry,/no MOTS-c was administered to the human participants/);assert.match(entry,/young CD-1 outbred mice/);assert.match(entry,/daily intraperitoneal injection at 5 mg\/kg for 2 weeks/);assert.match(entry,/does not establish a human amount, route or schedule/);assert.match(entry,/does not provide a retail-vial reconstitution method/);assert.match(entry,/No amount, vial strength, diluent, syringe setting, schedule or stage transfers into Guide/);assert.match(entry,/referenceMode:'custom-only'/);});
+
+test('Wolverine and KLOW expose classified community references without Guide transfer',()=>{
+ const practice=fs.readFileSync('./app/src/research-practice.ts','utf8');
+ const library=fs.readFileSync('./app/src/library-v04.ts','utf8');
+ assert.match(practice,/STARTING AMOUNT & SCHEDULE REFERENCE/);
+ assert.match(library,/researchPracticeReference:c\.researchPracticeReference/);
+ const wStart=expanded.indexOf("{id:'wolverine'"),wEnd=expanded.indexOf("{id:'klow'",wStart),w=expanded.slice(wStart,wEnd);
+ assert.match(w,/Community\/vendor starting reference/);assert.match(w,/amount:0\.5/);assert.match(w,/vialStrengthMg:20,diluentMl:2/);assert.match(w,/PDP-WOLVERINE-2026/);assert.match(w,/transferable:false/);
+ const kStart=wEnd,kEnd=expanded.indexOf("{id:'melanotan-i'",kStart),k=expanded.slice(kStart,kEnd);
+ assert.match(k,/Community\/vendor blend reference/);for(const amount of [2,4,6])assert.match(k,new RegExp("amount:"+amount));assert.match(k,/vialStrengthMg:80,diluentMl:3/);assert.match(k,/PDP-KLOW-2026/);assert.match(k,/transferable:false/);
+});

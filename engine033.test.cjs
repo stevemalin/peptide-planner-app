@@ -129,3 +129,12 @@ test('inventory status distinguishes missing, exhausted and urgent supply',()=>{
  assert.equal(E.inventoryCoverage(make('0'),now).status,'out');
  assert.equal(E.inventoryCoverage(make('0.5'),now).status,'urgent');
 });
+
+test('new blend starting references remain community-classified and non-transferable',()=>{
+ const fs=require('fs'),expanded=fs.readFileSync('./app/src/content-v04.ts','utf8'),library=fs.readFileSync('./app/src/library-v04.ts','utf8');
+ const wStart=expanded.indexOf("{id:'wolverine'"),wEnd=expanded.indexOf("{id:'klow'",wStart),w=expanded.slice(wStart,wEnd);
+ const kEnd=expanded.indexOf("{id:'melanotan-i'",wEnd),k=expanded.slice(wEnd,kEnd);
+ assert.match(w,/Community\/vendor starting reference/);assert.match(w,/amount:0\.5/);assert.match(w,/vialStrengthMg:20,diluentMl:2/);assert.match(w,/transferable:false/);
+ assert.match(k,/Community\/vendor blend reference/);assert.match(k,/amount:2/);assert.match(k,/amount:6/);assert.match(k,/vialStrengthMg:80,diluentMl:3/);assert.match(k,/transferable:false/);
+ assert.match(library,/researchPracticeReference:c\.researchPracticeReference/);
+});
