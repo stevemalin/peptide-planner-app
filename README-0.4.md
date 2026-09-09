@@ -233,3 +233,23 @@ This is an evidence audit of all 21 current Pep School entries. It records what 
 - Entry-level primary-source coverage now reaches **21/21 entries**. That does not mean numeric, formulation-matched or route-matched human coverage: MOTS-c has an exact human endogenous exercise observation and a separate mouse intervention but no administered human protocol; NAD+ has a human intravenous pharmacokinetic pilot but no efficacy or non-IV/repeated regimen; and 5-Amino-1MQ retains a complete human-administration evidence gap. SS-31, tesamorelin and afamelanotide have direct FDA label metadata, remain custom-only and require owner review of newly exposed numeric details.
 - Reconstitution work remains calculator-first: user-entered vial mass + user-entered diluent volume → concentration → transparent U-100 arithmetic. Product-specific diluent, stability and storage claims require their own authoritative source.
 - Any new numeric customer-facing record remains non-transferable until its source, population/species, purpose, route, formulation, amount/unit, frequency, duration and limitations are reviewed together.
+
+### Morning owner decision — legacy transferable references
+
+This decision gate covers only GHK-Cu, KPV and Glow 70. The current pack marks each `commonResearchPractice` record with `guideTransfer: true`; Guide therefore copies the whole record into a draft. The separate `reference-setup.ts` fallback supplies the same vial strength, diluent volume and 9:00 AM display time. None of these transferred values is established by the primary or review evidence attached to the School profile.
+
+| Entry | Values currently copied into a draft | Numeric provenance actually recorded | Evidence problem |
+|---|---|---|---|
+| GHK-Cu | 50 mg vial; 3 mL diluent; Monday–Friday at 9:00 AM; 1 mg for 4 weeks, 1.5 mg for 4 weeks, then 2 mg for 4 weeks | ResearchProtocols.net and JA Performance vendor/reference pages | The attached human evidence is topical/cosmetic and the remaining evidence is review or preclinical material. It does not validate this injectable schedule, vial setup or route. |
+| KPV | 10 mg vial; 2 mL diluent; daily at 9:00 AM; 200 mcg for 1 week, 300 mcg for 1 week, 400 mcg for 1 week, then 500 mcg for 5 weeks | ResearchProtocols.net and PeptaBase vendor/reference pages | The attached numeric intervention evidence is preclinical. No route-matched human protocol supports the copied schedule or vial setup. |
+| Glow 70 mg | Project-supplied 50/10/10 component ratio; 70 mg vial; 3 mL diluent; daily at 9:00 AM; 2.33 mg for 4 weeks; 10-unit illustrative draw; 2-week break | JA Performance and glowpeptides.org vendor/community pages; formulation identity is project-supplied | No source evaluates the combined formulation as a human regimen or establishes blend compatibility, synergy, reconstitution, draw, schedule or break. Component evidence cannot support the combined transfer. |
+
+Current regression dependencies are explicit: `engine033.test.cjs` expects these three records to transfer their complete schedules and amounts, while `setup033.test.cjs` expects their vial/diluent fallbacks. A change must update those assertions to prove the selected boundary rather than weakening coverage.
+
+Owner choices:
+
+1. **Disable all three legacy transfers for the private beta — recommended.** Keep clearly labeled School context and allow deliberate manual entry, but copy no amount, vial, diluent, time, schedule, duration or break into Guide.
+2. **Approve a record unchanged.** Requires explicit review of every copied field and acknowledgement that its numeric provenance is vendor/community material, not primary clinical authority. It must remain labeled accordingly.
+3. **Approve selected fields only.** Requires a field-level transfer design plus individual provenance for every approved value; unapproved fields must stay empty and must not be restored by `reference-setup.ts`.
+
+No choice is implemented by this checkpoint. Until the owner decides, the current behavior is preserved and remains a private-beta approval blocker.
