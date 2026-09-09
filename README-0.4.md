@@ -146,11 +146,11 @@ This checklist is the sustained release plan for moving from Stone Lynch's devic
 
 ### Gate 3 — accounts and privacy foundation
 
-- [ ] Add invite-only passwordless accounts.
-- [ ] Add per-user cloud storage with strict row-level access controls.
-- [ ] Migrate device-local data only after preview and explicit confirmation; retain a recoverable local copy.
-- [ ] Add account export, deletion, session management, privacy notice and beta consent.
-- [ ] Keep plan content out of authentication and routine reminder emails.
+- [x] Add invite-only passwordless accounts.
+- [x] Add per-user cloud storage with strict row-level access controls.
+- [x] Copy device-local data only after preview and explicit confirmation; retain a recoverable local copy.
+- [x] Add account export, deletion-review controls, session management, privacy notice and beta consent.
+- [x] Keep plan content out of authentication and routine reminder emails.
 
 ### Gate 4 — beta feedback
 
@@ -184,3 +184,13 @@ This checklist is the sustained release plan for moving from Stone Lynch's devic
 - Beta feedback foundation is available from More and Community. Before cloud accounts, it exports a private report locally and excludes active peptide names unless the tester explicitly opts in.
 
 Current active block: **Gate 1 — audit and finish core app functions.** Native and web notifications are not required to declare Gate 1 complete; reminder limitations must be accurately disclosed.
+
+## Hosted account and guarded cloud-copy foundation — 2026-09-08 Pacific
+
+- Supabase hosts the invite-controlled beta account foundation. Public signup is disabled; passwordless sign-in uses a six-digit email code with a ten-minute expiry. Hosted sign-in, session restoration, sign-out and expired-code rejection passed. The permanent sender is **EZPep Planner <login@ezpepplanner.com>**; SPF, DKIM and DMARC passed.
+- Five database tables are protected by row-level security. Twenty-seven hosted security assertions passed. Planner, consent and feedback tables were empty after validation; no device-local planner data was migrated.
+- Planner use remains device-local by default. A signed-in eligible user may review and explicitly confirm a one-time initial cloud copy. The flow validates the payload and account, refuses an existing cloud snapshot, creates and verifies a separate local safety copy before upload, and aborts if the account or local payload changes. Later local edits are not presented as synchronized.
+- Account controls provide a private account export and a cancellable deletion-review request. A request does not delete data and requires separate organizer review, identity checking and final confirmation. Authentication and routine email content exclude peptide names, amounts, schedules and history.
+- Focused cloud-copy tests cover missing confirmation, account changes, cloud conflicts, failed reads, failed backups, stale local data, oversized payloads and successful backup-before-upload ordering. A transient invitation-check failure remains fail-closed and can recover only through an explicit retry.
+- Current candidate validation: TypeScript passed; Expo dependencies compatible; Expo Doctor 21/21; full application suite 160/160; separate v0.4 suite 90/90; hosted security assertions 27/27. Browser checks at 320, 412 and 1366 pixels returned HTTP 200 with no page/console errors or horizontal overflow; the 412-pixel result was visually inspected.
+- This foundation is prepared for a controlled private beta. It does not authorize public deployment, invitations, automatic synchronization, deletion processing, local-data removal or a merge to main.
