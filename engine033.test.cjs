@@ -138,3 +138,11 @@ test('new blend starting references remain community-classified and non-transfer
  assert.match(k,/Community\/vendor blend reference/);assert.match(k,/amount:2/);assert.match(k,/amount:6/);assert.match(k,/vialStrengthMg:80,diluentMl:3/);assert.match(k,/transferable:false/);
  assert.match(library,/researchPracticeReference:c\.researchPracticeReference/);
 });
+
+test('Melanotan II, kisspeptin and Semax references preserve route and transfer boundaries',()=>{
+ const fs=require('fs'),expanded=fs.readFileSync('./app/src/content-v04.ts','utf8');
+ const section=(id,next)=>expanded.slice(expanded.indexOf("{id:'"+id+"'"),next?expanded.indexOf("{id:'"+next+"'",expanded.indexOf("{id:'"+id+"'")):expanded.length);
+ const mt=section('melanotan-ii','kisspeptin');assert.match(mt,/amount:250,unit:'mcg'/);assert.match(mt,/vialStrengthMg:10,diluentMl:2/);assert.match(mt,/serious toxicity case/);assert.match(mt,/transferable:false/);
+ const kiss=section('kisspeptin','semax');assert.match(kiss,/kisspeptin-10 low pulse/);assert.match(kiss,/amount:100,unit:'mcg'/);assert.match(kiss,/not interchangeable/);assert.match(kiss,/transferable:false/);
+ const semax=section('semax','bpc-157');assert.match(semax,/Route-specific intranasal reference/);assert.match(semax,/amount:600,unit:'mcg'/);assert.match(semax,/times:\['09:00','14:00'\]/);assert.match(semax,/vialStrengthMg:null,diluentMl:null/);assert.match(semax,/transferable:false/);
+});
