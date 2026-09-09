@@ -9,6 +9,15 @@ const activeEditor=fs.readFileSync('./app/src/ActivePeptideEditor.tsx','utf8');
 const store=fs.readFileSync('./app/src/store.ts','utf8');
 const myPlans=fs.readFileSync('./app/src/MyPlans.tsx','utf8');
 test('tracker leads with operational today dashboard',()=>{assert.match(tracker,/Today at a glance/);assert.match(tracker,/need logging/);assert.match(tracker,/Up next/);});
+test('inventory attention stays on affected Today cards instead of pushing the timeline down',()=>{
+ const eventCard=fs.readFileSync('./app/src/TodayEventCard.tsx','utf8');
+ assert.match(eventCard,/Inventory needs attention/);
+ assert.match(eventCard,/onInventory/);
+ assert.match(tracker,/inventoryAttention={inventoryAttention}/);
+ assert.match(tracker,/onInventory={\(\)=>onEdit\(plan\.id,'Inventory'\)}/);
+ assert.doesNotMatch(tracker,/visibleLowSupply\.map/);
+ assert.doesNotMatch(tracker,/Remind me later/);
+});
 test('tracker preserves aggregate calendar and history',()=>{for(const term of ['Today','Calendar','History','Counts include every active plan|total across every active plan'])assert.match(tracker,new RegExp(term));});
 test('tracker keeps compound identity visually distinct',()=>{assert.match(tracker,/compoundColor/);assert.match(tracker,/compoundDot/);assert.match(tracker,/plan\.compoundName/);});
 
