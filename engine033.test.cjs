@@ -146,3 +146,12 @@ test('Melanotan II, kisspeptin and Semax references preserve route and transfer 
  const kiss=section('kisspeptin','semax');assert.match(kiss,/kisspeptin-10 low pulse/);assert.match(kiss,/amount:100,unit:'mcg'/);assert.match(kiss,/not interchangeable/);assert.match(kiss,/transferable:false/);
  const semax=section('semax','bpc-157');assert.match(semax,/Route-specific intranasal reference/);assert.match(semax,/amount:600,unit:'mcg'/);assert.match(semax,/times:\['09:00','14:00'\]/);assert.match(semax,/vialStrengthMg:null,diluentMl:null/);assert.match(semax,/transferable:false/);
 });
+
+
+test('BPC-157, TB-500 and ipamorelin references remain community-classified and non-transferable',()=>{
+ const fs=require('fs'),expanded=fs.readFileSync('./app/src/content-v04.ts','utf8');
+ const section=(id,next)=>expanded.slice(expanded.indexOf("{id:'"+id+"'"),expanded.indexOf("{id:'"+next+"'",expanded.indexOf("{id:'"+id+"'")));
+ const bpc=section('bpc-157','tb-500');assert.match(bpc,/amount:250,unit:'mcg'/);assert.match(bpc,/vialStrengthMg:10,diluentMl:2/);assert.match(bpc,/two-person human pilot used single intravenous infusions/);assert.match(bpc,/transferable:false/);
+ const tb=section('tb-500','ipamorelin');assert.match(tb,/amount:2,unit:'mg'/);assert.match(tb,/days:\[1,4\]/);assert.match(tb,/full-length thymosin beta-4/);assert.match(tb,/transferable:false/);
+ const ipa=section('ipamorelin','tesamorelin');assert.match(ipa,/amount:100,unit:'mcg'/);assert.match(ipa,/amount:200,unit:'mcg'/);assert.match(ipa,/vialStrengthMg:10,diluentMl:3/);assert.match(ipa,/intravenous administration/);assert.match(ipa,/transferable:false/);
+});
