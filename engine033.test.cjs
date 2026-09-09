@@ -155,3 +155,12 @@ test('BPC-157, TB-500 and ipamorelin references remain community-classified and 
  const tb=section('tb-500','ipamorelin');assert.match(tb,/amount:2,unit:'mg'/);assert.match(tb,/days:\[1,4\]/);assert.match(tb,/full-length thymosin beta-4/);assert.match(tb,/transferable:false/);
  const ipa=section('ipamorelin','tesamorelin');assert.match(ipa,/amount:100,unit:'mcg'/);assert.match(ipa,/amount:200,unit:'mcg'/);assert.match(ipa,/vialStrengthMg:10,diluentMl:3/);assert.match(ipa,/intravenous administration/);assert.match(ipa,/transferable:false/);
 });
+
+
+test('tesamorelin, cagrilintide and SS-31 references preserve product and study boundaries',()=>{
+ const fs=require('fs'),expanded=fs.readFileSync('./app/src/content-v04.ts','utf8');
+ const section=(id,next)=>expanded.slice(expanded.indexOf("{id:'"+id+"'"),expanded.indexOf("{id:'"+next+"'",expanded.indexOf("{id:'"+id+"'")));
+ const t=section('tesamorelin','cagrilintide');assert.match(t,/amount:1\.28,unit:'mg'/);assert.match(t,/vialStrengthMg:11\.6,diluentMl:1\.3/);assert.match(t,/not substitutable with EGRIFTA SV/);assert.match(t,/transferable:false/);
+ const c=section('cagrilintide','5-amino-1mq');assert.match(c,/amount:0\.3,unit:'mg'/);assert.match(c,/durationWeeks:26/);assert.match(c,/vialStrengthMg:null,diluentMl:null/);assert.match(c,/transferable:false/);
+ const ss=section('ss-31','nad-plus');assert.match(ss,/amount:40,unit:'mg'/);assert.match(ss,/ready-to-use 80 mg\/mL solution/);assert.match(ss,/vialStrengthMg:null,diluentMl:null/);assert.match(ss,/transferable:false/);
+});
