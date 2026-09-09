@@ -106,3 +106,26 @@ test('review blocks unresolved inputs and calculation rejects blank or zero valu
 });
 
 test('equivalent schedules do not create accidental stage overrides',()=>{assert.ok(E.sameSchedule({kind:'daily',days:[],times:['09:00'],interval:null},{kind:'daily',days:[1,2],times:['09:00'],interval:null,timesPerWeek:null}));assert.ok(!E.sameSchedule({kind:'daily',days:[],times:['09:00'],interval:null},{kind:'daily',days:[],times:['10:00'],interval:null}));});
+
+test('inventory warnings follow scheduled-dose coverage rather than vial fraction or full-plan supply',()=>{
+ const now=new Date('2026-09-09T12:00:00Z');
+ const make=(kind,vials)=>E.activate({id:'coverage-'+kind+'-'+vials,compoundId:'tesamorelin',compoundName:'Tesamorelin',origin:null,customized:true,stages:[{id:'s1',amountMg:'1',amountUnit:'mg',weeks:'4',override:null}],defaultSchedule:{kind,days:kind==='weekly'?[3]:[],times:['09:00'],interval:null},breakWeeks:'0',startDate:'2026-09-09',vialMg:'10',waterMl:'2',initialVials:vials,reviewed:true,reminderEnabled:false,reminderOffsetMinutes:0},now);
+ const tenDaily=E.inventoryCoverage(make('daily','1'),now);
+ assert.equal(tenDaily.coveredDoses,10);
+ assert.equal(tenDaily.status,'attention');
+ assert.ok(tenDaily.daysUntilUncovered<=E.INVENTORY_ATTENTION_DAYS);
+ const twentyDaily=E.inventoryCoverage(make('daily','2'),now);
+ assert.equal(twentyDaily.enough,false);
+ assert.equal(twentyDaily.status,'covered');
+ assert.ok(twentyDaily.daysUntilUncovered>E.INVENTORY_ATTENTION_DAYS);
+ const weekly=E.inventoryCoverage(make('weekly','1'),now);
+ assert.equal(weekly.status,'covered');
+ assert.equal(weekly.firstUncovered,undefined);
+});
+test('inventory status distinguishes missing, exhausted and urgent supply',()=>{
+ const now=new Date('2026-09-09T12:00:00Z');
+ const make=vials=>E.activate({id:'coverage-'+String(vials),compoundId:'tesamorelin',compoundName:'Tesamorelin',origin:null,customized:true,stages:[{id:'s1',amountMg:'1',amountUnit:'mg',weeks:'4',override:null}],defaultSchedule:{kind:'daily',days:[],times:['09:00'],interval:null},breakWeeks:'0',startDate:'2026-09-09',vialMg:'10',waterMl:'2',initialVials:vials,reviewed:true,reminderEnabled:false,reminderOffsetMinutes:0},now);
+ assert.equal(E.inventoryCoverage(make(''),now).status,'not-entered');
+ assert.equal(E.inventoryCoverage(make('0'),now).status,'out');
+ assert.equal(E.inventoryCoverage(make('0.5'),now).status,'urgent');
+});

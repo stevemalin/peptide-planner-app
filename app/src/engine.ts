@@ -155,13 +155,17 @@ export function actualProgress(plan: SavedPlan,now=new Date()) {
  let before=0,stageIndex=-1;for(let i=0;i<plan.stages.length;i++){const end=before+stageDays(plan.stages[i]);if(elapsed>=before&&elapsed<end){stageIndex=i;break;}before=end;}
  return {totalDays,day:Math.max(0,Math.min(elapsed+1,totalDays)),stageDay:stageIndex<0?0:elapsed-before+1,started:elapsed>=0,week:elapsed<0?0:Math.min(Math.floor(elapsed/7)+1,Math.ceil(totalDays/7)),totalWeeks:Math.ceil(totalDays/7),stageIndex,stageWeek:stageIndex<0?0:Math.floor((elapsed-before)/7)+1,daysRemaining:Math.max(0,totalDays-Math.max(0,elapsed)),nextTransition:stageIndex>=0?addDays(plan.startDate,before+stageDays(plan.stages[stageIndex])):null,breakStart:addDays(plan.startDate,totalDays),breakEnd:addDays(plan.startDate,totalDays+breakDays),inBreak:elapsed>=totalDays&&elapsed<totalDays+breakDays,ended:elapsed>=totalDays+breakDays,completed:plan.events.filter(e=>e.status==='completed').length,due:plan.events.filter(e=>new Date(e.scheduledAt)<=now).length,total:plan.events.length};
 }
+export const INVENTORY_ATTENTION_DAYS=14;
+export const INVENTORY_URGENT_DAYS=7;
 export function inventoryCoverage(plan:SavedPlan,now=new Date()) {
  const used=plan.events.filter(e=>e.status==='completed').reduce((n,e)=>n+e.amountMg,0);
  const supply=plan.inventoryTotalMg===null?null:plan.inventoryTotalMg-used;
- const pending=plan.events.filter(e=>e.status==='pending'&&new Date(e.scheduledAt)>=now);
- const required=pending.reduce((n,e)=>n+e.amountMg,0);let budget=supply??0,firstUncovered:Event|undefined;
- for(const e of pending){if(budget+1e-9<e.amountMg){firstUncovered=e;break;}budget-=e.amountMg;}
- return {used,supply,required,firstUncovered,enough:supply===null?null:supply+1e-9>=required,vials:supply===null?null:supply/Number(plan.vialMg),days:supply===null?null:Math.max(0,daysBetween(localDate(now),firstUncovered?.localDate||actualProgress(plan,now).breakStart))};
+ const pending=plan.events.filter(e=>e.status==='pending'&&new Date(e.scheduledAt)>=now).sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt));
+ const required=pending.reduce((n,e)=>n+e.amountMg,0);let budget=supply??0,firstUncovered:Event|undefined,coveredDoses=0;
+ for(const e of pending){if(budget+1e-9<e.amountMg){firstUncovered=e;break;}budget-=e.amountMg;coveredDoses++;}
+ const daysUntilUncovered=firstUncovered?Math.max(0,daysBetween(localDate(now),firstUncovered.localDate)):null;
+ const status=supply===null?'not-entered':supply<=1e-9&&pending.length?'out':daysUntilUncovered!==null&&daysUntilUncovered<=INVENTORY_URGENT_DAYS?'urgent':daysUntilUncovered!==null&&daysUntilUncovered<=INVENTORY_ATTENTION_DAYS?'attention':'covered';
+ return {used,supply,required,firstUncovered,enough:supply===null?null:supply+1e-9>=required,vials:supply===null?null:supply/Number(plan.vialMg),days:supply===null?null:firstUncovered?daysUntilUncovered:actualProgress(plan,now).daysRemaining,daysUntilUncovered,coveredDoses,status};
 }
 export function glowComponents(amountMg:number) {return [{name:'GHK-Cu',amountMg:amountMg*5/7,unit:'mg' as const},{name:'BPC-157',amountMg:amountMg/7,unit:'mg' as const},{name:'TB-500',amountMg:amountMg/7,unit:'mg' as const}];}
 export function decodeStore(raw:string):Store {
