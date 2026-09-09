@@ -50,7 +50,7 @@ import {decodePlannerStore,encodePlannerStore,previewPeptideLibraryCsv,externalS
 type Experience = "new" | "familiar" | "experienced";
 type FirstGoal = "learn" | "research" | "setup" | "track";
 type OnboardingProfile = { experience: Experience; goal: FirstGoal };
-type Screen = "welcome" | "activeEditor" | "profile" | "settings" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "planHistory" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "dataImport" | "more";
+type Screen = "welcome" | "activeEditor" | "profile" | "settings" | "betaFeedback" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "planHistory" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "dataImport" | "more";
 
 const COLORS = {
   ink: "#0E1C4A",
@@ -121,6 +121,11 @@ export default function App() {
   const [schoolSection,setSchoolSection] = useState<"library"|"courses"|"facts"|"community">("library");
   const [schoolFilter,setSchoolFilter] = useState<"all"|"favorites"|"human"|"preclinical"|"blends">("all");
   const [schoolFavorites,setSchoolFavorites] = useState<string[]>([]);
+  const [feedbackType,setFeedbackType]=useState<'Bug'|'Confusing'|'Suggestion'|'Calculation concern'>('Bug');
+  const [feedbackText,setFeedbackText]=useState('');
+  const [feedbackOrigin,setFeedbackOrigin]=useState('More');
+  const [feedbackIncludePlans,setFeedbackIncludePlans]=useState(false);
+  const [feedbackMessage,setFeedbackMessage]=useState('');
   useEffect(()=>{AsyncStorage.getItem("pepplan.school.favorites").then(value=>{if(value)setSchoolFavorites(JSON.parse(value));}).catch(()=>{});},[]);
   const toggleSchoolFavorite=(id:string)=>setSchoolFavorites(current=>{const next=current.includes(id)?current.filter(item=>item!==id):[...current,id];AsyncStorage.setItem("pepplan.school.favorites",JSON.stringify(next)).catch(()=>{});return next;});
 
@@ -264,7 +269,7 @@ export default function App() {
   useEffect(()=>{
     const subscription=BackHandler.addEventListener("hardwareBackPress",()=>{
       if(screen==='activeEditor'){discardActiveEdits().catch(()=>{});return true;}
-      const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",planHistory:"plans",dataImport:"settings",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"detail",review:"calc",schedule:"plan",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
+      const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",planHistory:"plans",dataImport:"settings",betaFeedback:"more",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"detail",review:"calc",schedule:"plan",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
       if(!parent[screen])return false;setScreen(parent[screen]!);return true;
     });return()=>subscription.remove();
   },[screen]);
@@ -375,6 +380,7 @@ export default function App() {
             <Text style={styles.kicker}>COMMUNITY · COMING LATER</Text>
             <Text style={styles.sectionTitle}>Learn with context—not noise.</Text>
             <Text style={styles.nextText}>This area is reserved for moderated questions, expert-reviewed discussions and useful shared learning. It will remain separate from your private plans and tracking.</Text>
+            <AppButton label="Give private beta feedback" onPress={()=>{setFeedbackOrigin('Community');setFeedbackMessage('');setScreen('betaFeedback');}}/>
           </View>}
       </ScrollView>
   );
@@ -475,8 +481,29 @@ export default function App() {
       <AppButton label="Back to My data & privacy" secondary onPress={()=>setScreen('settings')}/>
     </ScrollView>
   );
+  const openBetaFeedback=(origin:string)=>{setFeedbackOrigin(origin);setFeedbackMessage('');setScreen('betaFeedback');};
+  const exportBetaFeedback=async()=>{
+    if(!feedbackText.trim()){setFeedbackMessage('Describe what happened or what you would change.');return;}
+    const report=['EZPep Planner private beta feedback','Type: '+feedbackType,'Opened from: '+feedbackOrigin,'App version: 0.4','Platform: '+Platform.OS,'Viewport: '+Math.round(viewportWidth)+' px','Created: '+new Date().toISOString(),feedbackIncludePlans?'Active peptide names: '+(plans.map(plan=>plan.compoundName).join(', ')||'None'):'Active peptide names: Not included by tester','',feedbackText.trim()].join('\n');
+    try{
+      if(Platform.OS==='web'){
+        const web=globalThis as any,url=web.URL.createObjectURL(new web.Blob([report],{type:'text/plain'})),link=web.document.createElement('a');link.href=url;link.download='ezpep-beta-feedback-'+new Date().toISOString().slice(0,10)+'.txt';link.click();web.URL.revokeObjectURL(url);
+        setFeedbackMessage('Private feedback file downloaded. Send it to the beta coordinator. Central submission will be connected with beta accounts.');
+      }else{
+        await Share.share({title:'EZPep Planner beta feedback',message:report});setFeedbackMessage('Feedback report opened in your device share sheet.');
+      }
+    }catch{setFeedbackMessage('The report was not exported. Your text remains here so you can try again.');}
+  };
+  const renderBetaFeedback=()=> <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+    <Pressable accessibilityRole="button" onPress={()=>setScreen(feedbackOrigin==='Community'?'school':'more')}><Text style={styles.back}>‹ Back</Text></Pressable>
+    <Text style={styles.kicker}>PRIVATE BETA FEEDBACK</Text><Text style={styles.detailTitle}>Help improve EZPep Planner</Text><Text style={styles.detailMeta}>Report a problem, confusing step, suggestion or calculation concern.</Text>
+    <View style={styles.notice}><Text style={styles.noticeText}>Your plans and history are not included automatically. Until secure beta accounts are connected, this creates a private file or device share report for you to send manually.</Text></View>
+    <View style={styles.lessonCard}><Text style={styles.lessonTitle}>What kind of feedback is this?</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{(['Bug','Confusing','Suggestion','Calculation concern'] as const).map(type=><Pressable key={type} accessibilityRole="radio" accessibilityState={{checked:feedbackType===type}} onPress={()=>setFeedbackType(type)} style={[styles.schoolFilter,feedbackType===type&&styles.schoolFilterActive]}><Text style={[styles.schoolFilterText,feedbackType===type&&styles.schoolFilterTextActive]}>{type}</Text></Pressable>)}</View><Text style={[styles.inputLabel,{marginTop:16}]}>What happened or what would help?</Text><TextInput accessibilityLabel="Beta feedback details" multiline value={feedbackText} onChangeText={value=>{setFeedbackText(value);setFeedbackMessage('');}} placeholder="Describe the screen, action and result…" style={[styles.smallInput,{minHeight:140,textAlignVertical:'top'}]}/><Pressable accessibilityRole="checkbox" accessibilityState={{checked:feedbackIncludePlans}} onPress={()=>setFeedbackIncludePlans(value=>!value)} style={styles.notice}><Text style={styles.noticeText}>{feedbackIncludePlans?'✓':'○'} Include active peptide names in this report</Text></Pressable>{!!feedbackMessage&&<Text accessibilityLiveRegion="polite" style={styles.helper}>{feedbackMessage}</Text>}<AppButton label={Platform.OS==='web'?'Download private feedback report':'Share private feedback report'} onPress={()=>{void exportBetaFeedback();}}/><AppButton label="Clear feedback form" secondary onPress={()=>{setFeedbackText('');setFeedbackIncludePlans(false);setFeedbackMessage('Form cleared.');}}/></View>
+  </ScrollView>;
+
   const renderMore = () => {
     const rows:{label:string;detail:string;target:Screen|null}[]=[
+      {label:"Beta Feedback",detail:"Report a bug, confusion or suggestion privately",target:"betaFeedback"},
       {label:"Account",detail:"Local-first today · passwordless sync planned",target:"profile"},
       {label:"Notifications",detail:"Plan reminders, timing and permission status",target:"reminders"},
       {label:"Inventory",detail:"Individual vials across active peptides",target:"inventory"},
@@ -489,7 +516,7 @@ export default function App() {
     return <ScrollView contentContainerStyle={styles.scrollContent}>
       <Text style={[styles.kicker, { marginTop: 20 }]}>MORE</Text><Text style={styles.detailTitle}>Your EZPep Planner</Text><Text style={styles.detailMeta}>Account, reminders, preferences and support.</Text>
       <View style={styles.lessonCard}><Text style={styles.sourceClass}>ACCOUNT DIRECTION</Text><Text style={styles.lessonTitle}>Start locally. Sync when you choose.</Text><Text style={styles.nextText}>EZPep Planner remains useful without an account. Passwordless six-digit email verification will unlock backup, device transfer and Pro access after the secure service is connected.</Text><AppButton label="View account plan" secondary onPress={()=>setScreen("profile")}/></View>
-      {rows.map(row=><Pressable accessibilityRole="button" accessibilityLabel={row.label} disabled={!row.target} key={row.label} style={styles.moreRow} onPress={()=>row.target&&setScreen(row.target)}><View style={{flex:1}}><Text style={styles.planOptionTitle}>{row.label}</Text><Text style={styles.smallBadge}>{row.detail}</Text></View><Text style={styles.linkArrow}>{row.target?'›':'·'}</Text></Pressable>)}
+      {rows.map(row=><Pressable accessibilityRole="button" accessibilityLabel={row.label} disabled={!row.target} key={row.label} style={styles.moreRow} onPress={()=>row.target&&(row.target==='betaFeedback'?openBetaFeedback('More'):setScreen(row.target))}><View style={{flex:1}}><Text style={styles.planOptionTitle}>{row.label}</Text><Text style={styles.smallBadge}>{row.detail}</Text></View><Text style={styles.linkArrow}>{row.target?'›':'·'}</Text></Pressable>)}
       <View style={styles.notice}><Text style={styles.noticeText}>Prototype 0.4 · plans are saved on this device. No cloud account, shop connection or customer-data integration is active.</Text></View>
     </ScrollView>;
   };
@@ -637,6 +664,7 @@ export default function App() {
         {screen === "schoolMore" && renderSchoolDetail(true)}
         {screen === "schoolSources" && renderSources()}
         {screen === "more" && renderMore()}
+         {screen === "betaFeedback" && renderBetaFeedback()}
         {screen === "dataImport" && renderDataImport()}
         {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>{screen==='profile'?'ACCOUNT':'PREFERENCES & DATA'}</Text><Text style={styles.detailTitle}>{screen==='profile'?'Your account':'Your settings'}</Text>{screen==='profile'?<><View style={styles.lessonCard}><Text style={styles.sourceClass}>CURRENT MODE</Text><Text style={styles.lessonTitle}>Saved locally on this device</Text><Text style={styles.nextText}>No email address or password is required in this development version. Clearing app storage removes unsynced local data.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>PLANNED ACCOUNT</Text><Text style={styles.lessonTitle}>Six-digit email verification</Text><Text style={styles.nextText}>Enter an email, receive a one-time code, and verify without creating a password. An account will add backup, device transfer and EZPep Planner Pro entitlement while keeping AURAPEP commerce separate unless you explicitly connect it.</Text><Text style={styles.smallBadge}>Backend and email delivery are not connected yet.</Text></View></>:<><View style={styles.lessonCard}><Text style={styles.lessonTitle}>Plan-specific controls</Text><Text style={styles.nextText}>Dose units, schedule, reminder lead time, syringe capacity and inventory are maintained per peptide so one plan never silently changes another.</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>My data & privacy</Text><Text style={styles.nextText}>Plans, calculations, event history and inventory currently remain in local app storage. Download or share a private backup before changing browsers, clearing app data or moving to another test build.</Text><AppButton label="Import data from another app" onPress={chooseImportFile}/><AppButton label="Restore EZPep backup" secondary onPress={chooseBackupFile}/><AppButton label="Export local backup" secondary onPress={exportLocalBackup}/><Text style={styles.smallBadge}>The app does not upload backups. They may contain saved schedules and history, so store them privately. Cloud account backup will be added with the account service.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>QUICK START</Text><Text style={styles.lessonTitle}>Restart onboarding</Text><Text style={styles.nextText}>Review the welcome questions and choose a new starting path. Your saved plans, history and settings will stay exactly as they are.</Text><AppButton label="Restart Quick Start Onboarding" secondary onPress={restartOnboarding}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>About EZPep Planner</Text><Text style={styles.nextText}>EZPep Planner 0.4 · Learn. Plan. Track.</Text><Text style={styles.smallBadge}>Educational planning support. Evidence classes and route/formulation limits remain attached to School content.</Text></View></>}<AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
         {screen === "guide" && renderGuide()}
