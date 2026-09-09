@@ -164,3 +164,13 @@ test('tesamorelin, cagrilintide and SS-31 references preserve product and study 
  const c=section('cagrilintide','5-amino-1mq');assert.match(c,/amount:0\.3,unit:'mg'/);assert.match(c,/durationWeeks:26/);assert.match(c,/vialStrengthMg:null,diluentMl:null/);assert.match(c,/transferable:false/);
  const ss=section('ss-31','nad-plus');assert.match(ss,/amount:40,unit:'mg'/);assert.match(ss,/ready-to-use 80 mg\/mL solution/);assert.match(ss,/vialStrengthMg:null,diluentMl:null/);assert.match(ss,/transferable:false/);
 });
+
+
+test('remaining MT-I, 5-Amino-1MQ, NAD+ and MOTS-c references preserve route and species boundaries',()=>{
+ const fs=require('fs'),expanded=fs.readFileSync('./app/src/content-v04.ts','utf8');
+ const section=(id,next)=>expanded.slice(expanded.indexOf("{id:'"+id+"'"),next?expanded.indexOf("{id:'"+next+"'",expanded.indexOf("{id:'"+id+"'")):expanded.length);
+ const mt=section('melanotan-i','melanotan-ii');assert.match(mt,/0\.08 mg\/kg subcutaneously Monday through Friday/);assert.match(mt,/amount:null/);assert.match(mt,/transferable:false/);
+ const mq=section('5-amino-1mq','ss-31');assert.match(mq,/32 mg\/kg/);assert.match(mq,/vialStrengthMg:null,diluentMl:null/);assert.match(mq,/transferable:false/);
+ const nad=section('nad-plus','mots-c');assert.match(nad,/amount:750,unit:'mg'/);assert.match(nad,/6 hours at approximately 2 mg\/min/);assert.match(nad,/transferable:false/);
+ const mots=section('mots-c',null);assert.match(mots,/5 mg\/kg/);assert.match(mots,/human portion measured endogenous MOTS-c/);assert.match(mots,/transferable:false/);
+});
