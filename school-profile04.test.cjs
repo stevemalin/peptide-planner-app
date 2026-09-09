@@ -25,3 +25,5 @@ test('remaining current families preserve blend and route boundaries',()=>{
  assert.match(expanded,/Kisspeptin[\s\S]*population, purpose and route are decisive/);
  assert.match(expanded,/Semax[\s\S]*intranasal contexts; no injectable reference is inferred/);
 });
+
+test('SS-31 keeps current FDA labeling separate from research-vial planning',()=>{const start=expanded.indexOf("{id:'ss-31'"),end=expanded.indexOf("{id:'nad-plus'",start),entry=expanded.slice(start,end);assert.match(entry,/FDA-FORZINITY-2025/);assert.match(entry,/215244s000lbl\.pdf/);assert.match(entry,/U\.S\. FDA approved product labeling/);assert.match(entry,/ready-to-use 80 mg\/mL/);assert.match(entry,/Barth syndrome weighing at least 30 kg/);assert.match(entry,/not a lyophilized research vial/);assert.match(entry,/not transferred into Guide/);assert.match(entry,/referenceMode:'custom-only'/);});
