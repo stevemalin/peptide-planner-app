@@ -1,9 +1,9 @@
 import type {Compound} from './content';
 import type {Schedule} from './engine';
 import {referenceSetups} from './reference-setup';
-export const RESEARCH_PRACTICE_LABEL='COMMON RESEARCH PRACTICE';
-export const RESEARCH_PRACTICE_NOTICE='This reference reflects dosing patterns reported in research-oriented sources and is not an established human clinical dosing schedule. Published information may vary considerably. Use this as a starting point for further independent research and customize the plan as appropriate.';
-export const RESEARCH_IMPORT_NOTICE='Research-practice reference imported. These values were pre-filled from the selected research-practice reference, not a clinical recommendation. Review and customize them before starting your plan.';
+export const RESEARCH_PRACTICE_LABEL='PUBLISHED RESEARCH REFERENCE';
+export const RESEARCH_PRACTICE_NOTICE='This card reports values used in the cited source for its specific population or species, purpose, route and formulation. It is not a personalized recommendation and does not establish safety or effectiveness. Do not copy values into a plan unless this reference is explicitly approved for transfer.';
+export const RESEARCH_IMPORT_NOTICE='A reviewed published-source reference was copied into this draft. It reports what the cited source used; it is not a personalized recommendation or proof of safety or effectiveness. Check the source, route, formulation and population before starting your plan.';
 export type ResearchPracticeReference={
  id:string;title:string;evidenceClass:string;transferable:boolean;
  amount:number|null;unit:'mg'|'mcg';stages:{amount:number|null;unit:'mg'|'mcg';durationWeeks:number|null;schedule:Schedule|null}[];
