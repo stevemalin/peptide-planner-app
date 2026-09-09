@@ -50,7 +50,7 @@ import {decodePlannerStore,encodePlannerStore,previewPeptideLibraryCsv,externalS
 type Experience = "new" | "familiar" | "experienced";
 type FirstGoal = "learn" | "research" | "setup" | "track";
 type OnboardingProfile = { experience: Experience; goal: FirstGoal };
-type Screen = "welcome" | "activeEditor" | "profile" | "settings" | "betaFeedback" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "planHistory" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "dataImport" | "more";
+type Screen = "welcome" | "activeEditor" | "profile" | "settings" | "betaFeedback" | "betaPrivacy" | "shop" | "plans" | "planInventory" | "planDetail" | "planTracker" | "planHistory" | "school" | "schoolDetail" | "schoolMore" | "schoolSources" | "guide" | "detail" | "plan" | "calc" | "tracker" | "review" | "schedule" | "inventory" | "reminders" | "history" | "dataImport" | "more";
 
 const COLORS = {
   ink: "#0E1C4A",
@@ -126,6 +126,9 @@ export default function App() {
   const [feedbackOrigin,setFeedbackOrigin]=useState('More');
   const [feedbackIncludePlans,setFeedbackIncludePlans]=useState(false);
   const [feedbackMessage,setFeedbackMessage]=useState('');
+  const [betaConsentAt,setBetaConsentAt]=useState<string|null>(null);
+  const [betaConsentChecked,setBetaConsentChecked]=useState(false);
+  useEffect(()=>{AsyncStorage.getItem('pepplan.beta-consent.v1').then(value=>setBetaConsentAt(value||null)).catch(()=>{});},[]);
   useEffect(()=>{AsyncStorage.getItem("pepplan.school.favorites").then(value=>{if(value)setSchoolFavorites(JSON.parse(value));}).catch(()=>{});},[]);
   const toggleSchoolFavorite=(id:string)=>setSchoolFavorites(current=>{const next=current.includes(id)?current.filter(item=>item!==id):[...current,id];AsyncStorage.setItem("pepplan.school.favorites",JSON.stringify(next)).catch(()=>{});return next;});
 
@@ -269,7 +272,7 @@ export default function App() {
   useEffect(()=>{
     const subscription=BackHandler.addEventListener("hardwareBackPress",()=>{
       if(screen==='activeEditor'){discardActiveEdits().catch(()=>{});return true;}
-      const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",planHistory:"plans",dataImport:"settings",betaFeedback:"more",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"detail",review:"calc",schedule:"plan",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
+      const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",planHistory:"plans",dataImport:"settings",betaFeedback:"more",betaPrivacy:"more",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"detail",review:"calc",schedule:"plan",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
       if(!parent[screen])return false;setScreen(parent[screen]!);return true;
     });return()=>subscription.remove();
   },[screen]);
@@ -494,6 +497,16 @@ export default function App() {
       }
     }catch{setFeedbackMessage('The report was not exported. Your text remains here so you can try again.');}
   };
+  const saveBetaConsent=async()=>{if(!betaConsentChecked)return;const at=new Date().toISOString();try{await AsyncStorage.setItem('pepplan.beta-consent.v1',at);setBetaConsentAt(at);}catch{Alert.alert('Consent was not saved','Nothing else was changed. Keep the app open and try again.');}};
+  const renderBetaPrivacy=()=> <ScrollView contentContainerStyle={styles.scrollContent}>
+    <Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>PRIVATE WEB BETA</Text><Text style={styles.detailTitle}>Privacy and participation</Text><Text style={styles.detailMeta}>Review this draft before joining the invite-only beta.</Text>
+    <View style={styles.lessonCard}><Text style={styles.lessonTitle}>What this beta is</Text><Text style={styles.nextText}>EZPep Planner is an educational research, planning and tracking tool. It does not diagnose, prescribe, select a peptide or replace professional medical advice. Beta features may change and may contain errors.</Text></View>
+    <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Your information</Text><Text style={styles.nextText}>The current build keeps plans, schedules, calculations, history and inventory on this device. When cloud accounts are enabled, transfer will require a preview and explicit confirmation. The local copy will remain recoverable during migration.</Text><Text style={styles.nextText}>Routine authentication and reminder emails will not include peptide names, amounts, schedules or history. Feedback excludes plan information unless you explicitly choose to include it.</Text></View>
+    <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Your controls</Text><Text style={styles.nextText}>You will be able to export your account data, sign out, manage sessions and request account deletion. Until cloud accounts are connected, use Preferences & Data to export or restore the local record.</Text></View>
+    {betaConsentAt?<View style={styles.notice}><Text style={styles.noticeText}>Acknowledged on this device: {new Date(betaConsentAt).toLocaleString()}. Account-linked consent will be requested again when secure beta accounts are enabled.</Text></View>:<View style={styles.lessonCard}><Pressable accessibilityRole="checkbox" accessibilityState={{checked:betaConsentChecked}} onPress={()=>setBetaConsentChecked(value=>!value)} style={styles.notice}><Text style={styles.noticeText}>{betaConsentChecked?'✓':'○'} I understand this is an unfinished educational beta, not medical advice, and that the current data is stored on this device.</Text></Pressable><AppButton label="Save beta acknowledgement on this device" disabled={!betaConsentChecked} onPress={()=>{void saveBetaConsent();}}/></View>}
+    <AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/>
+  </ScrollView>;
+
   const renderBetaFeedback=()=> <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
     <Pressable accessibilityRole="button" onPress={()=>setScreen(feedbackOrigin==='Community'?'school':'more')}><Text style={styles.back}>‹ Back</Text></Pressable>
     <Text style={styles.kicker}>PRIVATE BETA FEEDBACK</Text><Text style={styles.detailTitle}>Help improve EZPep Planner</Text><Text style={styles.detailMeta}>Report a problem, confusing step, suggestion or calculation concern.</Text>
@@ -504,6 +517,7 @@ export default function App() {
   const renderMore = () => {
     const rows:{label:string;detail:string;target:Screen|null}[]=[
       {label:"Beta Feedback",detail:"Report a bug, confusion or suggestion privately",target:"betaFeedback"},
+      {label:"Beta privacy & consent",detail:"Review beta data handling and research-use boundaries",target:"betaPrivacy"},
       {label:"Account",detail:"Local-first today · passwordless sync planned",target:"profile"},
       {label:"Notifications",detail:"Plan reminders, timing and permission status",target:"reminders"},
       {label:"Inventory",detail:"Individual vials across active peptides",target:"inventory"},
@@ -665,6 +679,7 @@ export default function App() {
         {screen === "schoolSources" && renderSources()}
         {screen === "more" && renderMore()}
          {screen === "betaFeedback" && renderBetaFeedback()}
+         {screen === "betaPrivacy" && renderBetaPrivacy()}
         {screen === "dataImport" && renderDataImport()}
         {(screen==='profile'||screen==='settings')&&<ScrollView contentContainerStyle={styles.scrollContent}><Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>{screen==='profile'?'ACCOUNT':'PREFERENCES & DATA'}</Text><Text style={styles.detailTitle}>{screen==='profile'?'Your account':'Your settings'}</Text>{screen==='profile'?<><View style={styles.lessonCard}><Text style={styles.sourceClass}>CURRENT MODE</Text><Text style={styles.lessonTitle}>Saved locally on this device</Text><Text style={styles.nextText}>No email address or password is required in this development version. Clearing app storage removes unsynced local data.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>PLANNED ACCOUNT</Text><Text style={styles.lessonTitle}>Six-digit email verification</Text><Text style={styles.nextText}>Enter an email, receive a one-time code, and verify without creating a password. An account will add backup, device transfer and EZPep Planner Pro entitlement while keeping AURAPEP commerce separate unless you explicitly connect it.</Text><Text style={styles.smallBadge}>Backend and email delivery are not connected yet.</Text></View></>:<><View style={styles.lessonCard}><Text style={styles.lessonTitle}>Plan-specific controls</Text><Text style={styles.nextText}>Dose units, schedule, reminder lead time, syringe capacity and inventory are maintained per peptide so one plan never silently changes another.</Text><AppButton label="Open My Peptides" onPress={()=>setScreen('plans')}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>My data & privacy</Text><Text style={styles.nextText}>Plans, calculations, event history and inventory currently remain in local app storage. Download or share a private backup before changing browsers, clearing app data or moving to another test build.</Text><AppButton label="Import data from another app" onPress={chooseImportFile}/><AppButton label="Restore EZPep backup" secondary onPress={chooseBackupFile}/><AppButton label="Export local backup" secondary onPress={exportLocalBackup}/><Text style={styles.smallBadge}>The app does not upload backups. They may contain saved schedules and history, so store them privately. Cloud account backup will be added with the account service.</Text></View><View style={styles.lessonCard}><Text style={styles.sourceClass}>QUICK START</Text><Text style={styles.lessonTitle}>Restart onboarding</Text><Text style={styles.nextText}>Review the welcome questions and choose a new starting path. Your saved plans, history and settings will stay exactly as they are.</Text><AppButton label="Restart Quick Start Onboarding" secondary onPress={restartOnboarding}/></View><View style={styles.lessonCard}><Text style={styles.lessonTitle}>About EZPep Planner</Text><Text style={styles.nextText}>EZPep Planner 0.4 · Learn. Plan. Track.</Text><Text style={styles.smallBadge}>Educational planning support. Evidence classes and route/formulation limits remain attached to School content.</Text></View></>}<AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/></ScrollView>}
         {screen === "guide" && renderGuide()}
