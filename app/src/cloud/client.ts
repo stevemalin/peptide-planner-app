@@ -14,7 +14,7 @@ export const authPort: AuthPort = {
   async signOut(){const {error}=await configured().auth.signOut({scope:'local'});if(error)throw error;},
   subscribe(listener){const {data}=configured().auth.onAuthStateChange((_event,session)=>{setTimeout(()=>listener(session?{userId:session.user.id}:null),0);});return()=>data.subscription.unsubscribe();},
 };
-async function eligibleUser() {
+export async function eligibleUser() {
   const api=configured();
   const {data:user,error:userError}=await api.auth.getUser();
   if(userError||!user.user)throw new Error('Sign in with an active beta invitation.');
@@ -35,10 +35,26 @@ export async function submitBetaFeedback(input:FeedbackInput) {
   const {error}=await configured().from('beta_feedback').insert(feedbackRow(userId,input));
   if(error)throw new Error('Feedback was not submitted. Confirm account consent and your invitation, then retry. Your report remains on this device.');
 }
-// Read-only boundary for a later explicit migration flow. Never invoked during auth or startup.
+// Explicit cloud operations only; never invoked during auth or startup.
 export async function readCloudPlannerSnapshot() {
   const userId=await eligibleUser();
   const {data,error}=await configured().from('planner_state').select('*').eq('user_id',userId).maybeSingle();
   if(error)throw new Error('Cloud snapshot could not be read. Local data is unchanged.');
   return data;
+}
+export async function uploadInitialPlannerCopy(payload:string,expectedUserId:string){
+  if(await eligibleUser()!==expectedUserId)throw Error('Account changed. Review the copy again.');
+  const {error}=await configured().rpc('create_initial_planner_copy',{payload:JSON.parse(payload),confirmed:true,expected_user_id:expectedUserId});
+  if(error)throw Error(error.code==='40001'?'This account already has a cloud copy. Nothing was replaced.':'Cloud copy could not finish. Your local data and backup are unchanged.');
+}
+export async function exportOwnAccount(){
+  await eligibleUser();
+  const {data,error}=await configured().rpc('export_own_account');
+  if(error)throw Error('Account export is unavailable. Your data is unchanged.');
+  return data;
+}
+export async function setDeletionRequest(cancel:boolean){
+  await eligibleUser();
+  const {error}=await configured().rpc('set_deletion_request',{cancel_request:cancel});
+  if(error)throw Error('The request could not be saved. No data was deleted.');
 }
