@@ -1,6 +1,6 @@
 export type CloudConfig = { status: 'unconfigured' | 'invalid'; message: string } | { status: 'ready'; url: string; key: string };
 export function validateCloudConfig(url?: string, key?: string): CloudConfig {
-  if (!url && !key) return {status:'unconfigured',message:'Cloud accounts are not configured. Your planner remains local on this device.'};
+  if (!url && !key) return {status:'unconfigured',message:'Cloud account configuration is unavailable. Access is closed until the administrator completes setup.'};
   const invalid: CloudConfig = {status:'invalid',message:'Cloud account configuration needs administrator attention. Your local data is unchanged.'};
   if (!url || !key || /YOUR_|PLACEHOLDER/i.test(url+key) || key.startsWith('sb_secret_')) return invalid;
   try {
