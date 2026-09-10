@@ -2,6 +2,9 @@ name: EZPep Planner private beta
 
 on:
   workflow_dispatch:
+  push:
+    branches: [develop/0.4-multiplan]
+    paths: [.github/workflows/private-beta-pages.yml]
 
 permissions:
   contents: read
@@ -14,6 +17,14 @@ concurrency:
 
 jobs:
   build:
+    # One activation push from the approved checkpoint; later pushes cannot deploy.
+    if: >-
+      github.repository == 'stevemalin/peptide-planner-app' &&
+      github.ref == 'refs/heads/develop/0.4-multiplan' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'push' &&
+        github.event.before == '6a4b16d38d54093fc982417a3c37834fdc8b9e55' &&
+        github.event.head_commit.message == 'Activate approved private beta Pages workflow'))
     runs-on: ubuntu-latest
     env:
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
