@@ -47,6 +47,14 @@ export async function uploadInitialPlannerCopy(payload:string,expectedUserId:str
   const {error}=await configured().rpc('create_initial_planner_copy',{payload:JSON.parse(payload),confirmed:true,expected_user_id:expectedUserId});
   if(error)throw Error(error.code==='40001'?'This account already has a cloud copy. Nothing was replaced.':'Cloud copy could not finish. Your local data and backup are unchanged.');
 }
+export async function saveCloudPlannerSnapshot(payload:string,expectedRevision:number,expectedUserId:string){
+  if(await eligibleUser()!==expectedUserId)throw Error('Account changed. Review synchronization again.');
+  let parsed:unknown;
+  try{parsed=JSON.parse(payload);}catch{throw Error('Local planner data could not be validated. Nothing was uploaded.');}
+  const {data,error}=await configured().rpc('sync_planner_snapshot',{payload:parsed as Database['public']['Tables']['planner_state']['Row']['snapshot'],expected_revision:expectedRevision,expected_user_id:expectedUserId});
+  if(error)throw Error(error.code==='40001'?'Cloud data changed on another device. Refresh before choosing which copy to keep.':'Cloud synchronization could not finish. Your local data and backup are unchanged.');
+  return data;
+}
 export async function exportOwnAccount(){
   await eligibleUser();
   const {data,error}=await configured().rpc('export_own_account');
