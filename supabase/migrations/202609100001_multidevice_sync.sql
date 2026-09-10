@@ -14,7 +14,7 @@ declare
   next_revision bigint;
 begin
   if current_user_id is null
-     or current_user_id <> expected_user_id
+     or current_user_id IS DISTINCT FROM expected_user_id
      or not private.beta_member() then
     raise exception 'beta access required' using errcode = '42501';
   end if;

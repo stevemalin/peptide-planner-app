@@ -13,3 +13,29 @@ test('stale cloud revision blocks upload before backup',async()=>{const current=
 test('changed local planner blocks stale upload',async()=>{let current=local(),f=port(),review=reviewSync('one',current,row());current=blankStore();await assert.rejects(uploadReviewed(review,()=>current,true,f.port),/local data changed/i);assert.deepEqual(f.calls,[]);});
 test('confirmed download backs up local before applying cloud',async()=>{const current=local(),cloud=row(),f=port(cloud),review=reviewSync('one',current,cloud);await downloadReviewed(review,()=>current,true,f.port);assert.equal(f.calls[0][0],'backup');assert.equal(f.calls[1][0],'apply');assert.equal(f.calls[1][1],encodePlannerStore(blankStore()));});
 test('download requires explicit confirmation and stable revision',async()=>{const current=local(),cloud=row(),f=port(cloud),review=reviewSync('one',current,cloud);await assert.rejects(downloadReviewed(review,()=>current,false,f.port),/confirm/i);cloud.revision=4;await assert.rejects(downloadReviewed(review,()=>current,true,f.port),/changed on another device/i);assert.deepEqual(f.calls,[]);});
+
+const fs=require('node:fs');
+const syncSql=fs.readFileSync('supabase/migrations/202609100001_multidevice_sync.sql','utf8');
+const foundationSql=fs.readFileSync('supabase/migrations/202609080001_beta_foundation.sql','utf8');
+test('sync authorization uses null-safe expected-account binding',()=>{
+  assert.match(syncSql,/current_user_id IS DISTINCT FROM expected_user_id/);
+  assert.doesNotMatch(syncSql,/current_user_id\s*(?:<>|!=|=)\s*expected_user_id/);
+  assert.match(syncSql,/current_user_id is null[\s\S]*?or current_user_id IS DISTINCT FROM expected_user_id[\s\S]*?or not private\.beta_member\(\) then[\s\S]*?errcode = '42501'/);
+});
+test('sync cannot direct inserts or updates at a caller-selected owner',()=>{
+  assert.match(syncSql,/current_user_id uuid := auth\.uid\(\)/);
+  assert.match(syncSql,/values\(current_user_id, 4, 1, payload\)/);
+  assert.match(syncSql,/where user_id = current_user_id\s+and revision = expected_revision/);
+  assert.match(syncSql,/revoke all[\s\S]*from public, anon/);
+  assert.match(syncSql,/grant execute[\s\S]*to authenticated/);
+});
+test('planner reads require both current owner and non-null beta membership',()=>{
+  assert.match(foundationSql,/create policy planner_self_read[\s\S]*?user_id = \(select auth.uid\(\)\)[\s\S]*?private.beta_member\(\)/i);
+  assert.match(foundationSql,/create function private.beta_member\(\)[\s\S]*?select exists \(/);
+});
+
+test('PostgreSQL fixture exercises the exact migration body with isolated dependencies',()=>{
+ const fixture=fs.readFileSync('supabase/tests/multidevice-sync.sql','utf8');
+ const body=syncSql.slice(syncSql.indexOf('create or replace function'),syncSql.indexOf('\nrevoke all')).replaceAll('public.sync_planner_snapshot','pg_temp.test_sync').replaceAll('auth.uid()','pg_temp.test_uid()').replaceAll('private.beta_member()','pg_temp.test_member()').replaceAll('public.planner_state','pg_temp.planner_fixture');
+ assert.ok(fixture.includes(body));assert.match(fixture,/rollback;/);assert.doesNotMatch(fixture,/insert into (?:auth\.users|private\.beta_invites)/i);
+});
