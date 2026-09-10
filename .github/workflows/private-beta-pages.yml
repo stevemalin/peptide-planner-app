@@ -23,8 +23,8 @@ jobs:
       github.ref == 'refs/heads/develop/0.4-multiplan' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' &&
-        github.event.before == '6a4b16d38d54093fc982417a3c37834fdc8b9e55' &&
-        github.event.head_commit.message == 'Activate approved private beta Pages workflow'))
+        github.event.before == '782973f4f9d35905d51de952c33f8b986c8f733f' &&
+        github.event.head_commit.message == 'Deploy approved branded EZPep domain'))
     runs-on: ubuntu-latest
     env:
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}

@@ -20,7 +20,7 @@
       "bundler": "metro"
     },
     "experiments": {
-      "baseUrl": "/peptide-planner-app"
+      "baseUrl": ""
     }
   }
 }
