@@ -23,8 +23,8 @@ jobs:
       github.ref == 'refs/heads/develop/0.4-multiplan' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' &&
-        github.event.before == '87219ca71780762e0c7c5fbcb9e314a16b66362b' &&
-        github.event.head_commit.message == 'Deploy renamed EZPep GitHub account'))
+        github.event.before == 'e40e9054d8c6700118d2a6339d912761f574a0ff' &&
+        github.event.head_commit.message == 'Deploy consent-gated beta analytics'))
     runs-on: ubuntu-latest
     env:
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
