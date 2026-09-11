@@ -19,12 +19,12 @@ jobs:
   build:
     # One activation push from the approved checkpoint; later pushes cannot deploy.
     if: >-
-      github.repository == 'stevemalin/peptide-planner-app' &&
+      github.repository == 'stonelynch99/peptide-planner-app' &&
       github.ref == 'refs/heads/develop/0.4-multiplan' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' &&
-        github.event.before == '782973f4f9d35905d51de952c33f8b986c8f733f' &&
-        github.event.head_commit.message == 'Deploy approved branded EZPep domain'))
+        github.event.before == '87219ca71780762e0c7c5fbcb9e314a16b66362b' &&
+        github.event.head_commit.message == 'Deploy renamed EZPep GitHub account'))
     runs-on: ubuntu-latest
     env:
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
