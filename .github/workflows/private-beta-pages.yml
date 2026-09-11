@@ -23,8 +23,8 @@ jobs:
       github.ref == 'refs/heads/develop/0.4-multiplan' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' &&
-        github.event.before == 'e40e9054d8c6700118d2a6339d912761f574a0ff' &&
-        github.event.head_commit.message == 'Deploy consent-gated beta analytics'))
+        github.event.before == '339f59701bb3db51d53169b02cb2e19f7ec5159a' &&
+        github.event.head_commit.message == 'Deploy required beta usage analytics'))
     runs-on: ubuntu-latest
     env:
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
