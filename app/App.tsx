@@ -1,6 +1,6 @@
 import {CloudDataPanel,useAutomaticCloudSync} from './src/cloud/CloudDataPanel';
 import {BetaAccountPanel,useBetaAccount} from './src/cloud/BetaAccount';
-import {cloudConfig,submitBetaFeedback,readBetaAnalyticsConsent,setBetaAnalyticsConsent,trackBetaAnalytics} from './src/cloud/client';
+import {cloudConfig,submitBetaFeedback,setBetaAnalyticsConsent,trackBetaAnalytics} from './src/cloud/client';
 import ActivePeptideEditor from './src/ActivePeptideEditor';
 import {archivePlan} from './src/plan-actions-v04';
 import NavIcon,{navColors,type NavGlyph} from './src/NavIcon';
@@ -133,22 +133,26 @@ export default function App() {
   const [feedbackMessage,setFeedbackMessage]=useState('');
   const [betaConsentAt,setBetaConsentAt]=useState<string|null>(null);
   const [betaConsentChecked,setBetaConsentChecked]=useState(false);
-  const [analyticsConsent,setAnalyticsConsent]=useState<boolean|null>(null);
-  const [analyticsConsentChecked,setAnalyticsConsentChecked]=useState(false);
-  const [analyticsMessage,setAnalyticsMessage]=useState('');
-  const [analyticsBusy,setAnalyticsBusy]=useState(false);
+  const [analyticsConsent,setAnalyticsConsent]=useState(false);
   const analyticsSessionTracked=useRef(false);
   const trackedPlanCount=useRef<number|null>(null);
   useEffect(()=>{AsyncStorage.getItem('pepplan.beta-consent.v1').then(value=>setBetaConsentAt(value||null)).catch(()=>{});},[]);
   useEffect(()=>{
-    if(betaAccount.state.status!=='eligible'){setAnalyticsConsent(null);analyticsSessionTracked.current=false;return;}
-    readBetaAnalyticsConsent().then(setAnalyticsConsent).catch(()=>setAnalyticsConsent(false));
+    if(betaAccount.state.status!=='eligible'){setAnalyticsConsent(false);analyticsSessionTracked.current=false;return;}
+    setBetaAnalyticsConsent(true).then(()=>setAnalyticsConsent(true)).catch(()=>setAnalyticsConsent(false));
   },[betaAccount.state.status,betaAccount.state.userId]);
   useEffect(()=>{
-    if(betaAccount.state.status!=='eligible'||analyticsConsent!==true)return;
+    if(betaAccount.state.status!=='eligible'||!analyticsConsent)return;
     if(!analyticsSessionTracked.current){analyticsSessionTracked.current=true;void trackBetaAnalytics('session_started');}
     void trackBetaAnalytics('screen_viewed',screen);
     if(screen==='guide')void trackBetaAnalytics('plan_builder_started');
+  },[betaAccount.state.status,betaAccount.state.userId,analyticsConsent,screen]);
+  useEffect(()=>{
+    if(betaAccount.state.status!=='eligible'||!analyticsConsent)return;
+    let startedAt=Date.now(),measuring=true;
+    const flush=()=>{if(!measuring)return;measuring=false;const seconds=Math.floor((Date.now()-startedAt)/1000);if(seconds>=1)void trackBetaAnalytics('screen_time',screen,seconds);};
+    const subscription=AppState.addEventListener('change',next=>{if(next==='active'){startedAt=Date.now();measuring=true;}else flush();});
+    return()=>{flush();subscription.remove();};
   },[betaAccount.state.status,betaAccount.state.userId,analyticsConsent,screen]);
   useEffect(()=>{AsyncStorage.getItem("pepplan.school.favorites").then(value=>{if(value)setSchoolFavorites(JSON.parse(value));}).catch(()=>{});},[]);
   const toggleSchoolFavorite=(id:string)=>setSchoolFavorites(current=>{const next=current.includes(id)?current.filter(item=>item!==id):[...current,id];AsyncStorage.setItem("pepplan.school.favorites",JSON.stringify(next)).catch(()=>{});return next;});
@@ -168,10 +172,10 @@ export default function App() {
   const [restartingOnboarding,setRestartingOnboarding]=useState(false);
   useEffect(()=>{AsyncStorage.getItem("pepplan.onboarding.v1").then(value=>setOnboarding(value?JSON.parse(value):null)).catch(()=>setOnboarding(null));},[]);
   const onboardingDestination=(goal:FirstGoal):Screen=>goal==="learn"||goal==="research"?"school":"guide";
-  const finishOnboarding=(profile:OnboardingProfile,destination?:Screen)=>{setRestartingOnboarding(false);setOnboarding(profile);AsyncStorage.setItem("pepplan.onboarding.v1",JSON.stringify(profile)).catch(()=>{});if(analyticsConsent===true)void trackBetaAnalytics("onboarding_completed");setScreen(destination??onboardingDestination(profile.goal));};
+  const finishOnboarding=(profile:OnboardingProfile,destination?:Screen)=>{const acceptedAt=new Date().toISOString();setRestartingOnboarding(false);setOnboarding(profile);setBetaConsentAt(acceptedAt);AsyncStorage.multiSet([["pepplan.onboarding.v1",JSON.stringify(profile)],["pepplan.beta-consent.v1",acceptedAt]]).catch(()=>{});if(analyticsConsent)void trackBetaAnalytics("onboarding_completed");setScreen(destination??onboardingDestination(profile.goal));};
   const confirmSkipOnboarding=()=>Alert.alert(
     "Skip Quick Start?",
-    "Are you sure you want to skip Quick Start Onboarding? You can restart it at any time from More → Preferences.",
+    "Skipping the questions continues into EZPep and accepts the beta terms and limited usage analytics described on this screen. You can restart Quick Start from More → Preferences.",
     [
       {text:"Keep going",style:"cancel"},
       {text:"Skip for now",onPress:()=>finishOnboarding({experience:"familiar",goal:"setup"},"tracker")},
@@ -341,7 +345,8 @@ export default function App() {
       <View style={styles.goalGrid}>{([
         ["learn","Learn the basics"],["research","Research a peptide"],["setup","Set up an existing routine"],["track","Track a routine underway"]
       ] as const).map(([value,label])=><Pressable accessibilityRole="radio" accessibilityState={{selected:firstGoal===value}} key={value} onPress={()=>setFirstGoal(value)} style={[styles.goalCard,firstGoal===value&&styles.goalCardSelected]}><Text style={[styles.goalText,firstGoal===value&&styles.goalTextSelected]}>{label}</Text></Pressable>)}</View>
-      {experience&&firstGoal&&<AppButton label="Show me where to begin" onPress={()=>finishOnboarding({experience,goal:firstGoal})}/>}
+      <View style={styles.notice}><Text style={styles.noticeText}>By continuing, you accept the private beta terms and limited product analytics used to measure sessions, feature use and time spent by app area. Planner content—including peptide names, doses, schedules, calculations, inventory, history and notes—is not included.</Text></View>
+      {experience&&firstGoal&&<AppButton label="Accept and show me where to begin" onPress={()=>finishOnboarding({experience,goal:firstGoal})}/>}
       <Pressable accessibilityRole="button" accessibilityLabel="Skip introduction" onPress={confirmSkipOnboarding} style={styles.skipButton}><Text style={styles.crossLinkText}>Skip for now</Text></Pressable>
       <Text style={styles.onboardingSafety}>EZPep Planner organizes educational research information and routines you enter. It does not select a peptide or prescribe a dose.</Text>
     </ScrollView>
@@ -544,20 +549,13 @@ export default function App() {
     finally{setFeedbackSubmitting(false);}
   };
   const saveBetaConsent=async()=>{if(!betaConsentChecked)return;const at=new Date().toISOString();try{await AsyncStorage.setItem('pepplan.beta-consent.v1',at);setBetaConsentAt(at);}catch{Alert.alert('Consent was not saved','Nothing else was changed. Keep the app open and try again.');}};
-  const saveAnalyticsPreference=async(enabled:boolean)=>{
-    if(analyticsBusy||betaAccount.state.status!=='eligible')return;
-    setAnalyticsBusy(true);setAnalyticsMessage('');
-    try{await setBetaAnalyticsConsent(enabled);setAnalyticsConsent(enabled);setAnalyticsConsentChecked(false);analyticsSessionTracked.current=false;setAnalyticsMessage(enabled?'Anonymous-style beta usage tracking is on. No peptide or health details are collected.':'Beta usage tracking is off. No new analytics events will be collected.');}
-    catch(error){setAnalyticsMessage(error instanceof Error?error.message:'Analytics preference could not be saved.');}
-    finally{setAnalyticsBusy(false);}
-  };
   const renderBetaPrivacy=()=> <ScrollView contentContainerStyle={styles.scrollContent}>
     <Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>PRIVATE WEB BETA</Text><Text style={styles.detailTitle}>Privacy and participation</Text><Text style={styles.detailMeta}>Review this draft before joining the invite-only beta.</Text>
     <View style={styles.lessonCard}><Text style={styles.lessonTitle}>What this beta is</Text><Text style={styles.nextText}>EZPep Planner is an educational research, planning and tracking tool. It does not diagnose, prescribe, select a peptide or replace professional medical advice. Beta features may change and may contain errors.</Text></View>
-    <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Your information</Text><Text style={styles.nextText}>The current build keeps plans, schedules, calculations, history and inventory on this device. When cloud accounts are enabled, transfer will require a preview and explicit confirmation. The local copy will remain recoverable during migration.</Text><Text style={styles.nextText}>Routine authentication and reminder emails will not include peptide names, amounts, schedules or history. Feedback excludes plan information unless you explicitly choose to include it.</Text></View>
+    <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Your information</Text><Text style={styles.nextText}>The current build keeps plans, schedules, calculations, history and inventory on this device. When cloud accounts are enabled, transfer will require a preview and explicit confirmation. The local copy will remain recoverable during migration.</Text><Text style={styles.nextText}>Routine authentication and reminder emails will not include peptide names, amounts, schedules or history. Feedback excludes plan information unless you explicitly choose to include it. EZPep also records limited product usage and time spent by app area for service operation and improvement; it does not include planner content.</Text></View>
     <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Your controls</Text><Text style={styles.nextText}>You will be able to export your account data, sign out, manage sessions and request account deletion. Until cloud accounts are connected, use Preferences & Data to export or restore the local record.</Text></View>
     {betaConsentAt?<View style={styles.notice}><Text style={styles.noticeText}>Acknowledged on this device: {new Date(betaConsentAt).toLocaleString()}. Account-linked consent will be requested again when secure beta accounts are enabled.</Text></View>:<View style={styles.lessonCard}><Pressable accessibilityRole="checkbox" accessibilityState={{checked:betaConsentChecked}} onPress={()=>setBetaConsentChecked(value=>!value)} style={styles.notice}><Text style={styles.noticeText}>{betaConsentChecked?'✓':'○'} I understand this is an unfinished educational beta, not medical advice, and that the current data is stored on this device.</Text></Pressable><AppButton label="Save beta acknowledgement on this device" disabled={!betaConsentChecked} onPress={()=>{void saveBetaConsent();}}/></View>}
-    <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Optional beta usage analytics</Text><Text style={styles.nextText}>With your permission, EZPep records only app sessions, screens opened, onboarding completion, plan-builder starts, plans started, completed imports and submitted feedback. It cannot send peptide names, doses, schedules, calculations, inventory, history, notes, feedback text, device details or browser details.</Text>{betaAccount.state.status!=='eligible'?<Text style={styles.nextText}>Sign in with your invited beta account to choose this setting.</Text>:analyticsConsent===true?<><View style={styles.notice}><Text style={styles.noticeText}>✓ Beta usage analytics is on.</Text></View><AppButton label="Turn off beta usage analytics" secondary disabled={analyticsBusy} onPress={()=>{void saveAnalyticsPreference(false);}}/></>:<><Pressable accessibilityRole="checkbox" accessibilityState={{checked:analyticsConsentChecked}} onPress={()=>setAnalyticsConsentChecked(value=>!value)} style={styles.notice}><Text style={styles.noticeText}>{analyticsConsentChecked?'✓':'○'} I agree to the limited beta usage tracking described above.</Text></Pressable><AppButton label="Turn on beta usage analytics" disabled={!analyticsConsentChecked||analyticsBusy} onPress={()=>{void saveAnalyticsPreference(true);}}/></>}{!!analyticsMessage&&<Text accessibilityLiveRegion="polite" style={styles.helper}>{analyticsMessage}</Text>}</View>
+
     <AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/>
   </ScrollView>;
 

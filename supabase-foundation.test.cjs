@@ -29,11 +29,11 @@ test('UI gates configured access, preserves offline/export and explicit feedback
 test('RLS grants exclude client invites, planner writes and feedback review',()=>{const sql=fs.readFileSync('supabase/migrations/202609080001_beta_foundation.sql','utf8');for(const table of ['profiles','planner_state','consent_records','beta_feedback'])assert.ok(sql.includes(`alter table public.${table} enable row level security`));assert.match(sql,/alter table private.beta_invites enable row level security/);assert.match(sql,/revoke all on private.beta_invites from public, anon, authenticated/);assert.ok(!/grant (?:all|insert|update|delete).*public\.planner_state.*to authenticated/i.test(sql));assert.match(sql,/u.email_confirmed_at is not null/);assert.match(sql,/i.expires_at > now\(\)/);assert.match(sql,/security definer set search_path = ''/);});
 test('beta analytics is explicit, bounded and excludes sensitive planner data',()=>{
   const app=fs.readFileSync('app/App.tsx','utf8'),client=fs.readFileSync('app/src/cloud/client.ts','utf8');
-  assert.match(app,/I agree to the limited beta usage tracking described above/);
-  assert.match(app,/analyticsConsent===true/);
-  for(const event of ['session_started','screen_viewed','onboarding_completed','plan_builder_started','plan_started','import_completed','feedback_submitted'])assert.ok(client.includes(event));
-  assert.match(client,/insert\(\{user_id:userId,event_name:eventName,screen:screen\?\?null\}\)/);
-  assert.doesNotMatch(client,/trackBetaAnalytics\([^)]*,[^)]*,/);
+  assert.match(app,/By continuing, you accept the private beta terms and limited product analytics/);
+  assert.match(app,/setBetaAnalyticsConsent\(true\)/);
+  for(const event of ['session_started','screen_viewed','screen_time','onboarding_completed','plan_builder_started','plan_started','import_completed','feedback_submitted'])assert.ok(client.includes(event));
+  assert.match(client,/insert\(\{user_id:userId,event_name:eventName,screen:screen\?\?null,duration_seconds:duration\}\)/);
+  assert.doesNotMatch(client,/properties|metadata|user_agent|feedback_text/);
 });
 test('analytics migration requires consent and exposes no client event reads',()=>{
   const sql=fs.readFileSync('supabase/migrations/202609110001_beta_analytics.sql','utf8');

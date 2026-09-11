@@ -67,7 +67,7 @@ export async function setDeletionRequest(cancel:boolean){
   if(error)throw Error('The request could not be saved. No data was deleted.');
 }
 
-export type BetaAnalyticsEvent='session_started'|'screen_viewed'|'onboarding_completed'|'plan_builder_started'|'plan_started'|'import_completed'|'feedback_submitted';
+export type BetaAnalyticsEvent='session_started'|'screen_viewed'|'screen_time'|'onboarding_completed'|'plan_builder_started'|'plan_started'|'import_completed'|'feedback_submitted';
 export const BETA_ANALYTICS_CONSENT_VERSION='beta-analytics-v1';
 export async function readBetaAnalyticsConsent(){
   const userId=await eligibleUser(),api=configured() as any;
@@ -85,10 +85,12 @@ export async function setBetaAnalyticsConsent(enabled:boolean){
     if(error)throw Error('Analytics consent could not be withdrawn.');
   }
 }
-export async function trackBetaAnalytics(eventName:BetaAnalyticsEvent,screen?:string){
+export async function trackBetaAnalytics(eventName:BetaAnalyticsEvent,screen?:string,durationSeconds?:number){
   const allowedScreens=new Set(['welcome','profile','settings','betaFeedback','betaPrivacy','shop','plans','planInventory','planDetail','planTracker','planHistory','school','schoolDetail','schoolMore','schoolSources','guide','detail','plan','calc','tracker','review','schedule','inventory','reminders','history','dataImport','more']);
   if(screen&&!allowedScreens.has(screen))return false;
+  const duration=eventName==='screen_time'&&Number.isSafeInteger(durationSeconds)?Math.min(21600,Math.max(1,durationSeconds!)):null;
+  if(eventName==='screen_time'&&duration===null)return false;
   const userId=await eligibleUser(),api=configured() as any;
-  const {error}=await api.from('beta_analytics_events').insert({user_id:userId,event_name:eventName,screen:screen??null});
+  const {error}=await api.from('beta_analytics_events').insert({user_id:userId,event_name:eventName,screen:screen??null,duration_seconds:duration});
   return !error;
 }
