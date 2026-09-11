@@ -66,3 +66,29 @@ export async function setDeletionRequest(cancel:boolean){
   const {error}=await configured().rpc('set_deletion_request',{cancel_request:cancel});
   if(error)throw Error('The request could not be saved. No data was deleted.');
 }
+
+export type BetaAnalyticsEvent='session_started'|'screen_viewed'|'onboarding_completed'|'plan_builder_started'|'plan_started'|'import_completed'|'feedback_submitted';
+export const BETA_ANALYTICS_CONSENT_VERSION='beta-analytics-v1';
+export async function readBetaAnalyticsConsent(){
+  const userId=await eligibleUser(),api=configured() as any;
+  const {data,error}=await api.from('beta_analytics_consents').select('consent_version').eq('user_id',userId).maybeSingle();
+  if(error)throw Error('Analytics preference could not be checked.');
+  return data?.consent_version===BETA_ANALYTICS_CONSENT_VERSION;
+}
+export async function setBetaAnalyticsConsent(enabled:boolean){
+  const userId=await eligibleUser(),api=configured() as any;
+  if(enabled){
+    const {error}=await api.from('beta_analytics_consents').upsert({user_id:userId,consent_version:BETA_ANALYTICS_CONSENT_VERSION},{onConflict:'user_id'});
+    if(error)throw Error('Analytics consent could not be saved.');
+  }else{
+    const {error}=await api.from('beta_analytics_consents').delete().eq('user_id',userId);
+    if(error)throw Error('Analytics consent could not be withdrawn.');
+  }
+}
+export async function trackBetaAnalytics(eventName:BetaAnalyticsEvent,screen?:string){
+  const allowedScreens=new Set(['welcome','profile','settings','betaFeedback','betaPrivacy','shop','plans','planInventory','planDetail','planTracker','planHistory','school','schoolDetail','schoolMore','schoolSources','guide','detail','plan','calc','tracker','review','schedule','inventory','reminders','history','dataImport','more']);
+  if(screen&&!allowedScreens.has(screen))return false;
+  const userId=await eligibleUser(),api=configured() as any;
+  const {error}=await api.from('beta_analytics_events').insert({user_id:userId,event_name:eventName,screen:screen??null});
+  return !error;
+}

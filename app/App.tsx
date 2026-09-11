@@ -1,6 +1,6 @@
 import {CloudDataPanel,useAutomaticCloudSync} from './src/cloud/CloudDataPanel';
 import {BetaAccountPanel,useBetaAccount} from './src/cloud/BetaAccount';
-import {cloudConfig,submitBetaFeedback} from './src/cloud/client';
+import {cloudConfig,submitBetaFeedback,readBetaAnalyticsConsent,setBetaAnalyticsConsent,trackBetaAnalytics} from './src/cloud/client';
 import ActivePeptideEditor from './src/ActivePeptideEditor';
 import {archivePlan} from './src/plan-actions-v04';
 import NavIcon,{navColors,type NavGlyph} from './src/NavIcon';
@@ -10,7 +10,7 @@ import Svg,{Circle,Path} from 'react-native-svg';
 import {researchPracticeFor,RESEARCH_PRACTICE_LABEL,RESEARCH_PRACTICE_NOTICE} from './src/research-practice';
 import SetupPreview from './src/SetupPreview';
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -133,7 +133,23 @@ export default function App() {
   const [feedbackMessage,setFeedbackMessage]=useState('');
   const [betaConsentAt,setBetaConsentAt]=useState<string|null>(null);
   const [betaConsentChecked,setBetaConsentChecked]=useState(false);
+  const [analyticsConsent,setAnalyticsConsent]=useState<boolean|null>(null);
+  const [analyticsConsentChecked,setAnalyticsConsentChecked]=useState(false);
+  const [analyticsMessage,setAnalyticsMessage]=useState('');
+  const [analyticsBusy,setAnalyticsBusy]=useState(false);
+  const analyticsSessionTracked=useRef(false);
+  const trackedPlanCount=useRef<number|null>(null);
   useEffect(()=>{AsyncStorage.getItem('pepplan.beta-consent.v1').then(value=>setBetaConsentAt(value||null)).catch(()=>{});},[]);
+  useEffect(()=>{
+    if(betaAccount.state.status!=='eligible'){setAnalyticsConsent(null);analyticsSessionTracked.current=false;return;}
+    readBetaAnalyticsConsent().then(setAnalyticsConsent).catch(()=>setAnalyticsConsent(false));
+  },[betaAccount.state.status,betaAccount.state.userId]);
+  useEffect(()=>{
+    if(betaAccount.state.status!=='eligible'||analyticsConsent!==true)return;
+    if(!analyticsSessionTracked.current){analyticsSessionTracked.current=true;void trackBetaAnalytics('session_started');}
+    void trackBetaAnalytics('screen_viewed',screen);
+    if(screen==='guide')void trackBetaAnalytics('plan_builder_started');
+  },[betaAccount.state.status,betaAccount.state.userId,analyticsConsent,screen]);
   useEffect(()=>{AsyncStorage.getItem("pepplan.school.favorites").then(value=>{if(value)setSchoolFavorites(JSON.parse(value));}).catch(()=>{});},[]);
   const toggleSchoolFavorite=(id:string)=>setSchoolFavorites(current=>{const next=current.includes(id)?current.filter(item=>item!==id):[...current,id];AsyncStorage.setItem("pepplan.school.favorites",JSON.stringify(next)).catch(()=>{});return next;});
 
@@ -152,7 +168,7 @@ export default function App() {
   const [restartingOnboarding,setRestartingOnboarding]=useState(false);
   useEffect(()=>{AsyncStorage.getItem("pepplan.onboarding.v1").then(value=>setOnboarding(value?JSON.parse(value):null)).catch(()=>setOnboarding(null));},[]);
   const onboardingDestination=(goal:FirstGoal):Screen=>goal==="learn"||goal==="research"?"school":"guide";
-  const finishOnboarding=(profile:OnboardingProfile,destination?:Screen)=>{setRestartingOnboarding(false);setOnboarding(profile);AsyncStorage.setItem("pepplan.onboarding.v1",JSON.stringify(profile)).catch(()=>{});setScreen(destination??onboardingDestination(profile.goal));};
+  const finishOnboarding=(profile:OnboardingProfile,destination?:Screen)=>{setRestartingOnboarding(false);setOnboarding(profile);AsyncStorage.setItem("pepplan.onboarding.v1",JSON.stringify(profile)).catch(()=>{});if(analyticsConsent===true)void trackBetaAnalytics("onboarding_completed");setScreen(destination??onboardingDestination(profile.goal));};
   const confirmSkipOnboarding=()=>Alert.alert(
     "Skip Quick Start?",
     "Are you sure you want to skip Quick Start Onboarding? You can restart it at any time from More → Preferences.",
@@ -218,6 +234,7 @@ export default function App() {
       const total=report.activeCreated+report.archivedCreated;
       const summary=total+' '+(total===1?'peptide':'peptides')+' imported · '+report.activeCreated+' active · '+report.archivedCreated+' archived · '+report.historyAdded+' history entries added'+(report.duplicatesSkipped?' · '+report.duplicatesSkipped+' duplicate skipped':'');
       setImportResult(summary);setImportSummary(summary);
+      if(analyticsConsent===true)void trackBetaAnalytics('import_completed');
       setImportPreview(null);setImportSetups([]);setImportText('');
     }catch(error){setImportResult('');setImportError('Import was not completed. '+String(error).replace(/^Error:\s*/,''));}
     finally{setImporting(false);}
@@ -251,6 +268,12 @@ export default function App() {
  const [discardEdits,setDiscardEdits]=useState(false);
   const editing=editingActive&&!!saved.store.activeEdit&&['activeEditor','plan','review','schedule','calc'].includes(screen);
   const plans=getActivePlans(saved.store);
+  useEffect(()=>{
+    if(!saved.ready){trackedPlanCount.current=null;return;}
+    if(trackedPlanCount.current===null){trackedPlanCount.current=plans.length;return;}
+    if(plans.length>trackedPlanCount.current&&analyticsConsent===true)void trackBetaAnalytics('plan_started');
+    trackedPlanCount.current=plans.length;
+  },[saved.ready,plans.length,analyticsConsent]);
   const focused=plans.find(p=>p.id===selectedPlanId)??saved.store.archives.find(p=>p.id===selectedPlanId)??plans[0]??null;
   const scopedStore={...saved.store,active:focused,draft:editing?saved.store.activeEdit!.draft:screen==='planDetail'?null:saved.store.draft};
   const scopedUpdate=(change:Parameters<typeof saved.update>[0])=>saved.update(old=>{if(editing&&old.activeEdit){const changed=change({...old,active:focused,draft:old.activeEdit.draft});return {...old,activeEdit:{...old.activeEdit,draft:changed.draft!}};}const next=scopedPlanUpdate(old,focused?.id??null,change);if(getActivePlans(next).length>getActivePlans(old).length)setSelectedPlanId(getActivePlans(next).at(-1)!.id);return next;});
@@ -516,16 +539,25 @@ export default function App() {
     try{
       await submitBetaFeedback({category:feedbackType,message:feedbackText,origin:feedbackOrigin,platform:Platform.OS,browser:'Other',includePlanDetails:feedbackIncludePlans,activePeptideNames:feedbackIncludePlans?plans.map(plan=>plan.compoundName):undefined});
       setFeedbackMessage('Feedback submitted privately. Your planner data was not uploaded.');
+      if(analyticsConsent===true)void trackBetaAnalytics('feedback_submitted');
     }catch(error){setFeedbackMessage(error instanceof Error?error.message:'Feedback was not submitted. Your report remains here.');}
     finally{setFeedbackSubmitting(false);}
   };
   const saveBetaConsent=async()=>{if(!betaConsentChecked)return;const at=new Date().toISOString();try{await AsyncStorage.setItem('pepplan.beta-consent.v1',at);setBetaConsentAt(at);}catch{Alert.alert('Consent was not saved','Nothing else was changed. Keep the app open and try again.');}};
+  const saveAnalyticsPreference=async(enabled:boolean)=>{
+    if(analyticsBusy||betaAccount.state.status!=='eligible')return;
+    setAnalyticsBusy(true);setAnalyticsMessage('');
+    try{await setBetaAnalyticsConsent(enabled);setAnalyticsConsent(enabled);setAnalyticsConsentChecked(false);analyticsSessionTracked.current=false;setAnalyticsMessage(enabled?'Anonymous-style beta usage tracking is on. No peptide or health details are collected.':'Beta usage tracking is off. No new analytics events will be collected.');}
+    catch(error){setAnalyticsMessage(error instanceof Error?error.message:'Analytics preference could not be saved.');}
+    finally{setAnalyticsBusy(false);}
+  };
   const renderBetaPrivacy=()=> <ScrollView contentContainerStyle={styles.scrollContent}>
     <Pressable accessibilityRole="button" onPress={()=>setScreen('more')}><Text style={styles.back}>‹ More</Text></Pressable><Text style={styles.kicker}>PRIVATE WEB BETA</Text><Text style={styles.detailTitle}>Privacy and participation</Text><Text style={styles.detailMeta}>Review this draft before joining the invite-only beta.</Text>
     <View style={styles.lessonCard}><Text style={styles.lessonTitle}>What this beta is</Text><Text style={styles.nextText}>EZPep Planner is an educational research, planning and tracking tool. It does not diagnose, prescribe, select a peptide or replace professional medical advice. Beta features may change and may contain errors.</Text></View>
     <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Your information</Text><Text style={styles.nextText}>The current build keeps plans, schedules, calculations, history and inventory on this device. When cloud accounts are enabled, transfer will require a preview and explicit confirmation. The local copy will remain recoverable during migration.</Text><Text style={styles.nextText}>Routine authentication and reminder emails will not include peptide names, amounts, schedules or history. Feedback excludes plan information unless you explicitly choose to include it.</Text></View>
     <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Your controls</Text><Text style={styles.nextText}>You will be able to export your account data, sign out, manage sessions and request account deletion. Until cloud accounts are connected, use Preferences & Data to export or restore the local record.</Text></View>
     {betaConsentAt?<View style={styles.notice}><Text style={styles.noticeText}>Acknowledged on this device: {new Date(betaConsentAt).toLocaleString()}. Account-linked consent will be requested again when secure beta accounts are enabled.</Text></View>:<View style={styles.lessonCard}><Pressable accessibilityRole="checkbox" accessibilityState={{checked:betaConsentChecked}} onPress={()=>setBetaConsentChecked(value=>!value)} style={styles.notice}><Text style={styles.noticeText}>{betaConsentChecked?'✓':'○'} I understand this is an unfinished educational beta, not medical advice, and that the current data is stored on this device.</Text></Pressable><AppButton label="Save beta acknowledgement on this device" disabled={!betaConsentChecked} onPress={()=>{void saveBetaConsent();}}/></View>}
+    <View style={styles.lessonCard}><Text style={styles.lessonTitle}>Optional beta usage analytics</Text><Text style={styles.nextText}>With your permission, EZPep records only app sessions, screens opened, onboarding completion, plan-builder starts, plans started, completed imports and submitted feedback. It cannot send peptide names, doses, schedules, calculations, inventory, history, notes, feedback text, device details or browser details.</Text>{betaAccount.state.status!=='eligible'?<Text style={styles.nextText}>Sign in with your invited beta account to choose this setting.</Text>:analyticsConsent===true?<><View style={styles.notice}><Text style={styles.noticeText}>✓ Beta usage analytics is on.</Text></View><AppButton label="Turn off beta usage analytics" secondary disabled={analyticsBusy} onPress={()=>{void saveAnalyticsPreference(false);}}/></>:<><Pressable accessibilityRole="checkbox" accessibilityState={{checked:analyticsConsentChecked}} onPress={()=>setAnalyticsConsentChecked(value=>!value)} style={styles.notice}><Text style={styles.noticeText}>{analyticsConsentChecked?'✓':'○'} I agree to the limited beta usage tracking described above.</Text></Pressable><AppButton label="Turn on beta usage analytics" disabled={!analyticsConsentChecked||analyticsBusy} onPress={()=>{void saveAnalyticsPreference(true);}}/></>}{!!analyticsMessage&&<Text accessibilityLiveRegion="polite" style={styles.helper}>{analyticsMessage}</Text>}</View>
     <AppButton label="Back to More" secondary onPress={()=>setScreen('more')}/>
   </ScrollView>;
 

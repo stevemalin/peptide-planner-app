@@ -16,3 +16,12 @@ test('turning inventory tracking off preserves its balance for later re-enable',
 test('private beta feedback is reachable from More and Community without automatic plan disclosure',()=>{const source=fs.readFileSync('./app/App.tsx','utf8');assert.match(source,/Give private beta feedback/);assert.match(source,/Beta Feedback/);assert.match(source,/Your plans and history are not included automatically/);assert.match(source,/Include active peptide names in this report/);assert.match(source,/Active peptide names: Not included by tester/);assert.match(source,/Submit private beta feedback/);});
 
 test('beta privacy acknowledgement is local and repeats for account-linked consent',()=>{const source=fs.readFileSync('./app/App.tsx','utf8');assert.match(source,/pepplan\.beta-consent\.v1/);assert.match(source,/educational research, planning and tracking tool/);assert.match(source,/Routine authentication and reminder emails will not include peptide names/);assert.match(source,/transfer will require a preview and explicit confirmation/);assert.match(source,/Account-linked consent will be requested again/);});
+test('consent-gated beta analytics stays bounded to non-sensitive event names',()=>{
+ const app=fs.readFileSync('app/App.tsx','utf8'),client=fs.readFileSync('app/src/cloud/client.ts','utf8'),sql=fs.readFileSync('supabase/migrations/202609110001_beta_analytics.sql','utf8');
+ assert.match(app,/I agree to the limited beta usage tracking described above/);
+ assert.match(client,/insert\(\{user_id:userId,event_name:eventName,screen:screen\?\?null\}\)/);
+ assert.match(sql,/exists \(\s*select 1 from public\.beta_analytics_consents/s);
+ assert.match(sql,/grant insert on public\.beta_analytics_events to authenticated/);
+ assert.doesNotMatch(sql,/grant select.*beta_analytics_events.*authenticated/i);
+});
+
