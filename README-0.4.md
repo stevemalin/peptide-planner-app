@@ -255,3 +255,12 @@ Owner choices:
 **Owner decision confirmed September 9, 2026:** preserve the existing GHK-Cu, KPV and Glow 70 reference numbers and their current transfer behavior. Their vendor/community provenance and limitations must remain visible; they must not be relabeled as approved, clinically established or primary-source protocols. This is no longer a private-beta blocker.
 
 The product direction is broader than these three records: every School library entry should provide a useful starting amount and schedule reference so users can stay inside EZPep Planner. Primary sources remain preferred, but where those do not provide a route-appropriate human numeric protocol, the app may present a clearly identified vendor/community starting reference with a prominent disclaimer and direct source links. Such a reference may remain manual-entry only; coverage does not require automatic Guide transfer. The app must distinguish the source class honestly and must not invent a number merely to fill a gap.
+
+
+## Beta automatic cloud sync — 2026-09-11
+
+Eligible signed-in beta accounts remain local-first but now use bounded automatic synchronization after an explicit first cloud copy. The app checks on sign-in, open/resume and after a short delay following a saved local change; it does not continuously poll. A visible Sync control reports Up to date, Syncing, Setup required, Paused or Needs attention.
+
+Each device stores the last cloud revision and normalized payload it actually matched. A local-only change may upload against that exact revision, while a cloud-only change may load after a local recovery backup. Concurrent local and cloud changes, unexpected same-revision payload changes, account changes and failed verification stop without overwriting either copy. Device clock timestamps never decide the winner. Manual review remains available for first setup and conflicts.
+
+Before expanded public or app-store rollout, reassess snapshot-level synchronization for cohort size, request/bandwidth monitoring, offline duration, background execution limits and record-level conflict handling. Consider moving completed events, inventory entries and plan edits to independently versioned operations before enabling larger multi-device use.

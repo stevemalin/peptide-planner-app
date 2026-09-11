@@ -48,3 +48,19 @@ export async function downloadReviewed(review:SyncReview,current:()=>Store,confi
   await recheck(review,port);
   await port.apply(decodePlannerStore(review.cloudPayload));
 }
+
+
+export type AutomaticSyncBaseline={revision:number;payload:string};
+export type AutomaticSyncDecision='bind'|'upload'|'download'|'attention';
+export function decideAutomaticSync(localPayload:string,cloudPayload:string,cloudRevision:number,baseline:AutomaticSyncBaseline|null):AutomaticSyncDecision{
+ if(!Number.isSafeInteger(cloudRevision)||cloudRevision<1)return 'attention';
+ if(localPayload===cloudPayload)return 'bind';
+ if(!baseline||!Number.isSafeInteger(baseline.revision)||baseline.revision<1)return 'attention';
+ if(cloudRevision<baseline.revision)return 'attention';
+ if(cloudRevision===baseline.revision&&cloudPayload!==baseline.payload)return 'attention';
+ const localChanged=localPayload!==baseline.payload;
+ const cloudChanged=cloudRevision>baseline.revision&&cloudPayload!==baseline.payload;
+ if(localChanged&&!cloudChanged)return 'upload';
+ if(!localChanged&&cloudChanged)return 'download';
+ return 'attention';
+}

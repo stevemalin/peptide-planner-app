@@ -1,13 +1,81 @@
-import React,{useEffect,useRef,useState} from 'react';
-import {Platform,Pressable,Share,StyleSheet,Text,View} from 'react-native';
+import React,{useCallback,useEffect,useRef,useState} from 'react';
+import {AppState,Platform,Pressable,Share,StyleSheet,Text,View} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {Store} from '../engine';
-import {encodePlannerStore} from '../persistence-v04';
+import {decodePlannerStore,encodePlannerStore} from '../persistence-v04';
 import {confirmMigration,reviewMigration,type MigrationReview} from './planner-migration';
-import {downloadReviewed,reviewSync,uploadReviewed,type SyncReview} from './planner-sync';
+import {decideAutomaticSync,downloadReviewed,reviewSync,uploadReviewed,type AutomaticSyncBaseline,type SyncReview} from './planner-sync';
 import {eligibleUser,exportOwnAccount,readCloudPlannerSnapshot,saveCloudPlannerSnapshot,setDeletionRequest,uploadInitialPlannerCopy} from './client';
 
-export function CloudDataPanel({store,ready,userId,replaceStore,guided=false}:{store:Store;ready:boolean;userId:string;replaceStore:(next:Store)=>Promise<void>;guided?:boolean}){
+export type AutomaticCloudSyncState={
+ kind:'local'|'checking'|'syncing'|'upToDate'|'setup'|'needsAttention'|'retry';
+ label:string;detail:string;
+};
+const initialAutomaticState:AutomaticCloudSyncState={kind:'local',label:'Saved on this device',detail:'Sign in to use cloud sync.'};
+const automaticBaselineKey=(userId:string)=>'pepplan.cloud-sync.baseline.v1:'+userId;
+function readAutomaticBaseline(raw:string|null):AutomaticSyncBaseline|null{
+ if(!raw)return null;
+ try{const value=JSON.parse(raw);return Number.isSafeInteger(value?.revision)&&value.revision>0&&typeof value?.payload==='string'?value:null;}catch{return null;}
+}
+async function saveAutomaticBaseline(userId:string,baseline:AutomaticSyncBaseline){
+ await AsyncStorage.setItem(automaticBaselineKey(userId),JSON.stringify(baseline));
+}
+export function useAutomaticCloudSync({eligible,userId,store,ready,saving,replaceStore,onNeedsAttention}:{eligible:boolean;userId:string|null;store:Store;ready:boolean;saving:boolean;replaceStore:(next:Store)=>Promise<void>;onNeedsAttention:()=>void;}){
+ const [state,setState]=useState<AutomaticCloudSyncState>(initialAutomaticState);
+ const current=useRef(store),replace=useRef(replaceStore),attention=useRef(onNeedsAttention),busy=useRef(false),mounted=useRef(true);
+ current.current=store;replace.current=replaceStore;attention.current=onNeedsAttention;
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
+ const set=(next:AutomaticCloudSyncState)=>{if(mounted.current)setState(next);};
+ const syncNow=useCallback(async()=>{
+  if(!eligible||!userId||!ready||saving||busy.current)return;
+  busy.current=true;set({kind:'checking',label:'Checking cloud…',detail:'Comparing this device with your private cloud copy.'});
+  try{
+   const localPayload=encodePlannerStore(current.current),row=await readCloudPlannerSnapshot();
+   if(!row){set({kind:'setup',label:'Set up cloud sync',detail:'Create the first cloud copy before automatic sync begins.'});return;}
+   const review=reviewSync(userId,current.current,row);
+   const baseline=readAutomaticBaseline(await AsyncStorage.getItem(automaticBaselineKey(userId)));
+   const decision=decideAutomaticSync(review.localPayload,review.cloudPayload,row.revision,baseline);
+   if(decision==='bind'){
+    await saveAutomaticBaseline(userId,{revision:row.revision,payload:review.cloudPayload});
+    set({kind:'upToDate',label:'Cloud up to date',detail:'This device matches cloud revision '+row.revision+'.'});return;
+   }
+   if(decision==='attention'){
+    set({kind:'needsAttention',label:'Sync needs attention',detail:'Both copies may contain changes. Review them before choosing which planner to keep.'});return;
+   }
+   set({kind:'syncing',label:'Syncing…',detail:decision==='upload'?'Saving this device’s newer changes to the cloud.':'Loading newer cloud changes on this device.'});
+   await AsyncStorage.setItem('peptide-planner:auto-sync-backup:'+new Date().toISOString(),localPayload);
+   if(encodePlannerStore(current.current)!==localPayload)throw Error('Local data changed during synchronization. Try again.');
+   if(decision==='upload'){
+    const revision=await saveCloudPlannerSnapshot(review.localPayload,row.revision,userId);
+    const verified=await readCloudPlannerSnapshot();
+    if(!verified||verified.revision!==revision)throw Error('Cloud update could not be verified.');
+    const verifiedReview=reviewSync(userId,current.current,verified);
+    if(verifiedReview.localPayload!==verifiedReview.cloudPayload)throw Error('Cloud update could not be verified.');
+    await saveAutomaticBaseline(userId,{revision,payload:verifiedReview.cloudPayload});
+    set({kind:'upToDate',label:'Cloud up to date',detail:'Your changes are available on your other signed-in devices.'});
+   }else{
+    const verified=await readCloudPlannerSnapshot();
+    if(!verified||verified.revision!==row.revision)throw Error('Cloud data changed again. Review sync before continuing.');
+    const verifiedReview=reviewSync(userId,current.current,verified);
+    if(verifiedReview.cloudPayload!==review.cloudPayload)throw Error('Cloud data changed again. Review sync before continuing.');
+    await replace.current(decodePlannerStore(review.cloudPayload));
+    await saveAutomaticBaseline(userId,{revision:row.revision,payload:review.cloudPayload});
+    set({kind:'upToDate',label:'Cloud up to date',detail:'Newer changes from another device are now on this device.'});
+   }
+  }catch(error){
+   const detail=String(error).replace(/^Error:\s*/,'');
+   set(/changed|review|account/i.test(detail)?{kind:'needsAttention',label:'Sync needs attention',detail}:{kind:'retry',label:'Sync paused',detail:'Your device copy is safe. '+detail});
+  }finally{busy.current=false;}
+ },[eligible,userId,ready,saving]);
+ const localPayload=ready?encodePlannerStore(store):'';
+ useEffect(()=>{if(!eligible||!userId||!ready||saving)return;const timer=setTimeout(()=>{void syncNow();},1800);return()=>clearTimeout(timer);},[eligible,userId,ready,saving,localPayload,syncNow]);
+ useEffect(()=>{if(!eligible)return;const subscription=AppState.addEventListener('change',next=>{if(next==='active')void syncNow();});return()=>subscription.remove();},[eligible,syncNow]);
+ useEffect(()=>{if(!eligible)setState(initialAutomaticState);},[eligible,userId]);
+ const activate=()=>state.kind==='needsAttention'||state.kind==='setup'?attention.current():void syncNow();
+ return {state,syncNow,activate};
+}
+
+export function CloudDataPanel({store,ready,userId,replaceStore,guided=false,onCloudChanged}:{store:Store;ready:boolean;userId:string;replaceStore:(next:Store)=>Promise<void>;guided?:boolean;onCloudChanged?:()=>void}){
  const [review,setReview]=useState<MigrationReview|null>(null),[syncReview,setSyncReview]=useState<SyncReview|null>(null),[confirmed,setConfirmed]=useState(false),[deletionConfirmed,setDeletionConfirmed]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
  const current=useRef(store);current.current=store;
  useEffect(()=>{setReview(null);setSyncReview(null);setConfirmed(false);setDeletionConfirmed(false);setMessage('');},[userId]);
@@ -34,7 +102,7 @@ export function CloudDataPanel({store,ready,userId,replaceStore,guided=false}:{s
  <Text style={styles.text}>{guided?'EZPep saves your planner on each device. Start here to safely copy this device’s planner to your private cloud, or load an existing cloud copy onto this device.':'Move a verified planner copy between devices using the same invited account. EZPep checks the account and revision and saves a local recovery copy before replacing anything.'}</Text>
  <Text style={styles.step}><Text style={styles.stepNumber}>1</Text> On the device containing the planner you want to keep, copy it to your private cloud.</Text>
  <Text style={styles.step}><Text style={styles.stepNumber}>2</Text> Sign in on the other device with the same email and choose “Load my cloud planner.”</Text>
- <Text style={styles.note}>This is a safe cloud copy, not continuous automatic sync. After later changes, return here to update or load the cloud copy again.</Text>
+ <Text style={styles.note}>After the first cloud copy is established, EZPep automatically checks on sign-in, app open and resume, and shortly after saved changes. Use the Sync control anytime for an immediate check.</Text>
  {button('Refresh cloud-copy status',()=>void run(refreshSync),!ready)}
  {!syncReview&&button('Review this planner for cloud copy',()=>void run(async()=>{
   setReview(null);setConfirmed(false);
@@ -50,15 +118,15 @@ export function CloudDataPanel({store,ready,userId,replaceStore,guided=false}:{s
    userId:eligibleUser,cloudExists:async()=>Boolean(await readCloudPlannerSnapshot()),
    backup:payload=>backup(payload,'pre-cloud'),
    upload:uploadInitialPlannerCopy,
-  });setReview(null);setConfirmed(false);await refreshSync();return 'Your planner is ready in the cloud. Sign in on your other device with the same email, then choose “Load my cloud planner.”';
+  });setReview(null);setConfirmed(false);await refreshSync();onCloudChanged?.();return 'Your planner is ready in the cloud. Sign in on your other device with the same email. Automatic sync will begin after it matches this cloud copy.';
  }),!confirmed||!ready)}
  {button('Cancel cloud copy',()=>{setReview(null);setConfirmed(false);setMessage('Cloud copy cancelled. Nothing was uploaded.');})}</>}
  {syncReview&&<><View style={styles.summary}><Text style={styles.text}>This device: {syncReview.localPlans} saved peptide record(s)</Text><Text style={styles.text}>Cloud: {syncReview.cloudPlans} saved peptide record(s) · revision {syncReview.cloudRevision}</Text></View>
  {syncReview.identical?<Text style={styles.good}>This device and the cloud copy match.</Text>:<>
  <Text style={styles.warning}>These copies differ. Choose one direction. EZPep does not merge two different schedules automatically.</Text>
  {check('I reviewed the direction below and understand the replaced copy will remain available in a local safety backup.',confirmed,()=>setConfirmed(v=>!v))}
- {button('Keep this device’s planner and copy it to cloud',()=>void run(async()=>{const revision=await uploadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setSyncReview(null);return 'Cloud planner updated to revision '+revision+'. Other devices can now load it.';}),!confirmed||!ready)}
- {button('Load my cloud planner on this device',()=>void run(async()=>{await downloadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setSyncReview(null);return 'Cloud revision '+syncReview.cloudRevision+' is now active on this device. The previous local copy was preserved as a recovery copy.';}),!confirmed||!ready)}
+ {button('Keep this device’s planner and copy it to cloud',()=>void run(async()=>{const revision=await uploadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setSyncReview(null);onCloudChanged?.();return 'Cloud planner updated to revision '+revision+'. Other devices can now load it.';}),!confirmed||!ready)}
+ {button('Load my cloud planner on this device',()=>void run(async()=>{await downloadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setSyncReview(null);onCloudChanged?.();return 'Cloud revision '+syncReview.cloudRevision+' is now active on this device. The previous local copy was preserved as a recovery copy.';}),!confirmed||!ready)}
  </>}</>}
  {button('Export account data',()=>void run(async()=>{
   const payload=JSON.stringify(await exportOwnAccount(),null,2);

@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const {blankStore,newDraft}=require('./app/src/engine.ts');
 const {library}=require('./app/src/library-v04.ts');
 const {encodePlannerStore}=require('./app/src/persistence-v04.ts');
-const {reviewSync,uploadReviewed,downloadReviewed}=require('./app/src/cloud/planner-sync.ts');
+const {reviewSync,uploadReviewed,downloadReviewed,decideAutomaticSync}=require('./app/src/cloud/planner-sync.ts');
 function local(){const s=blankStore();s.draft=newDraft(library[0]);return s;}
 function row(snapshot=blankStore(),revision=2){return{user_id:'one',snapshot:JSON.parse(encodePlannerStore(snapshot)),schema_version:4,revision,updated_at:new Date().toISOString()};}
 function port(cloud=row()){const calls=[];return{calls,port:{userId:async()=>'one',read:async()=>cloud,backup:async payload=>calls.push(['backup',payload]),upload:async(payload,revision,id)=>{calls.push(['upload',revision,id]);return revision+1;},apply:async store=>calls.push(['apply',encodePlannerStore(store)])}};}
@@ -39,3 +39,10 @@ test('PostgreSQL fixture exercises the exact migration body with isolated depend
  const body=syncSql.slice(syncSql.indexOf('create or replace function'),syncSql.indexOf('\nrevoke all')).replaceAll('public.sync_planner_snapshot','pg_temp.test_sync').replaceAll('auth.uid()','pg_temp.test_uid()').replaceAll('private.beta_member()','pg_temp.test_member()').replaceAll('public.planner_state','pg_temp.planner_fixture');
  assert.ok(fixture.includes(body));assert.match(fixture,/rollback;/);assert.doesNotMatch(fixture,/insert into (?:auth\.users|private\.beta_invites)/i);
 });
+
+test('automatic sync binds an identical first device without writing',()=>{assert.equal(decideAutomaticSync('same','same',3,null),'bind');});
+test('automatic sync refuses a different device until a common cloud baseline is known',()=>{assert.equal(decideAutomaticSync('phone','cloud',3,null),'attention');});
+test('automatic sync uploads only local changes from the known cloud revision',()=>{assert.equal(decideAutomaticSync('phone-new','base',3,{revision:3,payload:'base'}),'upload');});
+test('automatic sync downloads only newer cloud changes when local stayed at the baseline',()=>{assert.equal(decideAutomaticSync('base','desktop-new',4,{revision:3,payload:'base'}),'download');});
+test('automatic sync refuses concurrent device changes instead of choosing by clock time',()=>{assert.equal(decideAutomaticSync('phone-new','desktop-new',4,{revision:3,payload:'base'}),'attention');});
+test('automatic sync refuses same-revision payload mutation',()=>{assert.equal(decideAutomaticSync('base','unexpected',3,{revision:3,payload:'base'}),'attention');});
