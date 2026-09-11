@@ -7,7 +7,7 @@ import {confirmMigration,reviewMigration,type MigrationReview} from './planner-m
 import {downloadReviewed,reviewSync,uploadReviewed,type SyncReview} from './planner-sync';
 import {eligibleUser,exportOwnAccount,readCloudPlannerSnapshot,saveCloudPlannerSnapshot,setDeletionRequest,uploadInitialPlannerCopy} from './client';
 
-export function CloudDataPanel({store,ready,userId,replaceStore}:{store:Store;ready:boolean;userId:string;replaceStore:(next:Store)=>Promise<void>}){
+export function CloudDataPanel({store,ready,userId,replaceStore,guided=false}:{store:Store;ready:boolean;userId:string;replaceStore:(next:Store)=>Promise<void>;guided?:boolean}){
  const [review,setReview]=useState<MigrationReview|null>(null),[syncReview,setSyncReview]=useState<SyncReview|null>(null),[confirmed,setConfirmed]=useState(false),[deletionConfirmed,setDeletionConfirmed]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
  const current=useRef(store);current.current=store;
  useEffect(()=>{setReview(null);setSyncReview(null);setConfirmed(false);setDeletionConfirmed(false);setMessage('');},[userId]);
@@ -20,6 +20,7 @@ export function CloudDataPanel({store,ready,userId,replaceStore}:{store:Store;re
    const next=reviewSync(userId,current.current,row);setSyncReview(next);
    return next.identical?'This device matches cloud revision '+next.cloudRevision+'.':'Cloud revision '+next.cloudRevision+' is available. Review both copies before choosing a direction.';
  };
+ useEffect(()=>{if(ready)void run(refreshSync);},[ready,userId]);
  const syncPort=()=>({
    userId:eligibleUser,
    read:async()=>await readCloudPlannerSnapshot(),
@@ -29,32 +30,35 @@ export function CloudDataPanel({store,ready,userId,replaceStore}:{store:Store;re
  });
  const button=(label:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" accessibilityLabel={label} disabled={busy||disabled} accessibilityState={{disabled:busy||disabled}} onPress={action} style={[styles.button,(busy||disabled)&&{opacity:.5}]}><Text style={styles.buttonText}>{label}</Text></Pressable>;
  const check=(label:string,value:boolean,change:()=>void)=><Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{checked:value,disabled:busy}} disabled={busy} onPress={change}><Text style={styles.text}>{value?'✓':'○'} {label}</Text></Pressable>;
- return <View style={styles.card}><Text style={styles.title}>Cloud sync & account data</Text>
- <Text style={styles.text}>Cloud sync lets the same invited account move its planner between phone and desktop. Each operation verifies the account and revision and saves a local recovery copy first. Another device can never silently overwrite a newer cloud revision.</Text>
- {button('Check cloud sync status',()=>void run(refreshSync),!ready)}
- {!syncReview&&button('Review an initial cloud copy',()=>void run(async()=>{
+ return <View style={styles.card}><Text style={styles.title}>{guided?'Use EZPep on another device':'Cloud copy & account data'}</Text>
+ <Text style={styles.text}>{guided?'EZPep saves your planner on each device. Start here to safely copy this device’s planner to your private cloud, or load an existing cloud copy onto this device.':'Move a verified planner copy between devices using the same invited account. EZPep checks the account and revision and saves a local recovery copy before replacing anything.'}</Text>
+ <Text style={styles.step}><Text style={styles.stepNumber}>1</Text> On the device containing the planner you want to keep, copy it to your private cloud.</Text>
+ <Text style={styles.step}><Text style={styles.stepNumber}>2</Text> Sign in on the other device with the same email and choose “Load my cloud planner.”</Text>
+ <Text style={styles.note}>This is a safe cloud copy, not continuous automatic sync. After later changes, return here to update or load the cloud copy again.</Text>
+ {button('Refresh cloud-copy status',()=>void run(refreshSync),!ready)}
+ {!syncReview&&button('Review this planner for cloud copy',()=>void run(async()=>{
   setReview(null);setConfirmed(false);
   if(await eligibleUser()!==userId)throw Error('Account changed. Open your account again.');
   if(await readCloudPlannerSnapshot())return refreshSync();
   setReview(reviewMigration(userId,encodePlannerStore(current.current)));
-  return 'Review the first cloud copy below. A verified local safety copy will be retained.';
+  return 'Review this device’s planner below. A verified local safety copy will be retained.';
  }),!ready)}
  {review&&<><Text style={styles.text}>Copy {review.plans} active plans and {review.archives} archived plans from this device. This creates cloud revision 1 without deleting the local planner.</Text>
  {check('I explicitly agree to create this account’s first private cloud planner copy.',confirmed,()=>setConfirmed(v=>!v))}
- {button('Confirm initial cloud copy',()=>void run(async()=>{
+ {button('Copy this planner to the cloud',()=>void run(async()=>{
   await confirmMigration(review,()=>encodePlannerStore(current.current),confirmed,{
    userId:eligibleUser,cloudExists:async()=>Boolean(await readCloudPlannerSnapshot()),
    backup:payload=>backup(payload,'pre-cloud'),
    upload:uploadInitialPlannerCopy,
-  });setReview(null);setConfirmed(false);return refreshSync();
+  });setReview(null);setConfirmed(false);await refreshSync();return 'Your planner is ready in the cloud. Sign in on your other device with the same email, then choose “Load my cloud planner.”';
  }),!confirmed||!ready)}
  {button('Cancel cloud copy',()=>{setReview(null);setConfirmed(false);setMessage('Cloud copy cancelled. Nothing was uploaded.');})}</>}
  {syncReview&&<><View style={styles.summary}><Text style={styles.text}>This device: {syncReview.localPlans} saved peptide record(s)</Text><Text style={styles.text}>Cloud: {syncReview.cloudPlans} saved peptide record(s) · revision {syncReview.cloudRevision}</Text></View>
  {syncReview.identical?<Text style={styles.good}>This device and the cloud copy match.</Text>:<>
  <Text style={styles.warning}>These copies differ. Choose one direction. EZPep does not merge two different schedules automatically.</Text>
  {check('I reviewed the direction below and understand the replaced copy will remain available in a local safety backup.',confirmed,()=>setConfirmed(v=>!v))}
- {button('Save this device to cloud',()=>void run(async()=>{const revision=await uploadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setSyncReview(null);return 'Cloud planner updated to revision '+revision+'. Other devices can now load it.';}),!confirmed||!ready)}
- {button('Load cloud copy on this device',()=>void run(async()=>{await downloadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setSyncReview(null);return 'Cloud revision '+syncReview.cloudRevision+' is now active on this device. The previous local copy was preserved.';}),!confirmed||!ready)}
+ {button('Keep this device’s planner and copy it to cloud',()=>void run(async()=>{const revision=await uploadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setSyncReview(null);return 'Cloud planner updated to revision '+revision+'. Other devices can now load it.';}),!confirmed||!ready)}
+ {button('Load my cloud planner on this device',()=>void run(async()=>{await downloadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setSyncReview(null);return 'Cloud revision '+syncReview.cloudRevision+' is now active on this device. The previous local copy was preserved as a recovery copy.';}),!confirmed||!ready)}
  </>}</>}
  {button('Export account data',()=>void run(async()=>{
   const payload=JSON.stringify(await exportOwnAccount(),null,2);
@@ -69,4 +73,4 @@ export function CloudDataPanel({store,ready,userId,replaceStore}:{store:Store;re
  {!!message&&<Text accessibilityLiveRegion="polite" style={styles.text}>{message}</Text>}
  </View>;
 }
-const styles=StyleSheet.create({card:{width:'100%',maxWidth:680,alignSelf:'center',padding:16,gap:12,borderRadius:18,backgroundColor:'#fff',borderWidth:1,borderColor:'#DDE8F6'},title:{fontSize:21,fontWeight:'700',color:'#0E1C4A'},text:{fontSize:15,lineHeight:23,color:'#334466',flexShrink:1},summary:{padding:12,gap:4,borderRadius:12,backgroundColor:'#F7FBFF'},good:{fontSize:15,lineHeight:23,color:'#176B45',fontWeight:'700'},warning:{fontSize:15,lineHeight:23,color:'#8A4B08',fontWeight:'700'},button:{padding:14,borderRadius:12,backgroundColor:'#0E1C4A'},buttonText:{color:'#fff',fontSize:15,fontWeight:'700',textAlign:'center'}});
+const styles=StyleSheet.create({card:{width:'100%',maxWidth:680,alignSelf:'center',padding:16,gap:12,borderRadius:18,backgroundColor:'#fff',borderWidth:1,borderColor:'#DDE8F6'},title:{fontSize:21,fontWeight:'700',color:'#0E1C4A'},text:{fontSize:15,lineHeight:23,color:'#334466',flexShrink:1},step:{fontSize:15,lineHeight:23,color:'#0E1C4A',fontWeight:'600'},stepNumber:{color:'#7557F6',fontWeight:'800'},note:{fontSize:13,lineHeight:19,color:'#52627F',backgroundColor:'#F2EDFF',borderRadius:12,padding:12},summary:{padding:12,gap:4,borderRadius:12,backgroundColor:'#F7FBFF'},good:{fontSize:15,lineHeight:23,color:'#176B45',fontWeight:'700'},warning:{fontSize:15,lineHeight:23,color:'#8A4B08',fontWeight:'700'},button:{padding:14,borderRadius:12,backgroundColor:'#0E1C4A'},buttonText:{color:'#fff',fontSize:15,fontWeight:'700',textAlign:'center'}});

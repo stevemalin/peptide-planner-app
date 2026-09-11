@@ -138,6 +138,13 @@ export default function App() {
   const toggleSchoolFavorite=(id:string)=>setSchoolFavorites(current=>{const next=current.includes(id)?current.filter(item=>item!==id):[...current,id];AsyncStorage.setItem("pepplan.school.favorites",JSON.stringify(next)).catch(()=>{});return next;});
 
   const saved = usePlannerStore();
+  const [cloudGuideOpen,setCloudGuideOpen]=useState(false);
+  useEffect(()=>{
+    if(betaAccount.state.status!=='eligible'||!saved.ready)return;
+    const key='pepplan.cloud-guide.seen.v1:'+betaAccount.state.userId;
+    AsyncStorage.getItem(key).then(value=>{if(!value)setCloudGuideOpen(true);}).catch(()=>{});
+  },[betaAccount.state.status,betaAccount.state.userId,saved.ready]);
+  const closeCloudGuide=()=>{setCloudGuideOpen(false);if(betaAccount.state.status==='eligible')AsyncStorage.setItem('pepplan.cloud-guide.seen.v1:'+betaAccount.state.userId,'seen').catch(()=>{});};
   const [onboarding,setOnboarding]=useState<OnboardingProfile|null|undefined>(undefined);
   const [experience,setExperience]=useState<Experience|null>(null);
   const [firstGoal,setFirstGoal]=useState<FirstGoal|null>(null);
@@ -543,9 +550,9 @@ export default function App() {
     ];
     return <ScrollView contentContainerStyle={styles.scrollContent}>
       <Text style={[styles.kicker, { marginTop: 20 }]}>MORE</Text><Text style={styles.detailTitle}>Your EZPep Planner</Text><Text style={styles.detailMeta}>Account, reminders, preferences and support.</Text>
-      <View style={styles.lessonCard}><Text style={styles.sourceClass}>ACCOUNT DIRECTION</Text><Text style={styles.lessonTitle}>Start locally. Sync when you choose.</Text><Text style={styles.nextText}>EZPep Planner remains useful without an account. Passwordless six-digit email verification will unlock backup, device transfer and Pro access after the secure service is connected.</Text><AppButton label="View account plan" secondary onPress={()=>setScreen("profile")}/></View>
+      <View style={styles.lessonCard}><Text style={styles.sourceClass}>USE ANOTHER DEVICE</Text><Text style={styles.lessonTitle}>Move your planner safely.</Text><Text style={styles.nextText}>Copy this device’s planner to your private cloud, then load it on a phone, tablet or computer signed in with the same invited email.</Text><AppButton label="Use EZPep on another device" onPress={()=>setCloudGuideOpen(true)}/><AppButton label="View account" secondary onPress={()=>setScreen("profile")}/></View>
       {rows.map(row=><Pressable accessibilityRole="button" accessibilityLabel={row.label} disabled={!row.target} key={row.label} style={styles.moreRow} onPress={()=>row.target&&(row.target==='betaFeedback'?openBetaFeedback('More'):setScreen(row.target))}><View style={{flex:1}}><Text style={styles.planOptionTitle}>{row.label}</Text><Text style={styles.smallBadge}>{row.detail}</Text></View><Text style={styles.linkArrow}>{row.target?'›':'·'}</Text></Pressable>)}
-      <View style={styles.notice}><Text style={styles.noticeText}>Prototype 0.4 · plans are saved on this device. No cloud account, shop connection or customer-data integration is active.</Text></View>
+      <View style={styles.notice}><Text style={styles.noticeText}>Prototype 0.4 · plans save on this device first. Invited accounts can create an explicit private cloud copy for device transfer. Continuous automatic sync is not active.</Text></View>
     </ScrollView>;
   };
 
@@ -686,6 +693,7 @@ export default function App() {
       {replacement&&<View style={{padding:16,backgroundColor:COLORS.paleBlue}}><Text style={styles.helper}>You have an unfinished {saved.store.draft?.compoundName} draft. Replace only that draft? Active plans and history will stay unchanged.</Text><AppButton label="Confirm replace draft" onPress={()=>{const next=replacement;saved.update(old=>({...old,draft:next.draft})).then(()=>{setReplacement(null);setScreen(next.target);}).catch(()=>{});}}/><AppButton label="Keep existing draft" secondary onPress={()=>setReplacement(null)}/></View>}
       {discardEdits&&<View style={{padding:16,backgroundColor:COLORS.paleBlue}}><Text style={styles.helper}>Discard saved edits? Active plans and history will stay unchanged.</Text><AppButton label="Confirm discard edits" onPress={()=>discardActiveEdits().then(()=>setDiscardEdits(false))}/><AppButton label="Keep edits" secondary onPress={()=>setDiscardEdits(false)}/></View>}
       {restoreCandidate&&<Modal transparent animationType="fade" onRequestClose={()=>setRestoreCandidate(null)}><View style={styles.importModalShade}><View style={styles.importModalCard}><Text style={styles.sourceClass}>RESTORE PREVIEW</Text><Text style={styles.importModalTitle}>Replace this device’s planner data?</Text><Text style={styles.nextText}>{restoreCandidate.plans} active plans · {restoreCandidate.archives} archived plans · {restoreCandidate.history} saved history entries</Text><Text style={styles.smallBadge}>This replaces the current local planner data only after confirmation. A private pre-restore recovery copy of the current state is created first.</Text><AppButton label="Confirm restore backup" onPress={()=>{void restoreLocalBackup();}}/><AppButton label="Cancel restore" secondary onPress={()=>setRestoreCandidate(null)}/></View></View></Modal>}
+      {cloudGuideOpen&&betaAccount.state.status==='eligible'&&<Modal transparent animationType="fade" onRequestClose={closeCloudGuide}><View style={styles.importModalShade}><ScrollView contentContainerStyle={styles.cloudGuideScroll}><CloudDataPanel guided store={saved.store} ready={saved.ready&&!saved.saving&&!saved.loadFailed&&!saved.error} userId={betaAccount.state.userId!} replaceStore={saved.recover}/><AppButton label="Done for now" secondary onPress={closeCloudGuide}/></ScrollView></View></Modal>}
       <View key={screen==='schoolDetail'?screen+selected.id:screen} style={styles.main}>
         {screen === "welcome" && renderWelcome()}
         {screen === "school" && renderSchool()}
@@ -714,6 +722,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   importModalShade:{flex:1,backgroundColor:'rgba(9,20,49,0.55)',alignItems:'center',justifyContent:'center',padding:24},
+  cloudGuideScroll:{width:'100%',maxWidth:700,paddingVertical:24},
   importModalCard:{width:'100%',maxWidth:430,padding:22,borderRadius:24,backgroundColor:'#fff'},
   importModalTitle:{fontSize:27,lineHeight:33,fontWeight:'800',color:COLORS.ink,marginTop:5},
   welcomeContent:{paddingHorizontal:22,paddingTop:28,paddingBottom:40},
