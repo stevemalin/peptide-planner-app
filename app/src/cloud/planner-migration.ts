@@ -10,7 +10,7 @@ export function reviewMigration(userId:string,payload:string):MigrationReview {
   if(!userId)throw Error('Sign in before reviewing a cloud copy.');
   const store=decodePlannerStore(payload);
   const normalized=encodePlannerStore(store);
-  if(new TextEncoder().encode(normalized).length>1000000)throw Error('This backup is too large for beta cloud storage. Keep your local export.');
+  if(new TextEncoder().encode(normalized).length>5000000)throw Error('This backup is too large for beta cloud storage. Keep your local export.');
   return {userId,payload:normalized,plans:store.activePlans?.length??0,archives:store.archives.length};
 }
 // Only a deliberate confirmation calls this function. It never writes planner storage.
