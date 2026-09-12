@@ -78,8 +78,13 @@ export async function readBetaAnalyticsConsent(){
 export async function setBetaAnalyticsConsent(enabled:boolean){
   const userId=await eligibleUser(),api=configured() as any;
   if(enabled){
-    const {error}=await api.from('beta_analytics_consents').upsert({user_id:userId,consent_version:BETA_ANALYTICS_CONSENT_VERSION},{onConflict:'user_id'});
-    if(error)throw Error('Analytics consent could not be saved.');
+    const acceptedAt=new Date().toISOString();
+    const {data,error:updateError}=await api.from('beta_analytics_consents').update({consent_version:BETA_ANALYTICS_CONSENT_VERSION,accepted_at:acceptedAt}).eq('user_id',userId).select('user_id');
+    if(updateError)throw Error('Analytics consent could not be saved.');
+    if(!data?.length){
+      const {error:insertError}=await api.from('beta_analytics_consents').insert({user_id:userId,consent_version:BETA_ANALYTICS_CONSENT_VERSION,accepted_at:acceptedAt});
+      if(insertError&&insertError.code!=='23505')throw Error('Analytics consent could not be saved.');
+    }
   }else{
     const {error}=await api.from('beta_analytics_consents').delete().eq('user_id',userId);
     if(error)throw Error('Analytics consent could not be withdrawn.');
