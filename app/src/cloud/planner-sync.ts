@@ -15,7 +15,7 @@ export function reviewSync(userId:string,local:Store,row:CloudPlannerRow):SyncRe
   if(!userId||row.user_id!==userId)throw Error('Cloud account changed. Refresh before synchronizing.');
   if(row.schema_version!==4||!Number.isSafeInteger(row.revision)||row.revision<1)throw Error('Cloud data has an unsupported version. Nothing was changed.');
   const localPayload=normalized(encodePlannerStore(local)),cloudPayload=normalized(row.snapshot);
-  if(new TextEncoder().encode(localPayload).length>1000000)throw Error('This planner is too large for beta cloud storage.');
+  if(new TextEncoder().encode(localPayload).length>5000000)throw Error('This planner is too large for beta cloud storage.');
   return {userId,localPayload,cloudPayload,cloudRevision:row.revision,localPlans:planCount(localPayload),cloudPlans:planCount(cloudPayload),identical:localPayload===cloudPayload};
 }
 export interface SyncPort{
