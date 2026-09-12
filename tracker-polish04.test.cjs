@@ -105,6 +105,10 @@ test('active editor can restore a cycle anchor from the first saved history date
  const source=fs.readFileSync('./app/src/ActivePeptideEditor.tsx','utf8');
  assert.match(source,/Use first saved history date/);assert.match(source,/event\.status!==['"]pending['"]/);assert.match(source,/startDate:firstHistoryDate/);
 });
+test('opening an active editor stays transient until the first real change',()=>{
+ const source=fs.readFileSync('./app/App.tsx','utf8'),open=source.slice(source.indexOf('const editPlan='),source.indexOf('const saveActiveEdits='));
+ assert.match(source,/sessionEdit/);assert.match(open,/setSessionEdit/);assert.doesNotMatch(open,/saved\.update/);assert.match(source,/const persistEdit=.*saved\.update/);assert.match(source,/a draft is saved after your first change/);
+});
 
 
 test('planner persistence keeps and automatically restores a last-known-good local save',()=>{
