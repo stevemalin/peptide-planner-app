@@ -1,4 +1,4 @@
-import {decodeStore,activate,uid,localDate,daysBetween,type Store,type Draft,type Schedule,type Event,type SavedPlan} from './engine';
+import {decodeStore,activate,uid,localDate,daysBetween,rollEventWindow,type Store,type Draft,type Schedule,type Event,type SavedPlan} from './engine';
 import {calculate} from './planning';
 import {normalizeStoreV04} from './multiplan-migration-v04';
 export const STORAGE_KEY_V04='peptide-planner:local:v04';
@@ -24,6 +24,12 @@ export function decodePlannerStore(raw:string):Store{
  return {...base,...(value.activeEdit!==undefined?{activeEdit}:{}),activePlans:plans,active:plans[0]??null};
 }
 export function encodePlannerStore(store:Store){return JSON.stringify(normalizeStoreV04(store));}
+export function compactPlannerStore(store:Store,now=new Date()):Store{
+ const activePlans=(store.activePlans??(store.active?[store.active]:[])).map(plan=>rollEventWindow(plan,now));
+ return {...store,activePlans,active:activePlans[0]??null};
+}
+export function encodeCompactPlannerStore(store:Store,now=new Date()){return JSON.stringify(normalizeStoreV04(compactPlannerStore(store,now)));}
+export function decodeCompactPlannerStore(raw:string,now=new Date()){return compactPlannerStore(decodePlannerStore(raw),now);}
 
 
 export type ExternalCsvRow={

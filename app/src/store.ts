@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { blankStore } from './engine';
-import {decodePlannerStore,encodePlannerStore,STORAGE_KEY_V04,LEGACY_STORAGE_KEY} from './persistence-v04';
+import {decodePlannerStore,encodeCompactPlannerStore,decodeCompactPlannerStore,compactPlannerStore,STORAGE_KEY_V04,LEGACY_STORAGE_KEY} from './persistence-v04';
 import type { Store } from './engine';
 export const STORAGE_KEY=STORAGE_KEY_V04;
 export const RECOVERY_STORAGE_KEY=STORAGE_KEY_V04+':last-good';
@@ -15,16 +15,16 @@ export function usePlannerStore(){
    let loaded:Store;
    let recovered=false;
    if(currentRaw!==null){
-    try{loaded=decodePlannerStore(currentRaw);}
+    try{loaded=decodeCompactPlannerStore(currentRaw);}
     catch(primaryError){
      const recoveryRaw=await AsyncStorage.getItem(RECOVERY_STORAGE_KEY);
      if(recoveryRaw===null)throw primaryError;
-     loaded=decodePlannerStore(recoveryRaw);
-     await AsyncStorage.setItem(STORAGE_KEY,encodePlannerStore(loaded));
+     loaded=decodeCompactPlannerStore(recoveryRaw);
+     await AsyncStorage.setItem(STORAGE_KEY,encodeCompactPlannerStore(loaded));
      recovered=true;
     }
-   }else loaded=legacyRaw?decodePlannerStore(legacyRaw):{...blankStore(),activePlans:[]};
-   const encoded=encodePlannerStore(loaded);
+   }else loaded=legacyRaw?decodeCompactPlannerStore(legacyRaw):{...blankStore(),activePlans:[]};
+   const encoded=encodeCompactPlannerStore(loaded);
    if(currentRaw===null&&legacyRaw!==null)await AsyncStorage.setItem(STORAGE_KEY,encoded);
    await AsyncStorage.setItem(RECOVERY_STORAGE_KEY,encoded).catch(()=>{});
    if(mounted){
@@ -36,15 +36,16 @@ export function usePlannerStore(){
   finally{if(mounted)setReady(true);}
  })();return()=>{mounted=false;};},[]);
  const recover=async(next:Store)=>{
-  const encoded=encodePlannerStore(next);
+  next=compactPlannerStore(next);
+  const encoded=encodeCompactPlannerStore(next);
   await AsyncStorage.setItem(STORAGE_KEY,encoded);
   await AsyncStorage.setItem(RECOVERY_STORAGE_KEY,encoded).catch(()=>{});
   loadFailed.current=false;current.current=next;revision.current++;setStore(next);setSaving(false);setError('');
  };
  const update=(change:(old:Store)=>Store)=>{
   if(!ready||loadFailed.current)return Promise.reject(Error('Saved data is not available.'));
-  const next=change(current.current);current.current=next;setStore(next);setSaving(true);const rev=++revision.current;
-  const encoded=encodePlannerStore(next);
+  const next=compactPlannerStore(change(current.current));current.current=next;setStore(next);setSaving(true);const rev=++revision.current;
+  const encoded=encodeCompactPlannerStore(next);
   const write=queue.current.catch(()=>{}).then(async()=>{await AsyncStorage.setItem(STORAGE_KEY,encoded);await AsyncStorage.setItem(RECOVERY_STORAGE_KEY,encoded).catch(()=>{});});
   queue.current=write;write.then(()=>{if(rev===revision.current){setSaving(false);setError('');}},()=>{if(rev===revision.current){setSaving(false);setError('Could not save on this device. Keep the app open and tap Retry save.');}});
   return write;

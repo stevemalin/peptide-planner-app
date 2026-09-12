@@ -1,4 +1,4 @@
-import {decodePlannerStore,encodePlannerStore} from '../persistence-v04';
+import {decodeCompactPlannerStore,encodeCompactPlannerStore} from '../persistence-v04';
 export type MigrationReview={userId:string;payload:string;plans:number;archives:number};
 export interface MigrationPort {
   userId():Promise<string>;
@@ -8,8 +8,8 @@ export interface MigrationPort {
 }
 export function reviewMigration(userId:string,payload:string):MigrationReview {
   if(!userId)throw Error('Sign in before reviewing a cloud copy.');
-  const store=decodePlannerStore(payload);
-  const normalized=encodePlannerStore(store);
+  const store=decodeCompactPlannerStore(payload);
+  const normalized=encodeCompactPlannerStore(store);
   if(new TextEncoder().encode(normalized).length>5_000_000)throw Error('This backup is too large for beta cloud storage. Keep your local export.');
   return {userId,payload:normalized,plans:store.activePlans?.length??0,archives:store.archives.length};
 }

@@ -48,7 +48,7 @@ test('taking or skipping events triggers targeted reminder cancellation',()=>{
 
 
 test('first-run guidance keeps navigation stable and Today becomes Start Here before a plan',()=>{
- for(const term of ['WELCOME TO EZPEP PLANNER','How familiar are you with peptides?','What would you like to do first?','Show me where to begin','START HERE','Learn the essentials','Research a peptide','Build your plan','Review calculations','Start tracking'])assert.match(app,new RegExp(term));
+ for(const term of ['WELCOME TO EZPEP PLANNER','How familiar are you with peptides?','What would you like to do first?','Accept and show me where to begin','START HERE','Learn the essentials','Research a peptide','Build your plan','Review calculations','Start tracking'])assert.match(app,new RegExp(term));
  assert.match(app,/screen==='tracker'&&!plans\.length/);
  assert.match(app,/screen==='tracker'&&!!plans\.length/);
  assert.match(app,/{ key: "school", label: "Learn" }/);
@@ -106,7 +106,7 @@ test('Professor Lynch explains each active-plan maintenance section without addi
 test('planner persistence keeps and automatically restores a last-known-good local save',()=>{
  assert.match(store,/RECOVERY_STORAGE_KEY/);
  assert.match(store,/last-good/);
- assert.match(store,/decodePlannerStore\(recoveryRaw\)/);
+ assert.match(store,/decodeCompactPlannerStore\(recoveryRaw\)/);
  assert.match(store,/last complete local save was recovered automatically/);
  assert.match(store,/AsyncStorage\.setItem\(RECOVERY_STORAGE_KEY,encoded\)/);
 });
@@ -227,6 +227,4 @@ test('guided import UI provides per-peptide missing-field cards and imports only
  assert.match(app,/Platform\.OS==='web'.*executeReadyImports/);
  assert.match(tracker,/calculationUnavailable/);
 });
-
-
 

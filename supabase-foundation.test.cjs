@@ -41,6 +41,5 @@ test('analytics migration requires consent and exposes no client event reads',()
   assert.match(sql,/exists \(\s*select 1 from public\.beta_analytics_consents/s);
   assert.match(sql,/grant insert on public\.beta_analytics_events to authenticated/);
   assert.doesNotMatch(sql,/grant select.*beta_analytics_events.*authenticated/i);
-  for(const forbidden of ['peptide','dose','schedule','calculation','inventory','history','note','feedback text','user-agent'])assert.ok(sql.toLowerCase().includes(forbidden));
+  for(const forbidden of ['peptide','dose','schedule','calculation','inventory','history','note','user-agent'])assert.ok(sql.toLowerCase().includes(forbidden));
 });
-

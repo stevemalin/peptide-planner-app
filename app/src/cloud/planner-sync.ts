@@ -1,20 +1,20 @@
-import {decodePlannerStore,encodePlannerStore} from '../persistence-v04';
+import {decodeCompactPlannerStore,encodeCompactPlannerStore} from '../persistence-v04';
 import type {Store} from '../engine';
 
 export type CloudPlannerRow={user_id:string;snapshot:unknown;schema_version:number;revision:number;updated_at:string};
 export type SyncReview={userId:string;localPayload:string;cloudPayload:string;cloudRevision:number;localPlans:number;cloudPlans:number;identical:boolean};
 
 function normalized(value:unknown):string{
-  return encodePlannerStore(decodePlannerStore(typeof value==='string'?value:JSON.stringify(value)));
+  return encodeCompactPlannerStore(decodeCompactPlannerStore(typeof value==='string'?value:JSON.stringify(value)));
 }
 function planCount(payload:string){
-  const store=decodePlannerStore(payload);
+  const store=decodeCompactPlannerStore(payload);
   return (store.activePlans?.length??0)+store.archives.length;
 }
 export function reviewSync(userId:string,local:Store,row:CloudPlannerRow):SyncReview{
   if(!userId||row.user_id!==userId)throw Error('Cloud account changed. Refresh before synchronizing.');
   if(row.schema_version!==4||!Number.isSafeInteger(row.revision)||row.revision<1)throw Error('Cloud data has an unsupported version. Nothing was changed.');
-  const localPayload=normalized(encodePlannerStore(local)),cloudPayload=normalized(row.snapshot);
+  const localPayload=normalized(encodeCompactPlannerStore(local)),cloudPayload=normalized(row.snapshot);
   if(new TextEncoder().encode(localPayload).length>5000000)throw Error('This planner is too large for beta cloud storage.');
   return {userId,localPayload,cloudPayload,cloudRevision:row.revision,localPlans:planCount(localPayload),cloudPlans:planCount(cloudPayload),identical:localPayload===cloudPayload};
 }
@@ -32,21 +32,21 @@ async function recheck(review:SyncReview,port:SyncPort){
 }
 export async function uploadReviewed(review:SyncReview,current:()=>Store,confirmed:boolean,port:SyncPort){
   if(confirmed!==true)throw Error('Confirm the cloud update first.');
-  if(normalized(encodePlannerStore(current()))!==review.localPayload)throw Error('Local data changed. Review synchronization again.');
+  if(normalized(encodeCompactPlannerStore(current()))!==review.localPayload)throw Error('Local data changed. Review synchronization again.');
   await recheck(review,port);
   await port.backup(review.localPayload);
-  if(normalized(encodePlannerStore(current()))!==review.localPayload)throw Error('Local data changed. Your safety copy is preserved.');
+  if(normalized(encodeCompactPlannerStore(current()))!==review.localPayload)throw Error('Local data changed. Your safety copy is preserved.');
   await recheck(review,port);
   return port.upload(review.localPayload,review.cloudRevision,review.userId);
 }
 export async function downloadReviewed(review:SyncReview,current:()=>Store,confirmed:boolean,port:SyncPort){
   if(confirmed!==true)throw Error('Confirm the cloud download first.');
-  const before=normalized(encodePlannerStore(current()));
+  const before=normalized(encodeCompactPlannerStore(current()));
   await recheck(review,port);
   await port.backup(before);
-  if(normalized(encodePlannerStore(current()))!==before)throw Error('Local data changed. Your safety copy is preserved.');
+  if(normalized(encodeCompactPlannerStore(current()))!==before)throw Error('Local data changed. Your safety copy is preserved.');
   await recheck(review,port);
-  await port.apply(decodePlannerStore(review.cloudPayload));
+  await port.apply(decodeCompactPlannerStore(review.cloudPayload));
 }
 
 

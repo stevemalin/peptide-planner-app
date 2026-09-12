@@ -115,11 +115,19 @@ export function validateDraft(d: Draft): string[] {
  return [...new Set(errors)];
 }
 function atTime(day: string,time: string) { const d=parseDate(day)!;const [h,m]=time.split(':').map(Number);d.setHours(h,m,0,0);if(d.getHours()!==h||d.getMinutes()!==m)throw Error(time+' does not exist on '+day+' because clocks change. Choose another time.');return d; }
-export function generateEvents(d: Draft): Event[] {
+export const UPCOMING_EVENT_WINDOW_DAYS=30;
+export type EventWindow={from?:string;through?:string};
+export function generateEvents(d: Draft,window?:EventWindow): Event[] {
  const errors=validateDraft(d);if(errors.length)throw Error(errors.join('\n'));
  const events:Event[]=[];let offset=0;
  for(let i=0;i<d.stages.length;i++){
-  const stage=d.stages[i],schedule=stage.override||d.defaultSchedule!,length=stageDays(stage);
+  const stage=d.stages[i],schedule=stage.override||d.defaultSchedule!;
+  const stageStart=addDays(d.startDate,offset);
+  const requestedThrough=window?.through&&parseDate(window.through)?window.through:null;
+  const indefiniteDays=d.indefinite&&i===d.stages.length-1&&requestedThrough
+   ?Math.max(stageDays(stage),daysBetween(stageStart,addDays(requestedThrough,1)))
+   :stageDays(stage);
+  const length=indefiniteDays;
   const start=addDays(d.startDate,offset),end=addDays(start,length),anchor=stage.override?start:d.startDate;
   const dates:Date[]=[];
   if(schedule.kind==='intervalHours'){
@@ -132,14 +140,26 @@ export function generateEvents(d: Draft): Event[] {
    const matches=schedule.kind==='daily'||schedule.kind==='weekly'&&schedule.days.includes(weekday)||schedule.kind==='intervalDays'&&daysBetween(anchor,day) % schedule.interval! === 0||schedule.kind==='cycle'&&cyclePosition<(schedule.cycleOn??0);
    if(matches)for(const time of [...schedule.times].sort())dates.push(atTime(day,time));
   }
-  for(const date of dates){const scheduledAt=date.toISOString();events.push({id:d.id+':'+stage.id+':'+scheduledAt,stageId:stage.id,stageIndex:i,scheduledAt,localDate:localDate(date),amountMg:Number(stage.amountMg),amountUnit:stage.amountUnit||'mg',calculation:calculate(d.vialMg,d.waterMl,stage.amountMg)!,status:'pending'});if(events.length>10000)throw Error('Schedule exceeds 10,000 events. Reduce the schedule or plan length.');}
+  for(const date of dates){const day=localDate(date);if(window?.from&&day<window.from)continue;if(window?.through&&day>window.through)continue;const scheduledAt=date.toISOString();events.push({id:d.id+':'+stage.id+':'+scheduledAt,stageId:stage.id,stageIndex:i,scheduledAt,localDate:day,amountMg:Number(stage.amountMg),amountUnit:stage.amountUnit||'mg',calculation:calculate(d.vialMg,d.waterMl,stage.amountMg)!,status:'pending'});if(events.length>10000)throw Error('Schedule exceeds 10,000 events. Reduce the schedule or plan length.');}
   offset+=length;
  }
- if(!events.length)throw Error('This schedule generates no events. Check your days and duration.');
+ if(!events.length&&!window)throw Error('This schedule generates no events. Check your days and duration.');
  return events.sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt));
 }
 export function activate(d: Draft,now=new Date()):SavedPlan {
  return {...JSON.parse(JSON.stringify(d)),stages:d.stages.map(s=>({...s,amountUnit:s.amountUnit||'mg'})),activatedAt:now.toISOString(),events:generateEvents(d),inventoryTotalMg:d.inventoryTracking===false||d.initialVials===''?null:Number(d.initialVials)*Number(d.vialMg),timezone:Intl.DateTimeFormat().resolvedOptions().timeZone};
+}
+export function materializeEvents(plan:SavedPlan,from:string,through:string):Event[]{
+ const generated=generateEvents(plan,{from,through});
+ const saved=new Map(plan.events.filter(e=>e.localDate>=from&&e.localDate<=through).map(e=>[e.id,e]));
+ return generated.map(e=>saved.get(e.id)??e).concat([...saved.values()].filter(e=>!generated.some(g=>g.id===e.id))).sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt));
+}
+export function rollEventWindow(plan:SavedPlan,now=new Date()):SavedPlan{
+ const today=localDate(now),through=addDays(today,UPCOMING_EVENT_WINDOW_DAYS);
+ const durable=plan.events.filter(e=>e.status!=='pending'||Boolean(e.snoozedUntil));
+ const upcoming=materializeEvents(plan,today,through).filter(e=>e.status==='pending');
+ const byId=new Map([...durable,...upcoming].map(e=>[e.id,e]));
+ return {...plan,events:[...byId.values()].sort((a,b)=>a.scheduledAt.localeCompare(b.scheduledAt))};
 }
 export function eventStatus(e: Event,now=new Date()): 'Completed'|'Skipped'|'Missed'|'Scheduled'|'Future' {
  if(e.status==='completed')return 'Completed';if(e.status==='skipped')return 'Skipped';
