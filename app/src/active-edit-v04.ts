@@ -15,7 +15,7 @@ export function applyActiveEdit(store:Store,edit:ActiveEdit,now=new Date()):Stor
  if(!plan)throw Error('This plan is no longer active. Your edits are still saved.');
  if(planSettings(plan)!==edit.baseSettings)throw Error('This plan changed while you were editing. Your edits are saved; reopen the current plan before applying them.');
  if(edit.draft.id!==plan.id||edit.draft.compoundId!==plan.compoundId)throw Error('The edited plan does not match the original.');
- const eventSettings=(d:Draft)=>JSON.stringify([d.stages,d.defaultSchedule,d.startDate,d.breakWeeks,d.vialMg,d.waterMl]);
+ const eventSettings=(d:Draft)=>JSON.stringify([d.stages,d.defaultSchedule,d.startDate,d.breakWeeks,d.cycleOnWeeks,d.cycleOffWeeks,d.vialMg,d.waterMl]);
  const eventsChanged=eventSettings(edit.draft)!==eventSettings(plan);
  if(eventsChanged&&Intl.DateTimeFormat().resolvedOptions().timeZone!==plan.timezone)throw Error('Return to the time zone used to start this plan before changing its schedule.');
  const draft={...edit.draft,reviewed:true};
