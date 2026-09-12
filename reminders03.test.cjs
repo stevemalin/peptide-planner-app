@@ -16,3 +16,9 @@ test('local reminder reconciliation is idempotent, bounded, private and scoped t
 test('multi-plan reminders retain each owner and offset, even for matching event IDs',async()=>{
  allowed=true;const p=make(),q={...make(),id:'second-plan',reminderOffsetMinutes:15};q.events=p.events.map(e=>({...e}));await N.reconcileReminders([p,q]);const alarms=[...scheduled.values()].filter(n=>n.content.data.owner===owner&&!n.content.data.test);assert.equal(alarms.length,60);assert.ok(alarms.some(n=>n.content.data.planId===p.id));assert.ok(alarms.some(n=>n.content.data.planId===q.id));const second=alarms.find(n=>n.content.data.planId===q.id&&n.content.data.eventId==='event-0');assert.equal(+second.trigger.date,new Date(q.events[0].scheduledAt).getTime()-15*60000);await N.reconcileReminders([{...p,reminderEnabled:false},q]);assert.ok([...scheduled.values()].filter(n=>n.content.data.owner===owner&&!n.content.data.test).every(n=>n.content.data.planId===q.id));
 });
+test('repeating cycle restart has a dedicated private reminder outside the event cap',async()=>{
+ allowed=true;const today=new Date(),start=[today.getFullYear(),String(today.getMonth()+1).padStart(2,'0'),String(today.getDate()).padStart(2,'0')].join('-');
+ const plan={id:'cycle-plan',compoundName:'Example peptide',reminderEnabled:true,reminderOffsetMinutes:0,cycleOnWeeks:'1',cycleOffWeeks:'1',startDate:start,defaultSchedule:{times:['09:00']},events:[]};
+ const report=await N.reconcileReminders(plan),alarm=[...scheduled.values()].find(n=>n.content.data?.cycleResume===true);
+ assert.equal(report.count,1);assert.ok(alarm);assert.equal(alarm.content.data.planId,plan.id);assert.match(alarm.content.title,/Cycle resumes/);assert.ok(!alarm.content.body.includes(plan.compoundName));
+});
