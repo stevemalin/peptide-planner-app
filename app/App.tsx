@@ -290,7 +290,7 @@ export default function App() {
   const saveActiveEdits=async()=>{const target=saved.store.activeEdit?.returnTo??'plans';await saved.update(old=>old.activeEdit?applyActiveEdit(old,old.activeEdit):old);setEditingActive(false);setScreen(target);};
   const discardActiveEdits=async()=>{const target=saved.store.activeEdit?.returnTo??'plans';await saved.update(old=>({...old,activeEdit:null}));setEditingActive(false);setScreen(target);setEditError('');};
   useEffect(()=>{if(!['activeEditor','plan','review','schedule','calc'].includes(screen))setEditingActive(false);},[screen]);
-  const workspaceNavigate=(target:any)=>{if(target==='tracker'){setScreen('planTracker');}else if(target==='inventory'&&focused)editPlan(focused.id,'Inventory');else setScreen(target);};
+  const workspaceNavigate=(target:any)=>{if(target==='back'&&screen==='planHistory'){if(Platform.OS==='web'&&(globalThis as any).history?.state?.ezpepScreen==='planHistory')(globalThis as any).history.back();else setScreen('plans');}else if(target==='tracker'){setScreen('planTracker');}else if(target==='inventory'&&focused)editPlan(focused.id,'Inventory');else setScreen(target);};
   const [reminderError,setReminderError] = useState("");
   const filtered=searchCompounds(query);
   const schoolResults=useMemo(()=>searchCompounds(schoolQuery).filter(c=>{
@@ -315,6 +315,14 @@ export default function App() {
       const parent:Partial<Record<Screen,Screen>>={plans:"guide",planDetail:"plans",planInventory:"planDetail",planTracker:"planDetail",planHistory:"plans",dataImport:"settings",betaFeedback:"more",betaPrivacy:"more",schoolSources:"schoolMore",schoolMore:"schoolDetail",schoolDetail:"school",detail:"guide",plan:"detail",review:"calc",schedule:"plan",calc:"schedule",tracker:"plan",inventory:"more",reminders:"more",history:"tracker"};
       if(!parent[screen])return false;setScreen(parent[screen]!);return true;
     });return()=>subscription.remove();
+  },[screen]);
+  useEffect(()=>{
+    if(Platform.OS!=='web'||screen!=='planHistory')return;
+    const web=globalThis as any;
+    web.history.pushState({...web.history.state,ezpepScreen:'planHistory'},'',web.location.href);
+    const back=()=>setScreen('plans');
+    web.addEventListener('popstate',back);
+    return()=>web.removeEventListener('popstate',back);
   },[screen]);
   useEffect(()=>{
     if(!saved.ready||saved.loadFailed)return;
