@@ -23,8 +23,8 @@ jobs:
       github.ref == 'refs/heads/develop/0.4-multiplan' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' &&
-        github.event.before == '787535af312d5ad77a97d215f72f85f7aa379e6e' &&
-        github.event.head_commit.message == 'Deploy stable cloud comparison'))
+        github.event.before == '639da0f73403940e2cc9a3170425093c28c3f042' &&
+        github.event.head_commit.message == 'Deploy simplified cloud device flow'))
     runs-on: ubuntu-latest
     env:
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
