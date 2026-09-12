@@ -23,8 +23,8 @@ jobs:
       github.ref == 'refs/heads/develop/0.4-multiplan' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' &&
-        github.event.before == '339f59701bb3db51d53169b02cb2e19f7ec5159a' &&
-        github.event.head_commit.message == 'Deploy required beta usage analytics'))
+        github.event.before == '43378e6f5abc8be61527940df5e8fcc758caffa8' &&
+        github.event.head_commit.message == 'Deploy increased cloud planner capacity'))
     runs-on: ubuntu-latest
     env:
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
