@@ -21,8 +21,8 @@ export default function AggregateTracker({plans,archives,update,initialTab='Toda
  const tomorrow=addDays(today,1),tomorrowRows=eventsForDay(plans,tomorrow);
  const nextRows=all.filter(x=>x.event.status==='pending'&&new Date(x.event.scheduledAt)>now).slice(0,1);
  const needsLog=all.filter(x=>x.event.status==='pending'&&new Date(x.event.scheduledAt)<=now&&new Date(x.event.snoozedUntil||x.event.scheduledAt)<=now);
- const groupHorizon=now.getTime()+60*60000;
  const groupCandidates=upcomingGroup(todayRows,now);
+ const groupHorizon=groupCandidates.reduce((latest,{event})=>Math.max(latest,Date.parse(event.snoozedUntil||event.scheduledAt)),0);
  const groupKey=(planId:string,eventId:string)=>planId+':'+eventId;
  const selectedGroup=groupCandidates.filter(({plan,event})=>groupSelection.includes(groupKey(plan.id,event.id)));
  const completedToday=todayRows.filter(x=>x.event.status==='completed').length;
