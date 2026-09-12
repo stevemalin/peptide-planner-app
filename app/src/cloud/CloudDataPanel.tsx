@@ -76,14 +76,14 @@ export function useAutomaticCloudSync({eligible,userId,store,ready,saving,replac
 }
 
 export function CloudDataPanel({store,ready,userId,replaceStore,guided=false,onCloudChanged}:{store:Store;ready:boolean;userId:string;replaceStore:(next:Store)=>Promise<void>;guided?:boolean;onCloudChanged?:()=>void}){
- const [review,setReview]=useState<MigrationReview|null>(null),[syncReview,setSyncReview]=useState<SyncReview|null>(null),[confirmed,setConfirmed]=useState(false),[deletionConfirmed,setDeletionConfirmed]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ const [review,setReview]=useState<MigrationReview|null>(null),[syncReview,setSyncReview]=useState<SyncReview|null>(null),[confirmed,setConfirmed]=useState(false),[pendingDirection,setPendingDirection]=useState<'download'|'upload'|null>(null),[showAdvanced,setShowAdvanced]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
  const current=useRef(store);current.current=store;
- useEffect(()=>{setReview(null);setSyncReview(null);setConfirmed(false);setDeletionConfirmed(false);setMessage('');},[userId]);
+ useEffect(()=>{setReview(null);setSyncReview(null);setConfirmed(false);setPendingDirection(null);setShowAdvanced(false);setMessage('');},[userId]);
  const run=async(action:()=>Promise<string>)=>{if(busy)return;setBusy(true);try{setMessage(await action());}catch(error){setMessage(error instanceof Error?error.message:'The action could not finish. Your local data is unchanged.');}finally{setBusy(false);}};
  const backup=async(payload:string,label:string)=>{const key='peptide-planner:'+label+':'+new Date().toISOString()+':'+Math.random().toString(36).slice(2);await AsyncStorage.setItem(key,payload);if(await AsyncStorage.getItem(key)!==payload)throw Error('Local safety copy could not be verified. No planner data was changed.');};
  const refreshSync=async()=>{
    const row=await readCloudPlannerSnapshot();
-   setReview(null);setConfirmed(false);
+   setReview(null);setConfirmed(false);setPendingDirection(null);setShowAdvanced(false);
    if(!row){setSyncReview(null);return 'No cloud planner exists yet. Review an initial cloud copy to begin.';}
    const next=reviewSync(userId,current.current,row);setSyncReview(next);
    return next.identical?'This device matches cloud revision '+next.cloudRevision+'.':'Cloud revision '+next.cloudRevision+' is available. Review both copies before choosing a direction.';
@@ -96,10 +96,10 @@ export function CloudDataPanel({store,ready,userId,replaceStore,guided=false,onC
    upload:saveCloudPlannerSnapshot,
    apply:replaceStore,
  });
- const button=(label:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" accessibilityLabel={label} disabled={busy||disabled} accessibilityState={{disabled:busy||disabled}} onPress={action} style={[styles.button,(busy||disabled)&&{opacity:.5}]}><Text style={styles.buttonText}>{label}</Text></Pressable>;
+ const button=(label:string,action:()=>void,disabled=false,secondary=false)=><Pressable accessibilityRole="button" accessibilityLabel={label} disabled={busy||disabled} accessibilityState={{disabled:busy||disabled}} onPress={action} style={[styles.button,secondary&&styles.secondaryButton,(busy||disabled)&&{opacity:.5}]}><Text style={[styles.buttonText,secondary&&styles.secondaryButtonText]}>{label}</Text></Pressable>;
  const check=(label:string,value:boolean,change:()=>void)=><Pressable accessibilityRole="checkbox" accessibilityLabel={label} accessibilityState={{checked:value,disabled:busy}} disabled={busy} onPress={change}><Text style={styles.text}>{value?'✓':'○'} {label}</Text></Pressable>;
- return <View style={styles.card}><Text style={styles.title}>{guided?'Use EZPep on another device':'Cloud copy & account data'}</Text>
- <Text style={styles.text}>{guided?'EZPep saves your planner on each device. Start here to safely copy this device’s planner to your private cloud, or load an existing cloud copy onto this device.':'Move a verified planner copy between devices using the same invited account. EZPep checks the account and revision and saves a local recovery copy before replacing anything.'}</Text>
+ return <><View style={styles.card}><Text style={styles.title}>{guided?'Get this device up to date':'Cloud planner'}</Text>
+ <Text style={styles.text}>{guided?'Load your latest private cloud planner onto this device. EZPep keeps a recovery copy before replacing anything.':'Keep your planner current across devices signed in with the same invited account.'}</Text>
  <Text style={styles.step}><Text style={styles.stepNumber}>1</Text> On the device containing the planner you want to keep, copy it to your private cloud.</Text>
  <Text style={styles.step}><Text style={styles.stepNumber}>2</Text> Sign in on the other device with the same email and choose “Load my cloud planner.”</Text>
  <Text style={styles.note}>After the first cloud copy is established, EZPep automatically checks on sign-in, app open and resume, and shortly after saved changes. Use the Sync control anytime for an immediate check.</Text>
@@ -123,22 +123,33 @@ export function CloudDataPanel({store,ready,userId,replaceStore,guided=false,onC
  {button('Cancel cloud copy',()=>{setReview(null);setConfirmed(false);setMessage('Cloud copy cancelled. Nothing was uploaded.');})}</>}
  {syncReview&&<><View style={styles.summary}><Text style={styles.text}>This device: {syncReview.localPlans} saved peptide record(s)</Text><Text style={styles.text}>Cloud: {syncReview.cloudPlans} saved peptide record(s) · revision {syncReview.cloudRevision}</Text></View>
  {syncReview.identical?<Text style={styles.good}>This device and the cloud copy match.</Text>:<>
- <Text style={styles.warning}>These copies differ. Choose one direction. EZPep does not merge two different schedules automatically.</Text>
- {check('I reviewed the direction below and understand the replaced copy will remain available in a local safety backup.',confirmed,()=>setConfirmed(v=>!v))}
- {button('Keep this device’s planner and copy it to cloud',()=>void run(async()=>{const revision=await uploadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setSyncReview(null);onCloudChanged?.();return 'Cloud planner updated to revision '+revision+'. Other devices can now load it.';}),!confirmed||!ready)}
- {button('Load my cloud planner on this device',()=>void run(async()=>{await downloadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setSyncReview(null);onCloudChanged?.();return 'Cloud revision '+syncReview.cloudRevision+' is now active on this device. The previous local copy was preserved as a recovery copy.';}),!confirmed||!ready)}
+ <Text style={styles.warning}>{syncReview.localPlans===0?'Your cloud planner is ready. This device does not have a planner yet.':'This device differs from the cloud copy. The normal choice is to load the cloud planner here.'}</Text>
+ {!pendingDirection&&<>
+ {button('Load cloud planner on this device',()=>{setPendingDirection('download');setConfirmed(false);})}
+ <Pressable accessibilityRole="button" accessibilityLabel="Show advanced cloud options" onPress={()=>setShowAdvanced(v=>!v)} disabled={busy}><Text style={styles.advancedLink}>{showAdvanced?'Hide advanced option':'Advanced: replace the cloud copy'}</Text></Pressable>
+ {showAdvanced&&<View style={styles.advancedBox}><Text style={styles.text}>Only use this if this device definitely contains the newer planner. It will replace the cloud copy for every device.</Text>{button('Use this device to replace cloud',()=>{setPendingDirection('upload');setConfirmed(false);},false,true)}</View>}
+ </>}
+ {pendingDirection&&<View style={styles.confirmBox}><Text style={styles.warning}>{pendingDirection==='download'?'Load cloud revision '+syncReview.cloudRevision+' here? The current device copy will be kept as a recovery copy.':'Replace cloud revision '+syncReview.cloudRevision+' with this device’s planner?'}</Text>
+ {check(pendingDirection==='download'?'I understand this will replace the planner currently on this device.':'I understand this will replace the cloud planner used by my other devices.',confirmed,()=>setConfirmed(v=>!v))}
+ {pendingDirection==='download'
+  ?button('Confirm and load cloud planner',()=>void run(async()=>{await downloadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setPendingDirection(null);setSyncReview(null);onCloudChanged?.();return 'Cloud revision '+syncReview.cloudRevision+' is now active on this device. The previous local copy was preserved as a recovery copy.';}),!confirmed||!ready)
+  :button('Confirm and replace cloud planner',()=>void run(async()=>{const revision=await uploadReviewed(syncReview,()=>current.current,confirmed,syncPort());setConfirmed(false);setPendingDirection(null);setSyncReview(null);onCloudChanged?.();return 'Cloud planner updated to revision '+revision+'. Other devices can now load it.';}),!confirmed||!ready)}
+ {button('Go back',()=>{setPendingDirection(null);setConfirmed(false);},false,true)}</View>}
  </>}</>}
- {button('Export account data',()=>void run(async()=>{
-  const payload=JSON.stringify(await exportOwnAccount(),null,2);
-  if(Platform.OS==='web'){const web=globalThis as any,url=web.URL.createObjectURL(new web.Blob([payload],{type:'application/json'}));try{const link=web.document.createElement('a');link.href=url;link.download='ezpep-account-export-'+new Date().toISOString().slice(0,10)+'.json';link.click();}finally{web.URL.revokeObjectURL(url);}}
-  else await Share.share({title:'EZPep Planner account export',message:payload});
-  return 'Account export prepared. Keep it private.';
- }))}
- <Text style={styles.text}>Account deletion requires organizer review, identity checking and a separate final confirmation. A request does not delete anything.</Text>
- {check('I want the beta organizer to review an account-deletion request. I understand no deletion happens now.',deletionConfirmed,()=>setDeletionConfirmed(v=>!v))}
+ {!!message&&<Text accessibilityLiveRegion="polite" style={styles.text}>{message}</Text>}
+ </View>{!guided&&<AccountDataControls ready={ready} userId={userId}/>}</>;
+}
+
+export function AccountDataControls({ready,userId}:{ready:boolean;userId:string}){
+ const [deletionConfirmed,setDeletionConfirmed]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState('');
+ useEffect(()=>{setDeletionConfirmed(false);setMessage('');},[userId]);
+ const run=async(action:()=>Promise<string>)=>{if(busy)return;setBusy(true);try{setMessage(await action());}catch(error){setMessage(error instanceof Error?error.message:'The action could not finish.');}finally{setBusy(false);}};
+ const button=(label:string,action:()=>void,disabled=false)=><Pressable accessibilityRole="button" accessibilityLabel={label} disabled={busy||disabled} accessibilityState={{disabled:busy||disabled}} onPress={action} style={[styles.button,styles.secondaryButton,(busy||disabled)&&{opacity:.5}]}><Text style={[styles.buttonText,styles.secondaryButtonText]}>{label}</Text></Pressable>;
+ return <View style={styles.card}><Text style={styles.title}>Account data & privacy</Text><Text style={styles.text}>Export your account information or ask the beta organizer to review an account-deletion request. These controls do not affect cloud sync.</Text>
+ {button('Export account data',()=>void run(async()=>{const payload=JSON.stringify(await exportOwnAccount(),null,2);if(Platform.OS==='web'){const web=globalThis as any,url=web.URL.createObjectURL(new web.Blob([payload],{type:'application/json'}));try{const link=web.document.createElement('a');link.href=url;link.download='ezpep-account-export-'+new Date().toISOString().slice(0,10)+'.json';link.click();}finally{web.URL.revokeObjectURL(url);}}else await Share.share({title:'EZPep Planner account export',message:payload});return 'Account export prepared. Keep it private.';}),!ready)}
+ <Pressable accessibilityRole="checkbox" accessibilityLabel="Request deletion review confirmation" accessibilityState={{checked:deletionConfirmed,disabled:busy}} disabled={busy} onPress={()=>setDeletionConfirmed(v=>!v)}><Text style={styles.text}>{deletionConfirmed?'✓':'○'} I want the beta organizer to review an account-deletion request. Nothing is deleted now.</Text></Pressable>
  {button('Request deletion review',()=>void run(async()=>{await setDeletionRequest(false);setDeletionConfirmed(false);return 'Deletion review requested. Nothing was deleted.';}),!deletionConfirmed)}
  {button('Cancel deletion request',()=>void run(async()=>{await setDeletionRequest(true);setDeletionConfirmed(false);return 'Deletion request cancelled. Your data is unchanged.';}))}
- {!!message&&<Text accessibilityLiveRegion="polite" style={styles.text}>{message}</Text>}
- </View>;
+ {!!message&&<Text accessibilityLiveRegion="polite" style={styles.text}>{message}</Text>}</View>;
 }
-const styles=StyleSheet.create({card:{width:'100%',maxWidth:680,alignSelf:'center',padding:16,gap:12,borderRadius:18,backgroundColor:'#fff',borderWidth:1,borderColor:'#DDE8F6'},title:{fontSize:21,fontWeight:'700',color:'#0E1C4A'},text:{fontSize:15,lineHeight:23,color:'#334466',flexShrink:1},step:{fontSize:15,lineHeight:23,color:'#0E1C4A',fontWeight:'600'},stepNumber:{color:'#7557F6',fontWeight:'800'},note:{fontSize:13,lineHeight:19,color:'#52627F',backgroundColor:'#F2EDFF',borderRadius:12,padding:12},summary:{padding:12,gap:4,borderRadius:12,backgroundColor:'#F7FBFF'},good:{fontSize:15,lineHeight:23,color:'#176B45',fontWeight:'700'},warning:{fontSize:15,lineHeight:23,color:'#8A4B08',fontWeight:'700'},button:{padding:14,borderRadius:12,backgroundColor:'#0E1C4A'},buttonText:{color:'#fff',fontSize:15,fontWeight:'700',textAlign:'center'}});
+const styles=StyleSheet.create({card:{width:'100%',maxWidth:680,alignSelf:'center',padding:16,gap:12,borderRadius:18,backgroundColor:'#fff',borderWidth:1,borderColor:'#DDE8F6'},title:{fontSize:21,fontWeight:'700',color:'#0E1C4A'},text:{fontSize:15,lineHeight:23,color:'#334466',flexShrink:1},step:{fontSize:15,lineHeight:23,color:'#0E1C4A',fontWeight:'600'},stepNumber:{color:'#7557F6',fontWeight:'800'},note:{fontSize:13,lineHeight:19,color:'#52627F',backgroundColor:'#F2EDFF',borderRadius:12,padding:12},summary:{padding:12,gap:4,borderRadius:12,backgroundColor:'#F7FBFF'},good:{fontSize:15,lineHeight:23,color:'#176B45',fontWeight:'700'},warning:{fontSize:15,lineHeight:23,color:'#8A4B08',fontWeight:'700'},button:{padding:15,borderRadius:12,backgroundColor:'#0E1C4A'},buttonText:{color:'#fff',fontSize:16,fontWeight:'800',textAlign:'center'},secondaryButton:{backgroundColor:'#fff',borderWidth:1,borderColor:'#A8B5C9'},secondaryButtonText:{color:'#334466',fontSize:14,fontWeight:'700'},advancedLink:{fontSize:14,lineHeight:21,color:'#52627F',textAlign:'center',textDecorationLine:'underline',padding:8},advancedBox:{padding:12,gap:10,borderRadius:12,backgroundColor:'#F7F8FA'},confirmBox:{padding:12,gap:12,borderRadius:12,backgroundColor:'#FFF8ED',borderWidth:1,borderColor:'#F0D4A7'}});
