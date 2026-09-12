@@ -4,8 +4,14 @@ import type {Store} from '../engine';
 export type CloudPlannerRow={user_id:string;snapshot:unknown;schema_version:number;revision:number;updated_at:string};
 export type SyncReview={userId:string;localPayload:string;cloudPayload:string;cloudRevision:number;localPlans:number;cloudPlans:number;identical:boolean};
 
+function canonicalJson(value:unknown):string{
+  if(Array.isArray(value))return '['+value.map(canonicalJson).join(',')+']';
+  if(value&&typeof value==='object')return '{'+Object.keys(value as Record<string,unknown>).sort().map(key=>JSON.stringify(key)+':'+canonicalJson((value as Record<string,unknown>)[key])).join(',')+'}';
+  return JSON.stringify(value);
+}
 function normalized(value:unknown):string{
-  return encodeCompactPlannerStore(decodeCompactPlannerStore(typeof value==='string'?value:JSON.stringify(value)));
+  const compact=encodeCompactPlannerStore(decodeCompactPlannerStore(typeof value==='string'?value:JSON.stringify(value)));
+  return canonicalJson(JSON.parse(compact));
 }
 function planCount(payload:string){
   const store=decodeCompactPlannerStore(payload);
