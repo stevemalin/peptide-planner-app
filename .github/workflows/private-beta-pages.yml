@@ -23,8 +23,8 @@ jobs:
       github.ref == 'refs/heads/develop/0.4-multiplan' &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' &&
-        github.event.before == 'e910fd328def7150216de1a9fe36d65d549211d2' &&
-        github.event.head_commit.message == 'Deploy highlighted cloud download action'))
+        github.event.before == 'b3a73b5d64722e605e9b89b0409a8cd769143d4d' &&
+        github.event.head_commit.message == 'Deploy peptide history back navigation'))
     runs-on: ubuntu-latest
     env:
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
