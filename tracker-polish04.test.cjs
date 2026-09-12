@@ -101,6 +101,10 @@ test('Professor Lynch explains each active-plan maintenance section without addi
  assert.match(activeEditor,/ProfessorHelp title={name}/);
  assert.match(activeEditor,/do not verify preparation or clinical suitability/);
 });
+test('active editor can restore a cycle anchor from the first saved history date',()=>{
+ const source=fs.readFileSync('./app/src/ActivePeptideEditor.tsx','utf8');
+ assert.match(source,/Use first saved history date/);assert.match(source,/event\.status!==['"]pending['"]/);assert.match(source,/startDate:firstHistoryDate/);
+});
 
 
 test('planner persistence keeps and automatically restores a last-known-good local save',()=>{
@@ -227,4 +231,3 @@ test('guided import UI provides per-peptide missing-field cards and imports only
  assert.match(app,/Platform\.OS==='web'.*executeReadyImports/);
  assert.match(tracker,/calculationUnavailable/);
 });
-
